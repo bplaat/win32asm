@@ -165,7 +165,51 @@ _header_aligned_size equ $ - $$
             %rotate 2
         %endrep
 
-    %1_size equ position
+    %xdefine %1_size position
+%endmacro
+
+%macro function 1-*
+    %1:
+        ._arguments_size equ (%0 - 1) * 4
+
+        push ebp
+        mov ebp, esp
+
+        %assign i 2
+        %rotate 1
+        %rep %0 - 1
+            %xdefine %1 ebp + i * 4
+            %assign i i + 1
+            %rotate 1
+        %endrep
+%endmacro
+
+%macro return 1
+    mov eax, %1
+    leave
+    ret ._arguments_size
+%endmacro
+
+%macro return 0
+    leave
+    ret ._arguments_size
+%endmacro
+
+%macro local 2-*
+    %assign size 0
+    %rep %0 / 2
+        %assign size size + %2
+        %rotate 2
+    %endrep
+
+    sub esp, size
+
+    %assign position 0
+    %rep %0 / 2
+        %assign position position + %2
+        %xdefine %1 ebp - position
+        %rotate 2
+    %endrep
 %endmacro
 
 %macro push_reverse 1-*
@@ -175,17 +219,26 @@ _header_aligned_size equ $ - $$
     %endrep
 %endmacro
 
-%macro invoke 2+
+%macro stdcall 2+
     push_reverse %2
-    call [%1]
+    call %1
+%endmacro
+
+%macro stdcall 1
+    call %1
+%endmacro
+
+%macro invoke 2+
+    stdcall [%1], %2
 %endmacro
 
 %macro invoke 1
-    call [%1]
+    stdcall [%1]
 %endmacro
 
 ; Windows Library constants
 HWND_DESKTOP equ 0
+HWND_TOP equ 0
 
 MB_OK equ 0
 
@@ -257,20 +310,20 @@ struct MSG, \
     wParam, 4, \
     lParam, 4, \
     time, 4, \
-    pt, 8, \
+    pt, POINT_size, \
     lPrivate, 4
 
 struct MINMAXINFO, \
-    ptReserved, 8, \
-    ptMaxSize, 8, \
-    ptMaxPosition, 8, \
-    ptMinTrackSize, 8, \
-    ptMaxTrackSize, 8
+    ptReserved, POINT_size, \
+    ptMaxSize, POINT_size, \
+    ptMaxPosition, POINT_size, \
+    ptMinTrackSize, POINT_size, \
+    ptMaxTrackSize, POINT_size
 
 struct PAINTSTRUCT, \
     hdc, 4, \
     fErase, 4, \
-    rcPaint, 16, \
+    rcPaint, RECT_size, \
     fRestore, 4, \
     fIncUpdate, 4, \
     rgbReserved, 32
