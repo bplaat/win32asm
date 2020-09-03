@@ -4,57 +4,48 @@
 
 %include "libwindows-x64.inc"
 
-    ; It works but segmentation faults
-    ; With the stack alignment 😭
+    ; It is working but local variables are bugged because of stack alignment 😡
 
 code_section
     function WindowProc, hwnd, uMsg, wParam, lParam
-        mov rax, [uMsg]
-        cmp rax, WM_CREATE
+        mov eax, [uMsg]
+        cmp eax, WM_CREATE
         je .wm_create
-        cmp rax, WM_GETMINMAXINFO
+        cmp eax, WM_GETMINMAXINFO
         je .wm_getminmaxinfo
-        cmp rax, WM_PAINT
+        cmp eax, WM_PAINT
         je .wm_paint
-        cmp rax, WM_DESTROY
+        cmp eax, WM_DESTROY
         je .wm_destroy
         jmp .default
 
         .wm_create:
-            local window_rect, RECT_size, \
-                new_window_width, DWORD_size, \
-                new_window_height, DWORD_size, \
-                new_window_x, DWORD_size, \
-                new_window_y, DWORD_size
+            lea r10, [window_rect]
+            invoke GetClientRect, [hwnd], r10
 
-            lea rax, [window_rect]
-            invoke GetClientRect, [hwnd], rax
+            mov eax, [window_width]
+            shl eax, 1
+            sub eax, [window_rect + RECT.right]
+            mov [new_window_width], eax
 
-            mov rax, [window_width]
-            shl rax, 1
-            sub rax, [window_rect + RECT.right]
-            mov [new_window_width], rax
-
-            mov rax, [window_height]
-            shl rax, 1
-            sub rax, [window_rect + RECT.bottom]
-            mov [new_window_height], rax
+            mov eax, [window_height]
+            shl eax, 1
+            sub eax, [window_rect + RECT.bottom]
+            mov [new_window_height], eax
 
             invoke GetSystemMetrics, SM_CXSCREEN
-            sub rax, [new_window_width]
-            shr rax, 1
-            mov [new_window_x], rax
+            sub eax, [new_window_width]
+            shr eax, 1
+            mov [new_window_x], eax
 
             invoke GetSystemMetrics, SM_CYSCREEN
-            sub rax, [new_window_height]
-            shr rax, 1
-            mov [new_window_y], rax
+            sub eax, [new_window_height]
+            shr eax, 1
+            mov [new_window_y], eax
 
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_x], [new_window_y], [new_window_width], [new_window_height], SWP_NOZORDER
 
             jmp .leave
-
-            %undef window_rect
 
         .wm_getminmaxinfo:
             mov rax, [lParam]
@@ -63,38 +54,34 @@ code_section
             jmp .leave
 
         .wm_paint:
-            local paint_struct, PAINTSTRUCT_size, \
-                window_rect, RECT_size, \
-                hfont, DWORD_size
+            lea r10, [paint_struct]
+            invoke BeginPaint, [hwnd], r10
 
-            lea rcx, [paint_struct]
-            invoke BeginPaint, [hwnd], rcx
+            lea r10, [window_rect]
+            invoke GetClientRect, [hwnd], r10
 
-            lea rcx, [window_rect]
-            invoke GetClientRect, [hwnd], rcx
-
-            mov rcx, [window_rect + RECT.right]
-            shr rcx, 4
-            invoke CreateFontA, rcx, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
+            mov ecx, [window_rect + RECT.right]
+            mov r10, rcx
+            shr r10, 4
+            invoke CreateFontA, r10, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
             mov [hfont], rax
 
             invoke SelectObject, [paint_struct + PAINTSTRUCT.hdc], [hfont]
             invoke SetBkMode, [paint_struct + PAINTSTRUCT.hdc], TRANSPARENT
             invoke SetTextColor, [paint_struct + PAINTSTRUCT.hdc], 0x00ffffff
 
-            lea rcx, [window_rect]
-            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, rcx, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+            lea r10, [window_rect]
+            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, r10, DT_SINGLELINE | DT_CENTER | DT_VCENTER
 
             invoke DeleteObject, [hfont]
 
-            lea rcx, [paint_struct]
-            invoke EndPaint, [hwnd], rcx
+            lea r10, [paint_struct]
+            invoke EndPaint, [hwnd], r10
 
             jmp .leave
 
         .wm_destroy:
             invoke PostQuitMessage, 0
-
         .leave:
             return 0
 
@@ -105,40 +92,37 @@ code_section
         %undef hwnd
 
     function rand
-        imul rax, [seed], 1103515245
-        add rax, 12345
+        imul eax, [seed], 1103515245
+        add eax, 12345
 
-        mov rdx, 0
-        mov rcx, 1 << 31
-        idiv rcx
+        mov edx, 0
+        mov ecx, 1 << 31
+        idiv ecx
 
-        mov [seed], rdx
-        return rdx
+        mov [seed], edx
+        mov eax, edx
+        return
 
     _start:
         sub rsp, 8
 
-        local time, SYSTEMTIME_size, \
-            hwnd, 8, \
-            message, MSG_size
+        lea r10, [time]
+        invoke GetLocalTime, r10
 
-        lea rax, [time]
-        invoke GetLocalTime, rax
+        mov eax, [time + SYSTEMTIME.wHour]
+        and eax, 0x0000ffff
+        imul eax, 60
 
-        mov rax, [time + SYSTEMTIME.wHour]
-        and rax, 0x000000000000ffff
-        imul rax, 60
+        mov ecx, [time + SYSTEMTIME.wMinute]
+        and ecx, 0x0000ffff
+        add eax, ecx
+        imul eax, 60
 
-        mov rcx, [time + SYSTEMTIME.wMinute]
-        and rcx, 0x000000000000ffff
-        add rax, rcx
-        imul rax, 60
+        mov ecx, [time + SYSTEMTIME.wSecond]
+        and ecx, 0x0000ffff
+        add eax, ecx
 
-        mov rcx, [time + SYSTEMTIME.wSecond]
-        and rcx, 0x000000000000ffff
-        add rax, rcx
-
-        mov [seed], rax
+        mov [seed], eax
 
         invoke GetModuleHandleA, 0
         mov [window_class + WNDCLASSEX.hInstance], rax
@@ -161,17 +145,17 @@ code_section
         invoke UpdateWindow, [hwnd]
 
         .message_loop:
-            lea rcx, [message]
-            invoke GetMessageA, rcx, 0, 0, 0
+            lea r10, [message]
+            invoke GetMessageA, r10, 0, 0, 0
 
             cmp rax, 0
             jle .done
 
-            lea rcx, [message]
-            invoke TranslateMessage, rcx
+            lea r10, [message]
+            invoke TranslateMessage, r10
 
-            lea rcx, [message]
-            invoke DispatchMessageA, rcx
+            lea r10, [message]
+            invoke DispatchMessageA, r10
 
             jmp .message_loop
 
@@ -184,9 +168,9 @@ data_section
     window_title db "This is a test window (64-bit)", 0
     font_name db "Tahoma", 0
 
-    seed dq 0
-    window_width dq 800
-    window_height dq 600
+    seed dd 0
+    window_width dd 800
+    window_height dd 600
 
     window_class:
         dd WNDCLASSEX_size         ; cbSize
@@ -201,6 +185,19 @@ data_section
         dq 0                       ; lpszMenuName
         dq window_class_name       ; lpszClassName
         dq 0                       ; hIconSm
+
+    window_rect times RECT_size db 0
+    new_window_width dd 0
+    new_window_height dd 0
+    new_window_x dd 0
+    new_window_y dd 0
+
+    paint_struct times PAINTSTRUCT_size db 0
+    hfont dd 0
+
+    time times SYSTEMTIME_size db 0
+    hwnd dd 0
+    message times MSG_size db 0
 
     import_table
         library gdi_table, "GDI32.DLL", \
