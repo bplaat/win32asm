@@ -245,6 +245,8 @@ MB_OK equ 0
 CS_VREDRAW equ 0x0001
 CS_HREDRAW equ 0x0002
 
+COLOR_WINDOW equ 5
+
 IDC_ARROW equ 32512
 
 CW_USEDEFAULT equ 0x80000000
@@ -270,48 +272,53 @@ DT_CENTER equ 0x00000001
 DT_VCENTER equ 0x00000004
 DT_SINGLELINE equ 0x00000020
 
+; Windows Library structures
+%define WORD_size 2
+%define DWORD_size 4
+%define HANDLE_size 4
+
 struct SYSTEMTIME, \
-    wYear, 2, \
-    wMonth, 2, \
-    wDayOfWeek, 2, \
-    wDay, 2, \
-    wHour, 2, \
-    wMinute, 2, \
-    wSecond, 2, \
-    wMilliseconds, 2
+    wYear, WORD_size, \
+    wMonth, WORD_size, \
+    wDayOfWeek, WORD_size, \
+    wDay, WORD_size, \
+    wHour, WORD_size, \
+    wMinute, WORD_size, \
+    wSecond, WORD_size, \
+    wMilliseconds, WORD_size
 
 struct POINT, \
-    x, 4, \
-    y, 4
+    x, DWORD_size, \
+    y, DWORD_size
 
 struct RECT, \
-    left, 4, \
-    top, 4, \
-    right, 4, \
-    bottom, 4
+    left, DWORD_size, \
+    top, DWORD_size, \
+    right, DWORD_size, \
+    bottom, DWORD_size
 
 struct WNDCLASSEX, \
-    cbSize, 4, \
-    style, 4, \
-    lpfnWndProc, 4, \
-    cbClsExtra, 4, \
-    cbWndExtra, 4, \
-    hInstance, 4, \
-    hIcon, 4, \
-    hCursor, 4, \
-    hbrBackground, 4, \
-    lpszMenuName, 4, \
-    lpszClassName, 4, \
-    hIconSm, 4
+    cbSize, DWORD_size, \
+    style, DWORD_size, \
+    lpfnWndProc, HANDLE_size, \
+    cbClsExtra, DWORD_size, \
+    cbWndExtra, DWORD_size, \
+    hInstance, HANDLE_size, \
+    hIcon, HANDLE_size, \
+    hCursor, HANDLE_size, \
+    hbrBackground, HANDLE_size, \
+    lpszMenuName, HANDLE_size, \
+    lpszClassName, HANDLE_size, \
+    hIconSm, HANDLE_size
 
 struct MSG, \
-    hwnd, 4, \
-    message, 4, \
-    wParam, 4, \
-    lParam, 4, \
-    time, 4, \
+    hwnd, HANDLE_size, \
+    message, DWORD_size, \
+    wParam, HANDLE_size, \
+    lParam, HANDLE_size, \
+    time, DWORD_size, \
     pt, POINT_size, \
-    lPrivate, 4
+    lPrivate, DWORD_size
 
 struct MINMAXINFO, \
     ptReserved, POINT_size, \
@@ -321,9 +328,9 @@ struct MINMAXINFO, \
     ptMaxTrackSize, POINT_size
 
 struct PAINTSTRUCT, \
-    hdc, 4, \
-    fErase, 4, \
+    hdc, HANDLE_size, \
+    fErase, DWORD_size, \
     rcPaint, RECT_size, \
-    fRestore, 4, \
-    fIncUpdate, 4, \
+    fRestore, DWORD_size, \
+    fIncUpdate, DWORD_size, \
     rgbReserved, 32

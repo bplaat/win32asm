@@ -123,7 +123,7 @@ _header_aligned_size equ $ - $$
     _import_table_size equ $ - _import_table
 %endmacro
 
-%macro library 1-*
+%macro library 2-*
     %rep %0 / 2
         dd 0, 0, 0, RVA(_%1), RVA(%1)
         %rotate 2
@@ -137,7 +137,7 @@ _header_aligned_size equ $ - $$
 
 %endmacro
 
-%macro import 1-*
+%macro import 3-*
     %1:
         %rotate 1
         %rep (%0 - 1) / 2
@@ -164,16 +164,79 @@ _header_aligned_size equ $ - $$
             %rotate 2
         %endrep
 
-    %1_size equ position
+    %xdefine %1_size position
 %endmacro
 
-%macro invoke 1-*
+%macro function 1-*
+    %1:
+        push rbp
+        mov rbp, rsp
+
+        %assign i 2
+        %rotate 1
+        %rep %0 - 1
+            %xdefine %1 rbp + i * 8
+
+            %if i == 2
+                mov [%1], rcx
+            %endif
+            %if i == 3
+                mov [%1], rdx
+            %endif
+            %if i == 4
+                mov [%1], r8
+            %endif
+            %if i == 5
+                mov [%1], r9
+            %endif
+
+            %assign i i + 1
+            %rotate 1
+        %endrep
+%endmacro
+
+%macro return 1
+    mov rax, %1
+    leave
+    ret
+%endmacro
+
+%macro return 0
+    leave
+    ret
+%endmacro
+
+%macro local 2-*
+    %assign size 0
+    %rep %0 / 2
+        %assign size size + %2
+        %rotate 2
+    %endrep
+
+    sub rsp, size
+
+    %assign position 0
+    %rep %0 / 2
+        %assign position position + %2
+        %xdefine %1 ebp - position
+        %rotate 2
+    %endrep
+%endmacro
+
+%macro push_reverse 1-*
+    %rep %0
+        %rotate -1
+        push qword %1
+    %endrep
+%endmacro
+
+%macro fastcall 1-*
     %if %0 <= 4
-        sub rsp, 8 * 5
+        sub rsp, 4 * 8
     %elif %0 & 1
-        sub rsp, 8 * %0
+        sub rsp, (%0 - 1) * 8
     %else
-        sub rsp, 8 * (%0 + 1)
+        sub rsp, %0 * 8
     %endif
 
     %assign i %0 - 1
@@ -181,7 +244,7 @@ _header_aligned_size equ $ - $$
         %rotate -1
 
         %if i == 0
-            call [%1]
+            call %1
         %elif i == 1
             mov rcx, %1
         %elif i == 2
@@ -192,28 +255,39 @@ _header_aligned_size equ $ - $$
             mov r9, %1
         %else
             mov rax, %1
-            mov [rsp + i * 8], rax
+            mov [rsp + (i - 1) * 8], rax
         %endif
 
         %assign i i - 1
     %endrep
 
     %if %0 <= 4
-        add rsp, 8 * 5
+        add rsp, 4 * 8
     %elif %0 & 1
-        add rsp, 8 * %0
+        add rsp, (%0 - 1) * 8
     %else
-        add rsp, 8 * (%0 + 1)
+        add rsp, %0 * 8
     %endif
+%endmacro
+
+%macro invoke 2+
+    fastcall [%1], %2
+%endmacro
+
+%macro invoke 1
+    fastcall [%1]
 %endmacro
 
 ; Windows Library constants
 HWND_DESKTOP equ 0
+HWND_TOP equ 0
 
 MB_OK equ 0
 
 CS_VREDRAW equ 0x0001
 CS_HREDRAW equ 0x0002
+
+COLOR_WINDOW equ 5
 
 IDC_ARROW equ 32512
 
@@ -240,60 +314,65 @@ DT_CENTER equ 0x00000001
 DT_VCENTER equ 0x00000004
 DT_SINGLELINE equ 0x00000020
 
+; Windows Library structures
+%define WORD_size 2
+%define DWORD_size 4
+%define HANDLE_size 8
+
 struct SYSTEMTIME, \
-    wYear, 2, \
-    wMonth, 2, \
-    wDayOfWeek, 2, \
-    wDay, 2, \
-    wHour, 2, \
-    wMinute, 2, \
-    wSecond, 2, \
-    wMilliseconds, 2
+    wYear, WORD_size, \
+    wMonth, WORD_size, \
+    wDayOfWeek, WORD_size, \
+    wDay, WORD_size, \
+    wHour, WORD_size, \
+    wMinute, WORD_size, \
+    wSecond, WORD_size, \
+    wMilliseconds, WORD_size
 
 struct POINT, \
-    x, 4, \
-    y, 4
+    x, DWORD_size, \
+    y, DWORD_size
 
 struct RECT, \
-    left, 4, \
-    top, 4, \
-    right, 4, \
-    bottom, 4
+    left, DWORD_size, \
+    top, DWORD_size, \
+    right, DWORD_size, \
+    bottom, DWORD_size
 
 struct WNDCLASSEX, \
-    cbSize, 4, \
-    style, 4, \
-    lpfnWndProc, 8, \
-    cbClsExtra, 4, \
-    cbWndExtra, 4, \
-    hInstance, 8, \
-    hIcon, 8, \
-    hCursor, 8, \
-    hbrBackground, 8, \
-    lpszMenuName, 8, \
-    lpszClassName, 8, \
-    hIconSm, 8
+    cbSize, DWORD_size, \
+    style, DWORD_size, \
+    lpfnWndProc, HANDLE_size, \
+    cbClsExtra, DWORD_size, \
+    cbWndExtra, DWORD_size, \
+    hInstance, HANDLE_size, \
+    hIcon, HANDLE_size, \
+    hCursor, HANDLE_size, \
+    hbrBackground, HANDLE_size, \
+    lpszMenuName, HANDLE_size, \
+    lpszClassName, HANDLE_size, \
+    hIconSm, HANDLE_size
 
 struct MSG, \
-    hwnd, 8, \
-    message, 4, \
-    wParam, 8, \
-    lParam, 8, \
-    time, 4, \
-    pt, 8, \
-    lPrivate, 4
+    hwnd, HANDLE_size, \
+    message, DWORD_size, \
+    wParam, HANDLE_size, \
+    lParam, HANDLE_size, \
+    time, DWORD_size, \
+    pt, POINT_size, \
+    lPrivate, DWORD_size
 
 struct MINMAXINFO, \
-    ptReserved, 8, \
-    ptMaxSize, 8, \
-    ptMaxPosition, 8, \
-    ptMinTrackSize, 8, \
-    ptMaxTrackSize, 8
+    ptReserved, POINT_size, \
+    ptMaxSize, POINT_size, \
+    ptMaxPosition, POINT_size, \
+    ptMinTrackSize, POINT_size, \
+    ptMaxTrackSize, POINT_size
 
 struct PAINTSTRUCT, \
-    hdc, 8, \
-    fErase, 4, \
-    rcPaint, 16, \
-    fRestore, 4, \
-    fIncUpdate, 4, \
+    hdc, HANDLE_size, \
+    fErase, DWORD_size, \
+    rcPaint, RECT_size, \
+    fRestore, DWORD_size, \
+    fIncUpdate, DWORD_size, \
     rgbReserved, 32

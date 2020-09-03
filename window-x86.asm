@@ -19,10 +19,10 @@ code_section
 
         .wm_create:
             local window_rect, RECT_size, \
-                new_window_width, 4, \
-                new_window_height, 4, \
-                new_window_x, 4, \
-                new_window_y, 4
+                new_window_width, DWORD_size, \
+                new_window_height, DWORD_size, \
+                new_window_x, DWORD_size, \
+                new_window_y, DWORD_size
 
             lea eax, [window_rect]
             invoke GetClientRect, [hwnd], eax
@@ -62,7 +62,7 @@ code_section
         .wm_paint:
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
-                hfont, 4
+                hfont, DWORD_size
 
             lea eax, [paint_struct]
             invoke BeginPaint, [hwnd], eax
@@ -113,16 +113,25 @@ code_section
 
     _start:
         local time, SYSTEMTIME_size, \
-            hwnd, 4, \
+            hwnd, DWORD_size, \
             message, MSG_size
 
         lea eax, [time]
         invoke GetLocalTime, eax
+
         mov eax, [time + SYSTEMTIME.wHour]
+        and eax, 0x0000ffff
         imul eax, 60
-        add eax, [time + SYSTEMTIME.wMinute]
+
+        mov ecx, [time + SYSTEMTIME.wMinute]
+        and ecx, 0x0000ffff
+        add eax, ecx
         imul eax, 60
-        add eax, [time + SYSTEMTIME.wSecond]
+
+        mov ecx, [time + SYSTEMTIME.wSecond]
+        and ecx, 0x0000ffff
+        add eax, ecx
+
         mov [seed], eax
 
         invoke GetModuleHandleA, 0
