@@ -119,17 +119,14 @@ code_section
         lea eax, [time]
         invoke GetLocalTime, eax
 
-        mov eax, [time + SYSTEMTIME.wHour]
-        and eax, 0x0000ffff
+        movzx eax, word [time + SYSTEMTIME.wHour]
         imul eax, 60
 
-        mov ecx, [time + SYSTEMTIME.wMinute]
-        and ecx, 0x0000ffff
+        movzx ecx, word [time + SYSTEMTIME.wMinute]
         add eax, ecx
         imul eax, 60
 
-        mov ecx, [time + SYSTEMTIME.wSecond]
-        and ecx, 0x0000ffff
+        movzx ecx, word [time + SYSTEMTIME.wSecond]
         add eax, ecx
 
         mov [seed], eax

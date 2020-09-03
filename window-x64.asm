@@ -109,17 +109,14 @@ code_section
         lea r10, [time]
         invoke GetLocalTime, r10
 
-        mov eax, [time + SYSTEMTIME.wHour]
-        and eax, 0x0000ffff
+        movzx eax, word [time + SYSTEMTIME.wHour]
         imul eax, 60
 
-        mov ecx, [time + SYSTEMTIME.wMinute]
-        and ecx, 0x0000ffff
+        movzx ecx, word [time + SYSTEMTIME.wMinute]
         add eax, ecx
         imul eax, 60
 
-        mov ecx, [time + SYSTEMTIME.wSecond]
-        and ecx, 0x0000ffff
+        movzx ecx, word [time + SYSTEMTIME.wSecond]
         add eax, ecx
 
         mov [seed], eax
@@ -193,10 +190,10 @@ data_section
     new_window_y dd 0
 
     paint_struct times PAINTSTRUCT_size db 0
-    hfont dd 0
+    hfont dq 0
 
     time times SYSTEMTIME_size db 0
-    hwnd dd 0
+    hwnd dq 0
     message times MSG_size db 0
 
     import_table
