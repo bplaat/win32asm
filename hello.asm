@@ -1,17 +1,26 @@
-    ; hello-x86.asm - A 32-bit win32 assembly hello world program
+    ; hello.asm - An pure 32-bit and 64-bit win32 assembly hello world program
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
-    ; nasm -f bin hello-x86.asm -o hello-x86.exe && ./hello-x86
+    ; 32-bit: nasm -f bin hello.asm -o hello.exe && ./hello
+    ; 64-bit: nasm -DWIN64 -f bin hello.asm -o hello.exe && ./hello
 
-%include "libwindows-x86.inc"
+%ifdef WIN64
+    %include "libwindows-x64.inc"
+%else
+    %include "libwindows-x86.inc"
+%endif
 
 code_section
-    _start:
+    entrypoint
         invoke MessageBoxA, HWND_DESKTOP, message, message, MB_OK
         invoke ExitProcess, 0
 end_code_section
 
 data_section
-    message db "Hello World! (32-bit)", 0
+    %ifdef WIN64
+        message db "Hello World! (64-bit)", 0
+    %else
+        message db "Hello World! (32-bit)", 0
+    %endif
 
     import_table
         library kernel_table, "KERNEL32.DLL", \

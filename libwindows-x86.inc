@@ -35,7 +35,7 @@
     dd _code_section_aligned_size ; SizeOfCode
     dd _data_section_aligned_size ; SizeOfInitializedData
     dd 0                          ; SizeOfUninitializedData
-    dd RVA(_start)                ; AddressOfEntryPoint
+    dd RVA(_entrypoint)           ; AddressOfEntryPoint
     dd RVA(_code_section)         ; BaseOfCode
     dd RVA(_data_section)         ; BaseOfData
 
@@ -102,6 +102,11 @@ _header_aligned_size equ $ - $$
     _code_section_aligned_size equ $ - _code_section
 %endmacro
 
+%macro entrypoint 0
+    _entrypoint:
+        mov ebp, esp
+%endmacro
+
 ; Data section
 %macro data_section 0
     _data_section:
@@ -135,7 +140,6 @@ _header_aligned_size equ $ - $$
         _%1 db %2, 0
         %rotate 2
     %endrep
-
 %endmacro
 
 %macro import 3-*
@@ -164,7 +168,6 @@ _header_aligned_size equ $ - $$
             %assign position position + %2
             %rotate 2
         %endrep
-
     %xdefine %1_size position
 %endmacro
 
@@ -186,12 +189,14 @@ _header_aligned_size equ $ - $$
 
 %macro return 1
     mov eax, %1
-    leave
+    mov esp, ebp
+    pop ebp
     ret ._arguments_size
 %endmacro
 
 %macro return 0
-    leave
+    mov esp, ebp
+    pop ebp
     ret ._arguments_size
 %endmacro
 
@@ -219,22 +224,28 @@ _header_aligned_size equ $ - $$
     %endrep
 %endmacro
 
-%macro stdcall 2+
+%macro fcall 2+
     push_reverse %2
     call %1
 %endmacro
 
-%macro stdcall 1
+%macro fcall 1
     call %1
 %endmacro
 
 %macro invoke 2+
-    stdcall [%1], %2
+    fcall [%1], %2
 %endmacro
 
 %macro invoke 1
-    stdcall [%1]
+    fcall [%1]
 %endmacro
+
+; Virtual registers constants
+%define _ax eax
+%define _bx ebx
+%define _cx ecx
+%define _dx edx
 
 ; Windows Library constants
 HWND_DESKTOP equ 0
@@ -274,8 +285,11 @@ DT_SINGLELINE equ 0x00000020
 
 ; Windows Library structures
 %define WORD_size 2
+%define WORD_size_word word
 %define DWORD_size 4
+%define DWORD_size_word dword
 %define HANDLE_size 4
+%define HANDLE_size_word dword
 
 struct SYSTEMTIME, \
     wYear, WORD_size, \

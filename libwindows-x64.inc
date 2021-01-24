@@ -35,7 +35,7 @@
     dd _code_section_aligned_size ; SizeOfCode
     dd _data_section_aligned_size ; SizeOfInitializedData
     dd 0                          ; SizeOfUninitializedData
-    dd RVA(_start)                ; AddressOfEntryPoint
+    dd RVA(_entrypoint)           ; AddressOfEntryPoint
     dd RVA(_code_section)         ; BaseOfCode
 
     dq _base                      ; ImageBase
@@ -99,6 +99,12 @@ _header_aligned_size equ $ - $$
     _code_section_size equ $ - _code_section
         align _alignment, db 0
     _code_section_aligned_size equ $ - _code_section
+%endmacro
+
+%macro entrypoint 0
+    _entrypoint:
+        sub rsp, 8
+        mov rbp, rsp
 %endmacro
 
 ; Data section
@@ -197,12 +203,14 @@ _header_aligned_size equ $ - $$
 
 %macro return 1
     mov rax, %1
-    leave
+    mov rsp, rbp
+    pop rbp
     ret
 %endmacro
 
 %macro return 0
-    leave
+    mov rsp, rbp
+    pop rbp
     ret
 %endmacro
 
@@ -213,30 +221,21 @@ _header_aligned_size equ $ - $$
         %rotate 2
     %endrep
 
-    sub rsp, size
+    sub rsp, (size + 15) & (~15)
 
     %assign position 0
     %rep %0 / 2
         %assign position position + %2
-        %xdefine %1 ebp - position
+        %xdefine %1 rbp - position
         %rotate 2
     %endrep
 %endmacro
 
-%macro push_reverse 1-*
-    %rep %0
-        %rotate -1
-        push qword %1
-    %endrep
-%endmacro
-
-%macro fastcall 1-*
-    %if %0 <= 4
-        sub rsp, 4 * 8
-    %elif %0 & 1
-        sub rsp, (%0 - 1) * 8
+%macro fcall 1-*
+    %if (%0 - 1) > 4
+        sub rsp, (((%0 - 1) * 8) + 15) & (~15)
     %else
-        sub rsp, %0 * 8
+        sub rsp, 4 * 8
     %endif
 
     %assign i %0 - 1
@@ -254,29 +253,33 @@ _header_aligned_size equ $ - $$
         %elif i == 4
             mov r9, %1
         %else
-            mov rax, %1
-            mov [rsp + (i - 1) * 8], rax
+            mov rcx, %1
+            mov [rsp + (i - 1) * 8], rcx
         %endif
 
         %assign i i - 1
     %endrep
 
-    %if %0 <= 4
-        add rsp, 4 * 8
-    %elif %0 & 1
-        add rsp, (%0 - 1) * 8
+    %if (%0 - 1) > 4
+        add rsp, (((%0 - 1) * 8) + 15) & (~15)
     %else
-        add rsp, %0 * 8
+        add rsp, 4 * 8
     %endif
 %endmacro
 
 %macro invoke 2+
-    fastcall [%1], %2
+    fcall [%1], %2
 %endmacro
 
 %macro invoke 1
-    fastcall [%1]
+    fcall [%1]
 %endmacro
+
+; Virtual registers constants
+%define _ax rax
+%define _bx rbx
+%define _cx rcx
+%define _dx rdx
 
 ; Windows Library constants
 HWND_DESKTOP equ 0
@@ -316,8 +319,11 @@ DT_SINGLELINE equ 0x00000020
 
 ; Windows Library structures
 %define WORD_size 2
+%define WORD_size_word word
 %define DWORD_size 4
+%define DWORD_size_word dword
 %define HANDLE_size 8
+%define HANDLE_size_word qword
 
 struct SYSTEMTIME, \
     wYear, WORD_size, \
