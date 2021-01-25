@@ -10,6 +10,43 @@
 %endif
 
 code_section
+    ; ### Simple random number generator code ###
+
+    ; Generate rand seed by time
+    function rand_generate_seed
+        local time, SYSTEMTIME_size
+
+        lea _ax, [time]
+        invoke GetLocalTime, _ax
+
+        movzx eax, WORD_size_word [time + SYSTEMTIME.wHour]
+        imul eax, 60
+
+        movzx ecx, WORD_size_word [time + SYSTEMTIME.wMinute]
+        add eax, ecx
+        imul eax, 60
+
+        movzx ecx, WORD_size_word [time + SYSTEMTIME.wSecond]
+        add eax, ecx
+
+        mov [seed], eax
+
+        return
+
+    ; Simple random number generator function
+    function rand_rand
+        imul eax, [seed], 1103515245
+        add eax, 12345
+
+        mov edx, 0
+        mov ecx, 1 << 31
+        idiv ecx
+
+        mov [seed], edx
+        return _dx
+
+    ; ### Window code ###
+
     ; Window procedure function
     function WindowProc, hwnd, uMsg, wParam, lParam
         mov eax, [uMsg]
@@ -109,40 +146,14 @@ code_section
 
         %undef hwnd
 
-    ; Simple random number generator function
-    function rand
-        imul eax, [seed], 1103515245
-        add eax, 12345
-
-        mov edx, 0
-        mov ecx, 1 << 31
-        idiv ecx
-
-        mov [seed], edx
-        return _dx
-
     ; Main entry point
     entrypoint
-        local time, SYSTEMTIME_size, \
-            window_class, WNDCLASSEX_size, \
+        local window_class, WNDCLASSEX_size, \
             hwnd, DWORD_size, \
             message, MSG_size
 
-        ; Fill the seed with current time in seconds
-        lea _ax, [time]
-        invoke GetLocalTime, _ax
-
-        movzx eax, WORD_size_word [time + SYSTEMTIME.wHour]
-        imul eax, 60
-
-        movzx ecx, WORD_size_word [time + SYSTEMTIME.wMinute]
-        add eax, ecx
-        imul eax, 60
-
-        movzx ecx, WORD_size_word [time + SYSTEMTIME.wSecond]
-        add eax, ecx
-
-        mov [seed], eax
+        ; Generate rand seed
+        fcall rand_generate_seed
 
         ; Register the window class
         mov DWORD_size_word [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -158,12 +169,14 @@ code_section
         invoke GetModuleHandleA, 0
         mov [window_class + WNDCLASSEX.hInstance], _ax
 
-        mov HANDLE_size_word [window_class + WNDCLASSEX.hIcon], 0
+        invoke LoadIconA, 0, IDI_APPLICATION
+        mov HANDLE_size_word [window_class + WNDCLASSEX.hIcon], _ax
+        mov HANDLE_size_word [window_class + WNDCLASSEX.hIconSm], _ax
 
         invoke LoadCursorA, 0, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
-        fcall rand
+        fcall rand_rand
         and eax, 0x00ffffff
         invoke CreateSolidBrush, _ax
         mov [window_class + WNDCLASSEX.hbrBackground], _ax
@@ -171,8 +184,6 @@ code_section
         mov HANDLE_size_word [window_class + WNDCLASSEX.lpszMenuName], 0
 
         mov HANDLE_size_word [window_class + WNDCLASSEX.lpszClassName], window_class_name
-
-        mov HANDLE_size_word [window_class + WNDCLASSEX.hIconSm], 0
 
         lea _ax, [window_class]
         invoke RegisterClassExA, _ax
@@ -206,7 +217,7 @@ end_code_section
 
 data_section
     ; String constants
-    window_class_name db "test", 0
+    window_class_name db "window-test", 0
     %ifdef WIN64
         window_title db "This is a test window (64-bit)", 0
     %else
@@ -249,6 +260,7 @@ data_section
             GetMessageA, "GetMessageA", \
             GetSystemMetrics, "GetSystemMetrics", \
             LoadCursorA, "LoadCursorA", \
+            LoadIconA, "LoadIconA", \
             PostQuitMessage, "PostQuitMessage", \
             RegisterClassExA, "RegisterClassExA", \
             ShowWindow, "ShowWindow", \
