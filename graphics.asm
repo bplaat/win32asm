@@ -10,6 +10,13 @@
     %include "libwindows-x86.inc"
 %endif
 
+; A simple rect struct
+struct Rect, \
+    x, DWORD_size, \
+    y, DWORD_size, \
+    width, DWORD_size, \
+    height, DWORD_size
+
 code_section
     ; ### Simple random number generator code ###
 
@@ -115,10 +122,9 @@ code_section
             ; Draw stuff in the window via GDI+
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
-                graphics, GpGraphics_size, \
-                graphics_pointer, POINTER_size, \
-                pen, GpPen_size, \
-                pen_pointer, POINTER_size
+                graphics, POINTER_size, \
+                pen, POINTER_size, \
+                items_rect, Rect_size
 
             lea _ax, [paint_struct]
             invoke BeginPaint, [hwnd], _ax
@@ -128,40 +134,46 @@ code_section
 
             ; Create GDI+ Graphics object
             lea _ax, [graphics]
-            mov POINTER_size_word [graphics_pointer], _ax
-            lea _ax, [graphics_pointer]
             invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], _ax
 
             ; Enable anti aliasing
-            invoke GdipSetSmoothingMode, [graphics_pointer], SmoothingModeAntiAlias
+            invoke GdipSetSmoothingMode, [graphics], SmoothingModeAntiAlias
 
             ; Clear screen with window background color
-            invoke GdipGraphicsClear, [graphics_pointer], [window_background_color]
+            invoke GdipGraphicsClear, [graphics], [window_background_color]
 
             ; Create GDI+ pen object
             lea _ax, [pen]
-            mov POINTER_size_word [pen_pointer], _ax
-            lea _ax, [pen_pointer]
             invoke GdipCreatePen1, 0xffffffff, [line_width], UnitPixel, _ax
 
             ; Draw a cross with lines
-            invoke GdipDrawLineI, [graphics_pointer], [pen_pointer], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
-            invoke GdipDrawLineI, [graphics_pointer], [pen_pointer], [window_rect + RECT.right], 0, 0, [window_rect + RECT.bottom]
+            invoke GdipDrawLineI, [graphics], [pen], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
+            invoke GdipDrawLineI, [graphics], [pen], [window_rect + RECT.right], 0, 0, [window_rect + RECT.bottom]
 
-            ; Draw a circle in the middle
-            mov ebx, [window_rect + RECT.bottom]
-            shr ebx, 1
+            ; Calculate items rect
+            mov eax, [window_rect + RECT.right]
+            shr eax, 2
+            mov [items_rect + Rect.x], eax
+
+            mov eax, [window_rect + RECT.bottom]
+            shr eax, 2
+            mov [items_rect + Rect.y], eax
+
             mov eax, [window_rect + RECT.right]
             shr eax, 1
-            mov edi, [window_rect + RECT.bottom]
-            shr edi, 2
-            mov esi, [window_rect + RECT.right]
-            shr esi, 2
-            invoke GdipDrawEllipseI, [graphics_pointer], [pen_pointer], _si, _di, _ax, _bx
+            mov [items_rect + Rect.width], eax
+
+            mov eax, [window_rect + RECT.bottom]
+            shr eax, 1
+            mov [items_rect + Rect.height], eax
+
+            ; Draw a circle and a rect in the middle with items rect
+            invoke GdipDrawEllipseI, [graphics], [pen], [items_rect + Rect.x], [items_rect + Rect.y], [items_rect + Rect.width], [items_rect + Rect.height]
+            invoke GdipDrawRectangleI, [graphics], [pen], [items_rect + Rect.x], [items_rect + Rect.y], [items_rect + Rect.width], [items_rect + Rect.height]
 
             ; Delete the GDI+ objects
-            invoke GdipDeletePen, [pen_pointer]
-            invoke GdipDeleteGraphics, [graphics_pointer]
+            invoke GdipDeletePen, [pen]
+            invoke GdipDeleteGraphics, [graphics]
 
             lea _ax, [paint_struct]
             invoke EndPaint, [hwnd], _ax
@@ -292,6 +304,7 @@ data_section
             GdipDeletePen, "GdipDeletePen", \
             GdipDrawEllipseI, "GdipDrawEllipseI", \
             GdipDrawLineI, "GdipDrawLineI", \
+            GdipDrawRectangleI, "GdipDrawRectangleI", \
             GdipGraphicsClear, "GdipGraphicsClear", \
             GdipSetSmoothingMode, "GdipSetSmoothingMode", \
             GdiplusShutdown, "GdiplusShutdown", \

@@ -284,12 +284,16 @@ _header_aligned_size equ $ - $$
 %define _di rdi
 
 ; Windows Library structures
+%define BYTE_size 1
+%define BYTE_size_word byte
 %define WORD_size 2
 %define WORD_size_word word
 %define DWORD_size 4
 %define DWORD_size_word dword
-%define POINTER_size 8
-%define POINTER_size_word qword
+%define QWORD_size 8
+%define QWORD_size_word qword
+%define POINTER_size QWORD_size
+%define POINTER_size_word QWORD_size_word
 
 ; Include the shared libwindows stuff
 %include "libwindows-shared.inc"

@@ -93,7 +93,7 @@ struct PAINTSTRUCT, \
     rcPaint, RECT_size, \
     fRestore, DWORD_size, \
     fIncUpdate, DWORD_size, \
-    rgbReserved, 32
+    rgbReserved, 32 * BYTE_size
 
 ; Gdi32
 CLEARTYPE_QUALITY equ 5
@@ -110,9 +110,3 @@ struct GdiplusStartupInput, \
     DebugEventCallback, POINTER_size, \
     SuppressBackgroundThread, DWORD_size, \
     SuppressExternalCodecs, DWORD_size
-
-struct GpGraphics, \
-    fill, 128 ; TODO
-
-struct GpPen, \
-    fill, 128 ; TODO
