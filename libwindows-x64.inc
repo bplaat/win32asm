@@ -1,4 +1,4 @@
-    ; libwindows-x64.asm - A 64-bit win32 assembly helper library
+    ; libwindows-x64.inc - A 64-bit win32 assembly helper library
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
 
     ; PE header
@@ -281,106 +281,13 @@ _header_aligned_size equ $ - $$
 %define _cx rcx
 %define _dx rdx
 
-; Windows Library constants
-HWND_DESKTOP equ 0
-HWND_TOP equ 0
-
-MB_OK equ 0
-
-CS_VREDRAW equ 0x0001
-CS_HREDRAW equ 0x0002
-
-COLOR_WINDOW equ 5
-
-IDI_APPLICATION equ 32512
-
-IDC_ARROW equ 32512
-
-CW_USEDEFAULT equ 0x80000000
-WS_OVERLAPPEDWINDOW equ 0x00CF0000
-
-SW_SHOWDEFAULT equ 10
-
-WM_CREATE equ 0x0001
-WM_GETMINMAXINFO equ 0x0024
-WM_DESTROY equ 0x0002
-WM_PAINT equ 0x000F
-
-SM_CXSCREEN equ 0
-SM_CYSCREEN equ 1
-
-SWP_NOZORDER equ 0x0004
-
-CLEARTYPE_QUALITY equ 5
-
-TRANSPARENT equ 1
-
-DT_CENTER equ 0x00000001
-DT_VCENTER equ 0x00000004
-DT_SINGLELINE equ 0x00000020
-
 ; Windows Library structures
 %define WORD_size 2
 %define WORD_size_word word
 %define DWORD_size 4
 %define DWORD_size_word dword
-%define HANDLE_size 8
-%define HANDLE_size_word qword
+%define POINTER_size 8
+%define POINTER_size_word qword
 
-struct SYSTEMTIME, \
-    wYear, WORD_size, \
-    wMonth, WORD_size, \
-    wDayOfWeek, WORD_size, \
-    wDay, WORD_size, \
-    wHour, WORD_size, \
-    wMinute, WORD_size, \
-    wSecond, WORD_size, \
-    wMilliseconds, WORD_size
-
-struct POINT, \
-    x, DWORD_size, \
-    y, DWORD_size
-
-struct RECT, \
-    left, DWORD_size, \
-    top, DWORD_size, \
-    right, DWORD_size, \
-    bottom, DWORD_size
-
-struct WNDCLASSEX, \
-    cbSize, DWORD_size, \
-    style, DWORD_size, \
-    lpfnWndProc, HANDLE_size, \
-    cbClsExtra, DWORD_size, \
-    cbWndExtra, DWORD_size, \
-    hInstance, HANDLE_size, \
-    hIcon, HANDLE_size, \
-    hCursor, HANDLE_size, \
-    hbrBackground, HANDLE_size, \
-    lpszMenuName, HANDLE_size, \
-    lpszClassName, HANDLE_size, \
-    hIconSm, HANDLE_size
-
-struct MSG, \
-    hwnd, HANDLE_size, \
-    message, DWORD_size, \
-    wParam, HANDLE_size, \
-    lParam, HANDLE_size, \
-    time, DWORD_size, \
-    pt, POINT_size, \
-    lPrivate, DWORD_size
-
-struct MINMAXINFO, \
-    ptReserved, POINT_size, \
-    ptMaxSize, POINT_size, \
-    ptMaxPosition, POINT_size, \
-    ptMinTrackSize, POINT_size, \
-    ptMaxTrackSize, POINT_size
-
-struct PAINTSTRUCT, \
-    hdc, HANDLE_size, \
-    fErase, DWORD_size, \
-    rcPaint, RECT_size, \
-    fRestore, DWORD_size, \
-    fIncUpdate, DWORD_size, \
-    rgbReserved, 32
+; Include the shared libwindows stuff
+%include "libwindows-shared.inc"

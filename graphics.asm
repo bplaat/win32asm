@@ -1,7 +1,8 @@
-    ; window.asm - An pure 32-bit and 64-bit win32 assembly window program
+    ; graphics.asm - An pure 32-bit and 64-bit win32 assembly GDI+ program
+    ; Because the flat GDI+ API gives antialias drawing methods
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
-    ; 32-bit: nasm -f bin window.asm -o window-x86.exe && ./window-x86
-    ; 64-bit: nasm -DWIN64 -f bin window.asm -o window-x64.exe && ./window-x64
+    ; 32-bit: nasm -f bin graphics.asm -o graphics-x86.exe && ./graphics-x86
+    ; 64-bit: nasm -DWIN64 -f bin graphics.asm -o graphics-x64.exe && ./graphics-x64
 
 %ifdef WIN64
     %include "libwindows-x64.inc"
@@ -61,6 +62,12 @@ code_section
         jmp .default
 
         .wm_create:
+            ; Generate random background color
+            fcall rand_rand
+            and eax, 0x00ffffff
+            or eax, 0xff000000
+            mov [window_background_color], eax
+
             ; Center new created window
             local window_rect, RECT_size, \
                 new_window_width, DWORD_size, \
@@ -105,10 +112,13 @@ code_section
             jmp .leave
 
         .wm_paint:
-            ; Draw a centered text in the window
+            ; Draw a cross with lines in the window via GDI+
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
-                hfont, DWORD_size
+                graphics, GpGraphics_size, \
+                graphics_pointer, POINTER_size, \
+                pen, GpPen_size, \
+                pen_pointer, POINTER_size
 
             lea _ax, [paint_struct]
             invoke BeginPaint, [hwnd], _ax
@@ -116,19 +126,31 @@ code_section
             lea _ax, [window_rect]
             invoke GetClientRect, [hwnd], _ax
 
-            mov eax, [window_rect + RECT.right]
-            shr eax, 4
-            invoke CreateFontA, _ax, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
-            mov [hfont], _ax
+            ; Create GDI+ Graphics object
+            lea _ax, [graphics]
+            mov POINTER_size_word [graphics_pointer], _ax
+            lea _ax, [graphics_pointer]
+            invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], _ax
 
-            invoke SelectObject, [paint_struct + PAINTSTRUCT.hdc], [hfont]
-            invoke SetBkMode, [paint_struct + PAINTSTRUCT.hdc], TRANSPARENT
-            invoke SetTextColor, [paint_struct + PAINTSTRUCT.hdc], 0x00ffffff
+            ; Enable anti aliasing
+            invoke GdipSetSmoothingMode, [graphics_pointer], SmoothingModeAntiAlias
 
-            lea _ax, [window_rect]
-            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, _ax, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+            ; Clear screen with window background color
+            invoke GdipGraphicsClear, [graphics_pointer], [window_background_color]
 
-            invoke DeleteObject, [hfont]
+            ; Create GDI+ pen object
+            lea _ax, [pen]
+            mov POINTER_size_word [pen_pointer], _ax
+            lea _ax, [pen_pointer]
+            invoke GdipCreatePen1, 0xffffffff, [line_width], UnitPixel, _ax
+
+            ; Draw a cross with lines
+            invoke GdipDrawLineI, [graphics_pointer], [pen_pointer], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
+            invoke GdipDrawLineI, [graphics_pointer], [pen_pointer], [window_rect + RECT.right], 0, 0, [window_rect + RECT.bottom]
+
+            ; Delete GDI+ objects
+            invoke GdipDeletePen, [pen_pointer]
+            invoke GdipDeleteGraphics, [graphics_pointer]
 
             lea _ax, [paint_struct]
             invoke EndPaint, [hwnd], _ax
@@ -148,12 +170,24 @@ code_section
 
     ; Main entry point
     entrypoint
-        local window_class, WNDCLASSEX_size, \
+        local gdiplusToken, DWORD_size, \
+            gdiplusStartupInput, GdiplusStartupInput_size, \
+            window_class, WNDCLASSEX_size, \
             hwnd, DWORD_size, \
             message, MSG_size
 
         ; Generate rand seed
         fcall rand_generate_seed
+
+        ; Startup GDI+
+        mov DWORD_size_word [gdiplusStartupInput + GdiplusStartupInput.GdiplusVersion], 1
+        mov POINTER_size_word [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], 0
+        mov DWORD_size_word [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], 0
+        mov DWORD_size_word [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], 0
+
+        lea _bx, [gdiplusStartupInput]
+        lea _ax, [gdiplusToken]
+        invoke GdiplusStartup, _ax, _bx, 0
 
         ; Register the window class
         mov DWORD_size_word [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -176,10 +210,7 @@ code_section
         invoke LoadCursorA, 0, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
-        fcall rand_rand
-        and eax, 0x00ffffff
-        invoke CreateSolidBrush, _ax
-        mov [window_class + WNDCLASSEX.hbrBackground], _ax
+        mov POINTER_size_word [window_class + WNDCLASSEX.hbrBackground], COLOR_WINDOW + 1
 
         mov POINTER_size_word [window_class + WNDCLASSEX.lpszMenuName], 0
 
@@ -212,37 +243,47 @@ code_section
 
             jmp .message_loop
         .done:
+            ; Shutdown GDI+
+            invoke GdiplusShutdown, [gdiplusToken]
+
             invoke ExitProcess, [message + MSG.wParam]
 end_code_section
 
 data_section
     ; String constants
-    window_class_name db "window-test", 0
+    window_class_name db "graphics-test", 0
     %ifdef WIN64
-        window_title db "This is a test window (64-bit)", 0
+        window_title db "This is a test GDI+ window (64-bit)", 0
     %else
-        window_title db "This is a test window (32-bit)", 0
+        window_title db "This is a test GDI+ window (32-bit)", 0
     %endif
     font_name db "Tahoma", 0
 
     ; Global variables
     seed dd 0
-    window_width dd 800
-    window_height dd 600
+    window_width dd 1280
+    window_height dd 720
+    window_background_color dd 0
+
+    ; Float variables
+    line_width dd 1.0
 
     ; Import table
     import_table
-        library gdi_table, "GDI32.DLL", \
+        library gdiplus_table, "gdiplus.dll", \
             kernel_table, "KERNEL32.DLL", \
             user_table, "USER32.DLL"
 
-        import gdi_table, \
-            CreateFontA, "CreateFontA", \
-            CreateSolidBrush, "CreateSolidBrush", \
-            DeleteObject, "DeleteObject", \
-            SelectObject, "SelectObject", \
-            SetBkMode, "SetBkMode", \
-            SetTextColor, "SetTextColor"
+        import gdiplus_table, \
+            GdipCreateFromHDC, "GdipCreateFromHDC", \
+            GdipCreatePen1, "GdipCreatePen1", \
+            GdipDeleteGraphics, "GdipDeleteGraphics", \
+            GdipDeletePen, "GdipDeletePen", \
+            GdipDrawLineI, "GdipDrawLineI", \
+            GdipGraphicsClear, "GdipGraphicsClear", \
+            GdipSetSmoothingMode, "GdipSetSmoothingMode", \
+            GdiplusShutdown, "GdiplusShutdown", \
+            GdiplusStartup, "GdiplusStartup"
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
@@ -254,7 +295,6 @@ data_section
             CreateWindowExA, "CreateWindowExA", \
             DefWindowProcA, "DefWindowProcA", \
             DispatchMessageA, "DispatchMessageA", \
-            DrawTextA, "DrawTextA", \
             EndPaint, "EndPaint", \
             GetClientRect, "GetClientRect", \
             GetMessageA, "GetMessageA", \
