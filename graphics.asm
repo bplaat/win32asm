@@ -1,5 +1,6 @@
     ; graphics.asm - An pure 32-bit and 64-bit win32 assembly GDI+ program
     ; Because the flat GDI+ API gives antialiased drawing methods
+    ; This program uses SSE floating point extentions
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
     ; 32-bit: nasm -f bin graphics.asm -o graphics-x86.exe && ./graphics-x86
     ; 64-bit: nasm -DWIN64 -f bin graphics.asm -o graphics-x64.exe && ./graphics-x64
@@ -39,7 +40,7 @@ code_section
         imul eax, [seed], 1103515245
         add eax, 12345
 
-        mov edx, 0
+        xor edx, edx
         mov ecx, 1 << 31
         idiv ecx
 
@@ -53,8 +54,12 @@ code_section
         mov eax, [uMsg]
         cmp eax, WM_CREATE
         je .wm_create
+        cmp eax, WM_SIZE
+        je .wm_size
         cmp eax, WM_GETMINMAXINFO
         je .wm_getminmaxinfo
+        cmp eax, WM_ERASEBKGND
+        je .wm_erasebkgnd
         cmp eax, WM_PAINT
         je .wm_paint
         cmp eax, WM_DESTROY
@@ -66,7 +71,7 @@ code_section
             fcall rand_rand
             and eax, 0x00ffffff
             or eax, 0xff000000
-            mov [window_background_color], eax
+            mov [background_color], eax
 
             ; Center new created window
             local window_rect, RECT_size, \
@@ -101,6 +106,21 @@ code_section
 
             %undef window_rect
 
+        .wm_size:
+            ; Save new window size
+            movzx eax, WORD_size_word [lParam]
+            mov [window_width], eax
+
+            mov eax, DWORD_size_word [lParam]
+            shr eax, 16
+            mov [window_height], eax
+
+            jmp .leave
+
+        .wm_erasebkgnd:
+            ; This window draws it's own background
+            return 1
+
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
@@ -113,8 +133,16 @@ code_section
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
                 graphics, POINTER_size, \
+                line_width, DWORD_size, \
                 pen, POINTER_size, \
-                items_rect, Rect_size
+                items_rect, Rect_size, \
+                font_family, POINTER_size, \
+                font_size, DWORD_size, \
+                font, POINTER_size, \
+                text_brush, POINTER_size, \
+                string_format, POINTER_size, \
+                text_rect, Rect_size, \
+                text_buffer, 64 * BYTE_size
 
             lea _ax, [paint_struct]
             invoke BeginPaint, [hwnd], _ax
@@ -122,18 +150,26 @@ code_section
             lea _ax, [window_rect]
             invoke GetClientRect, [hwnd], _ax
 
-            ; Create GDI+ Graphics object
+            ; Create graphics object
             lea _ax, [graphics]
             invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], _ax
 
             ; Enable anti aliasing
             invoke GdipSetSmoothingMode, [graphics], SmoothingModeAntiAlias
+            invoke GdipSetTextRenderingHint, [graphics], TextRenderingHintClearTypeGridFit
 
             ; Clear screen with window background color
-            invoke GdipGraphicsClear, [graphics], [window_background_color]
+            invoke GdipGraphicsClear, [graphics], [background_color]
 
-            ; Create GDI+ pen object
+            ; Create pen object
+            mov eax, 3
+            cvtsi2ss xmm0, eax
+            movss [line_width], xmm0
+
             lea _ax, [pen]
+            %ifdef WIN64
+                movss xmm1, [line_width]
+            %endif
             invoke GdipCreatePen1, 0xffffffff, [line_width], UnitPixel, _ax
 
             ; Draw a cross with lines
@@ -161,7 +197,67 @@ code_section
             invoke GdipDrawEllipseI, [graphics], [pen], [items_rect + Rect.x], [items_rect + Rect.y], [items_rect + Rect.width], [items_rect + Rect.height]
             invoke GdipDrawRectangleI, [graphics], [pen], [items_rect + Rect.x], [items_rect + Rect.y], [items_rect + Rect.width], [items_rect + Rect.height]
 
+            ; Calculate font size by window width
+            mov eax, [window_width]
+            cvtsi2ss xmm0, eax
+            mov eax, 30
+            cvtsi2ss xmm1, eax
+            divss xmm0, xmm1
+            movss [font_size], xmm0
+
+            ; Create font object
+            lea _ax, [font_family]
+            invoke GdipCreateFontFamilyFromName, font_name, 0, _ax
+
+            lea _ax, [font]
+            %ifdef WIN64
+                movss xmm1, [font_size]
+            %endif
+            invoke GdipCreateFont, [font_family], [font_size], FontStyleRegular, UnitPixel, _ax
+
+            ; Create text solid fill brush object
+            lea _ax, [text_brush]
+            invoke GdipCreateSolidFill, 0xffffffff, _ax
+
+            ; Create centered string format object
+            lea _ax, [string_format]
+            invoke GdipStringFormatGetGenericDefault, _ax
+            invoke GdipSetStringFormatAlign, [string_format], StringAlignmentCenter
+
+            ; Calculate text_rect
+            mov eax, [window_rect + RECT.right]
+            cvtsi2ss xmm0, eax
+            movss [text_rect + Rect.width], xmm0
+
+            movss xmm1, [font_size]
+            mov eax, 2
+            cvtsi2ss xmm2, eax
+            mulss xmm1, xmm2
+            movss [text_rect + Rect.height], xmm1
+
+            mov eax, 0
+            cvtsi2ss xmm0, eax
+            movss [text_rect + Rect.x], xmm0
+
+            mov eax, [window_rect + RECT.bottom]
+            cvtsi2ss xmm0, eax
+            subss xmm0, xmm1
+            movss [text_rect + Rect.y], xmm0
+
+            ; Generate window size string
+            lea _ax, [text_buffer]
+            cinvoke wsprintfW, _ax, window_size_format, [window_width], [window_height]
+
+            ; Draw window size text
+            lea _bx, [text_rect]
+            lea _ax, [text_buffer]
+            invoke GdipDrawString, [graphics], _ax, -1, [font], _bx, [string_format], [text_brush]
+
             ; Delete the GDI+ objects
+            invoke GdipDeleteStringFormat, [string_format]
+            invoke GdipDeleteBrush, [text_brush]
+            invoke GdipDeleteFont, [font]
+            invoke GdipDeleteFontFamily, [font_family]
             invoke GdipDeletePen, [pen]
             invoke GdipDeleteGraphics, [graphics]
 
@@ -270,16 +366,14 @@ data_section
     %else
         window_title db "This is a test GDI+ window (32-bit)", 0
     %endif
-    font_name db "Tahoma", 0
+    font_name dw "T","a","h","o","m","a", 0
+    window_size_format dw "(","%","d","x","%","d",")", 0
 
     ; Global variables
     seed dd 0
     window_width dd 1280
     window_height dd 720
-    window_background_color dd 0
-
-    ; Float variables
-    line_width dd 1.0
+    background_color dd 0
 
     ; Import table
     import_table
@@ -288,15 +382,26 @@ data_section
             user_table, "USER32.DLL"
 
         import gdiplus_table, \
+            GdipCreateFont, "GdipCreateFont", \
+            GdipCreateFontFamilyFromName, "GdipCreateFontFamilyFromName", \
             GdipCreateFromHDC, "GdipCreateFromHDC", \
             GdipCreatePen1, "GdipCreatePen1", \
+            GdipCreateSolidFill, "GdipCreateSolidFill", \
+            GdipDeleteBrush, "GdipDeleteBrush", \
+            GdipDeleteFont, "GdipDeleteFont", \
+            GdipDeleteFontFamily, "GdipDeleteFontFamily", \
             GdipDeleteGraphics, "GdipDeleteGraphics", \
             GdipDeletePen, "GdipDeletePen", \
+            GdipDeleteStringFormat, "GdipDeleteStringFormat", \
             GdipDrawEllipseI, "GdipDrawEllipseI", \
             GdipDrawLineI, "GdipDrawLineI", \
             GdipDrawRectangleI, "GdipDrawRectangleI", \
+            GdipDrawString, "GdipDrawString", \
             GdipGraphicsClear, "GdipGraphicsClear", \
             GdipSetSmoothingMode, "GdipSetSmoothingMode", \
+            GdipSetStringFormatAlign, "GdipSetStringFormatAlign", \
+            GdipStringFormatGetGenericDefault, "GdipStringFormatGetGenericDefault", \
+            GdipSetTextRenderingHint, "GdipSetTextRenderingHint", \
             GdiplusShutdown, "GdiplusShutdown", \
             GdiplusStartup, "GdiplusStartup"
 
@@ -321,6 +426,7 @@ data_section
             ShowWindow, "ShowWindow", \
             SetWindowPos, "SetWindowPos", \
             TranslateMessage, "TranslateMessage", \
-            UpdateWindow, "UpdateWindow"
+            UpdateWindow, "UpdateWindow", \
+            wsprintfW, "wsprintfW"
     end_import_table
 end_data_section

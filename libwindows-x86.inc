@@ -224,21 +224,42 @@ _header_aligned_size equ $ - $$
     %endrep
 %endmacro
 
-%macro fcall 2+
+%macro stdcall 2+
     push_reverse %2
     call %1
 %endmacro
-
-%macro fcall 1
+%macro stdcall 1
     call %1
 %endmacro
 
-%macro invoke 2+
-    fcall [%1], %2
+%macro cdeclcall 2+
+    push_reverse %2
+    call %1
+    add esp, (%0 - 1) * 4
+%endmacro
+%macro cdeclcall 1
+    call %1
 %endmacro
 
+%macro fcall 2+
+    stdcall %1, %2
+%endmacro
+%macro fcall 1
+    stdcall %1
+%endmacro
+
+%macro invoke 2+
+    stdcall [%1], %2
+%endmacro
 %macro invoke 1
-    fcall [%1]
+    stdcall [%1]
+%endmacro
+
+%macro cinvoke 2+
+    cdeclcall [%1], %2
+%endmacro
+%macro cinvoke 1
+    cdeclcall [%1]
 %endmacro
 
 ; Virtual registers constants

@@ -231,7 +231,7 @@ _header_aligned_size equ $ - $$
     %endrep
 %endmacro
 
-%macro fcall 1-*
+%macro fastcall 1-*
     %if (%0 - 1) > 4
         sub rsp, (((%0 - 1) * 8) + 15) & (~15)
     %else
@@ -267,12 +267,25 @@ _header_aligned_size equ $ - $$
     %endif
 %endmacro
 
-%macro invoke 2+
-    fcall [%1], %2
+%macro fcall 2+
+    fastcall %1, %2
+%endmacro
+%macro fcall 1
+    fastcall %1
 %endmacro
 
+%macro invoke 2+
+    fastcall [%1], %2
+%endmacro
 %macro invoke 1
-    fcall [%1]
+    fastcall [%1]
+%endmacro
+
+%macro cinvoke 2+
+    fastcall [%1], %2
+%endmacro
+%macro cinvoke 1
+    fastcall [%1]
 %endmacro
 
 ; Virtual registers constants

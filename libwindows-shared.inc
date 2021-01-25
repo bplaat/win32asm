@@ -34,9 +34,11 @@ WS_OVERLAPPEDWINDOW equ 0x00CF0000
 SW_SHOWDEFAULT equ 10
 
 WM_CREATE equ 0x0001
+WM_SIZE equ 0x0005
 WM_GETMINMAXINFO equ 0x0024
 WM_DESTROY equ 0x0002
 WM_PAINT equ 0x000F
+WM_ERASEBKGND equ 0x0014
 
 SM_CXSCREEN equ 0
 SM_CYSCREEN equ 1
@@ -104,6 +106,12 @@ TRANSPARENT equ 1
 SmoothingModeAntiAlias equ 5
 
 UnitPixel equ 2
+
+FontStyleRegular equ 0
+
+StringAlignmentCenter equ 1
+
+TextRenderingHintClearTypeGridFit equ 5
 
 struct GdiplusStartupInput, \
     GdiplusVersion, DWORD_size, \

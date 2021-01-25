@@ -38,7 +38,7 @@ code_section
         imul eax, [seed], 1103515245
         add eax, 12345
 
-        mov edx, 0
+        xor edx, edx
         mov ecx, 1 << 31
         idiv ecx
 
