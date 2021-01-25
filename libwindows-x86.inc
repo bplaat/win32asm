@@ -246,6 +246,8 @@ _header_aligned_size equ $ - $$
 %define _bx ebx
 %define _cx ecx
 %define _dx edx
+%define _si esi
+%define _di edi
 
 ; Windows Library sizes
 %define WORD_size 2

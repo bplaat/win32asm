@@ -280,6 +280,8 @@ _header_aligned_size equ $ - $$
 %define _bx rbx
 %define _cx rcx
 %define _dx rdx
+%define _si rsi
+%define _di rdi
 
 ; Windows Library structures
 %define WORD_size 2

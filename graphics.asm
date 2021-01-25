@@ -1,5 +1,5 @@
     ; graphics.asm - An pure 32-bit and 64-bit win32 assembly GDI+ program
-    ; Because the flat GDI+ API gives antialias drawing methods
+    ; Because the flat GDI+ API gives antialiased drawing methods
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
     ; 32-bit: nasm -f bin graphics.asm -o graphics-x86.exe && ./graphics-x86
     ; 64-bit: nasm -DWIN64 -f bin graphics.asm -o graphics-x64.exe && ./graphics-x64
@@ -112,7 +112,7 @@ code_section
             jmp .leave
 
         .wm_paint:
-            ; Draw a cross with lines in the window via GDI+
+            ; Draw stuff in the window via GDI+
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
                 graphics, GpGraphics_size, \
@@ -148,7 +148,18 @@ code_section
             invoke GdipDrawLineI, [graphics_pointer], [pen_pointer], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
             invoke GdipDrawLineI, [graphics_pointer], [pen_pointer], [window_rect + RECT.right], 0, 0, [window_rect + RECT.bottom]
 
-            ; Delete GDI+ objects
+            ; Draw a circle in the middle
+            mov ebx, [window_rect + RECT.bottom]
+            shr ebx, 1
+            mov eax, [window_rect + RECT.right]
+            shr eax, 1
+            mov edi, [window_rect + RECT.bottom]
+            shr edi, 2
+            mov esi, [window_rect + RECT.right]
+            shr esi, 2
+            invoke GdipDrawEllipseI, [graphics_pointer], [pen_pointer], _si, _di, _ax, _bx
+
+            ; Delete the GDI+ objects
             invoke GdipDeletePen, [pen_pointer]
             invoke GdipDeleteGraphics, [graphics_pointer]
 
@@ -279,6 +290,7 @@ data_section
             GdipCreatePen1, "GdipCreatePen1", \
             GdipDeleteGraphics, "GdipDeleteGraphics", \
             GdipDeletePen, "GdipDeletePen", \
+            GdipDrawEllipseI, "GdipDrawEllipseI", \
             GdipDrawLineI, "GdipDrawLineI", \
             GdipGraphicsClear, "GdipGraphicsClear", \
             GdipSetSmoothingMode, "GdipSetSmoothingMode", \
