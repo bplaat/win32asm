@@ -63,10 +63,7 @@ code_section
         .wm_create:
             ; Center new created window
             local window_rect, RECT_size, \
-                new_window_width, DWORD_size, \
-                new_window_height, DWORD_size, \
-                new_window_x, DWORD_size, \
-                new_window_y, DWORD_size
+                new_window_rect, Rect_size
 
             lea _ax, [window_rect]
             invoke GetClientRect, [hwnd], _ax
@@ -74,24 +71,24 @@ code_section
             mov eax, [window_width]
             shl eax, 1
             sub eax, [window_rect + RECT.right]
-            mov [new_window_width], eax
+            mov [new_window_rect + Rect.width], eax
 
             mov eax, [window_height]
             shl eax, 1
             sub eax, [window_rect + RECT.bottom]
-            mov [new_window_height], eax
+            mov [new_window_rect + Rect.height], eax
 
             invoke GetSystemMetrics, SM_CXSCREEN
-            sub eax, [new_window_width]
+            sub eax, [new_window_rect + Rect.width]
             shr eax, 1
-            mov [new_window_x], eax
+            mov [new_window_rect + Rect.x], eax
 
             invoke GetSystemMetrics, SM_CYSCREEN
-            sub eax, [new_window_height]
+            sub eax, [new_window_rect + Rect.height]
             shr eax, 1
-            mov [new_window_y], eax
+            mov [new_window_rect + Rect.y], eax
 
-            invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_x], [new_window_y], [new_window_width], [new_window_height], SWP_NOZORDER
+            invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
 
             jmp .leave
 

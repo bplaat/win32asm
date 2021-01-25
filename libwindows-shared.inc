@@ -110,3 +110,10 @@ struct GdiplusStartupInput, \
     DebugEventCallback, POINTER_size, \
     SuppressBackgroundThread, DWORD_size, \
     SuppressExternalCodecs, DWORD_size
+
+; Custom
+struct Rect, \
+    x, DWORD_size, \
+    y, DWORD_size, \
+    width, DWORD_size, \
+    height, DWORD_size
