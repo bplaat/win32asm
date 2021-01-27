@@ -1,15 +1,19 @@
     ; graphics.asm - An pure 32-bit and 64-bit win32 assembly GDI+ program
-    ; Because the flat GDI+ API gives antialiased drawing methods
-    ; This program uses SSE floating point extentions
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
     ; 32-bit: nasm -f bin graphics.asm -o graphics-x86.exe && ./graphics-x86
     ; 64-bit: nasm -DWIN64 -f bin graphics.asm -o graphics-x64.exe && ./graphics-x64
+
+    ; Because the flat GDI+ API gives antialiased drawing methods
+    ; This program uses SSE floating point extentions: this is mandatory for x86-64
+    ; but can crash an 32-bit program on a realy old processor
 
 %ifdef WIN64
     %include "libwindows-x64.inc"
 %else
     %include "libwindows-x86.inc"
 %endif
+
+header
 
 code_section
     ; ### Simple random number generator code ###
@@ -18,17 +22,16 @@ code_section
     function rand_generate_seed
         local time, SYSTEMTIME_size
 
-        lea _ax, [time]
-        invoke GetLocalTime, _ax
+        invoke GetLocalTime, '&', time
 
-        movzx eax, WORD_size_word [time + SYSTEMTIME.wHour]
+        movzx eax, word [time + SYSTEMTIME.wHour]
         imul eax, 60
 
-        movzx ecx, WORD_size_word [time + SYSTEMTIME.wMinute]
+        movzx ecx, word [time + SYSTEMTIME.wMinute]
         add eax, ecx
         imul eax, 60
 
-        movzx ecx, WORD_size_word [time + SYSTEMTIME.wSecond]
+        movzx ecx, word [time + SYSTEMTIME.wSecond]
         add eax, ecx
 
         mov [seed], eax
@@ -77,8 +80,7 @@ code_section
             local window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            lea _ax, [window_rect]
-            invoke GetClientRect, [hwnd], _ax
+            invoke GetClientRect, [hwnd], '&', window_rect
 
             mov eax, [window_width]
             shl eax, 1
@@ -108,10 +110,10 @@ code_section
 
         .wm_size:
             ; Save new window size
-            movzx eax, WORD_size_word [lParam]
+            movzx eax, word [lParam]
             mov [window_width], eax
 
-            mov eax, DWORD_size_word [lParam]
+            mov eax, dword [lParam]
             shr eax, 16
             mov [window_height], eax
 
@@ -124,8 +126,8 @@ code_section
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
-            mov DWORD_size_word [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
-            mov DWORD_size_word [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
+            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
+            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
             jmp .leave
 
         .wm_paint:
@@ -144,15 +146,12 @@ code_section
                 text_rect, Rect_size, \
                 text_buffer, 64 * BYTE_size
 
-            lea _ax, [paint_struct]
-            invoke BeginPaint, [hwnd], _ax
+            invoke BeginPaint, [hwnd], '&', paint_struct
 
-            lea _ax, [window_rect]
-            invoke GetClientRect, [hwnd], _ax
+            invoke GetClientRect, [hwnd], '&', window_rect
 
             ; Create graphics object
-            lea _ax, [graphics]
-            invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], _ax
+            invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], '&', graphics
 
             ; Enable anti aliasing
             invoke GdipSetSmoothingMode, [graphics], SmoothingModeAntiAlias
@@ -165,12 +164,7 @@ code_section
             mov eax, 3
             cvtsi2ss xmm0, eax
             movss [line_width], xmm0
-
-            lea _ax, [pen]
-            %ifdef WIN64
-                movss xmm1, [line_width]
-            %endif
-            invoke GdipCreatePen1, 0xffffffff, [line_width], UnitPixel, _ax
+            invoke GdipCreatePen1, 0xffffffff, 'f', [line_width], UnitPixel, '&', pen
 
             ; Draw a cross with lines
             invoke GdipDrawLineI, [graphics], [pen], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
@@ -206,22 +200,14 @@ code_section
             movss [font_size], xmm0
 
             ; Create font object
-            lea _ax, [font_family]
-            invoke GdipCreateFontFamilyFromName, font_name, 0, _ax
-
-            lea _ax, [font]
-            %ifdef WIN64
-                movss xmm1, [font_size]
-            %endif
-            invoke GdipCreateFont, [font_family], [font_size], FontStyleRegular, UnitPixel, _ax
+            invoke GdipCreateFontFamilyFromName, font_name, 0, '&', font_family
+            invoke GdipCreateFont, [font_family], 'f', [font_size], FontStyleRegular, UnitPixel, '&', font
 
             ; Create text solid fill brush object
-            lea _ax, [text_brush]
-            invoke GdipCreateSolidFill, 0xffffffff, _ax
+            invoke GdipCreateSolidFill, 0xffffffff, '&', text_brush
 
             ; Create centered string format object
-            lea _ax, [string_format]
-            invoke GdipStringFormatGetGenericDefault, _ax
+            invoke GdipStringFormatGetGenericDefault, '&', string_format
             invoke GdipSetStringFormatAlign, [string_format], StringAlignmentCenter
 
             ; Calculate text_rect
@@ -245,13 +231,10 @@ code_section
             movss [text_rect + Rect.y], xmm0
 
             ; Generate window size string
-            lea _ax, [text_buffer]
-            cinvoke wsprintfW, _ax, window_size_format, [window_width], [window_height]
+            cinvoke wsprintfW, '&', text_buffer, window_size_format, [window_width], [window_height]
 
             ; Draw window size text
-            lea _bx, [text_rect]
-            lea _ax, [text_buffer]
-            invoke GdipDrawString, [graphics], _ax, -1, [font], _bx, [string_format], [text_brush]
+            invoke GdipDrawString, [graphics], '&',  text_buffer, -1, [font], '&', text_rect, [string_format], [text_brush]
 
             ; Delete the GDI+ objects
             invoke GdipDeleteStringFormat, [string_format]
@@ -261,9 +244,7 @@ code_section
             invoke GdipDeletePen, [pen]
             invoke GdipDeleteGraphics, [graphics]
 
-            lea _ax, [paint_struct]
-            invoke EndPaint, [hwnd], _ax
-
+            invoke EndPaint, [hwnd], '&', paint_struct
             jmp .leave
 
         .wm_destroy:
@@ -289,25 +270,22 @@ code_section
         fcall rand_generate_seed
 
         ; Startup GDI+
-        mov DWORD_size_word [gdiplusStartupInput + GdiplusStartupInput.GdiplusVersion], 1
-        mov POINTER_size_word [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], 0
-        mov DWORD_size_word [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], 0
-        mov DWORD_size_word [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], 0
-
-        lea _bx, [gdiplusStartupInput]
-        lea _ax, [gdiplusToken]
-        invoke GdiplusStartup, _ax, _bx, 0
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.GdiplusVersion], 1
+        mov pointer [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], 0
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], 0
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], 0
+        invoke GdiplusStartup, '&', gdiplusToken, '&',  gdiplusStartupInput, 0
 
         ; Register the window class
-        mov DWORD_size_word [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
+        mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
 
-        mov DWORD_size_word [window_class + WNDCLASSEX.style], CS_HREDRAW | CS_VREDRAW
+        mov dword [window_class + WNDCLASSEX.style], CS_HREDRAW | CS_VREDRAW
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
+        mov pointer [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
 
-        mov DWORD_size_word [window_class + WNDCLASSEX.cbClsExtra], 0
+        mov dword [window_class + WNDCLASSEX.cbClsExtra], 0
 
-        mov DWORD_size_word [window_class + WNDCLASSEX.cbWndExtra], 0
+        mov dword [window_class + WNDCLASSEX.cbWndExtra], 0
 
         invoke GetModuleHandleA, 0
         mov [window_class + WNDCLASSEX.hInstance], _ax
@@ -319,14 +297,13 @@ code_section
         invoke LoadCursorA, 0, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.hbrBackground], COLOR_WINDOW + 1
+        mov pointer [window_class + WNDCLASSEX.hbrBackground], COLOR_WINDOW + 1
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.lpszMenuName], 0
+        mov pointer [window_class + WNDCLASSEX.lpszMenuName], 0
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.lpszClassName], window_class_name
+        mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
-        lea _ax, [window_class]
-        invoke RegisterClassExA, _ax
+        invoke RegisterClassExA, '&', window_class
 
         ; Create the window
         invoke CreateWindowExA, 0, window_class_name, window_title, WS_OVERLAPPEDWINDOW, \
@@ -338,18 +315,12 @@ code_section
 
         ; Message loop
         .message_loop:
-            lea _ax, [message]
-            invoke GetMessageA, _ax, 0, 0, 0
-
+            invoke GetMessageA, '&', message, 0, 0, 0
             cmp _ax, 0
             jle .done
 
-            lea _ax, [message]
-            invoke TranslateMessage, _ax
-
-            lea _ax, [message]
-            invoke DispatchMessageA, _ax
-
+            invoke TranslateMessage, '&', message
+            invoke DispatchMessageA, '&', message
             jmp .message_loop
         .done:
             ; Shutdown GDI+

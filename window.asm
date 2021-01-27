@@ -9,6 +9,8 @@
     %include "libwindows-x86.inc"
 %endif
 
+header
+
 code_section
     ; ### Simple random number generator code ###
 
@@ -16,17 +18,16 @@ code_section
     function rand_generate_seed
         local time, SYSTEMTIME_size
 
-        lea _ax, [time]
-        invoke GetLocalTime, _ax
+        invoke GetLocalTime, '&', time
 
-        movzx eax, WORD_size_word [time + SYSTEMTIME.wHour]
+        movzx eax, word [time + SYSTEMTIME.wHour]
         imul eax, 60
 
-        movzx ecx, WORD_size_word [time + SYSTEMTIME.wMinute]
+        movzx ecx, word [time + SYSTEMTIME.wMinute]
         add eax, ecx
         imul eax, 60
 
-        movzx ecx, WORD_size_word [time + SYSTEMTIME.wSecond]
+        movzx ecx, word [time + SYSTEMTIME.wSecond]
         add eax, ecx
 
         mov [seed], eax
@@ -65,8 +66,7 @@ code_section
             local window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            lea _ax, [window_rect]
-            invoke GetClientRect, [hwnd], _ax
+            invoke GetClientRect, [hwnd], '&', window_rect
 
             mov eax, [window_width]
             shl eax, 1
@@ -97,8 +97,8 @@ code_section
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
-            mov DWORD_size_word [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
-            mov DWORD_size_word [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
+            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
+            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
             jmp .leave
 
         .wm_paint:
@@ -107,11 +107,9 @@ code_section
                 window_rect, RECT_size, \
                 hfont, DWORD_size
 
-            lea _ax, [paint_struct]
-            invoke BeginPaint, [hwnd], _ax
+            invoke BeginPaint, [hwnd], '&', paint_struct
 
-            lea _ax, [window_rect]
-            invoke GetClientRect, [hwnd], _ax
+            invoke GetClientRect, [hwnd], '&', window_rect
 
             mov eax, [window_rect + RECT.right]
             shr eax, 4
@@ -122,14 +120,11 @@ code_section
             invoke SetBkMode, [paint_struct + PAINTSTRUCT.hdc], TRANSPARENT
             invoke SetTextColor, [paint_struct + PAINTSTRUCT.hdc], 0x00ffffff
 
-            lea _ax, [window_rect]
-            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, _ax, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, '&', window_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
 
             invoke DeleteObject, [hfont]
 
-            lea _ax, [paint_struct]
-            invoke EndPaint, [hwnd], _ax
-
+            invoke EndPaint, [hwnd], '&', paint_struct
             jmp .leave
 
         .wm_destroy:
@@ -153,15 +148,15 @@ code_section
         fcall rand_generate_seed
 
         ; Register the window class
-        mov DWORD_size_word [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
+        mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
 
-        mov DWORD_size_word [window_class + WNDCLASSEX.style], CS_HREDRAW | CS_VREDRAW
+        mov dword [window_class + WNDCLASSEX.style], CS_HREDRAW | CS_VREDRAW
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
+        mov pointer [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
 
-        mov DWORD_size_word [window_class + WNDCLASSEX.cbClsExtra], 0
+        mov dword [window_class + WNDCLASSEX.cbClsExtra], 0
 
-        mov DWORD_size_word [window_class + WNDCLASSEX.cbWndExtra], 0
+        mov dword [window_class + WNDCLASSEX.cbWndExtra], 0
 
         invoke GetModuleHandleA, 0
         mov [window_class + WNDCLASSEX.hInstance], _ax
@@ -178,12 +173,11 @@ code_section
         invoke CreateSolidBrush, _ax
         mov [window_class + WNDCLASSEX.hbrBackground], _ax
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.lpszMenuName], 0
+        mov pointer [window_class + WNDCLASSEX.lpszMenuName], 0
 
-        mov POINTER_size_word [window_class + WNDCLASSEX.lpszClassName], window_class_name
+        mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
-        lea _ax, [window_class]
-        invoke RegisterClassExA, _ax
+        invoke RegisterClassExA, '&', window_class
 
         ; Create the window
         invoke CreateWindowExA, 0, window_class_name, window_title, WS_OVERLAPPEDWINDOW, \
@@ -195,18 +189,12 @@ code_section
 
         ; Message loop
         .message_loop:
-            lea _ax, [message]
-            invoke GetMessageA, _ax, 0, 0, 0
-
+            invoke GetMessageA, '&', message, 0, 0, 0
             cmp _ax, 0
             jle .done
 
-            lea _ax, [message]
-            invoke TranslateMessage, _ax
-
-            lea _ax, [message]
-            invoke DispatchMessageA, _ax
-
+            invoke TranslateMessage, '&', message
+            invoke DispatchMessageA, '&', message
             jmp .message_loop
         .done:
             invoke ExitProcess, [message + MSG.wParam]

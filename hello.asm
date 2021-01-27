@@ -9,6 +9,8 @@
     %include "libwindows-x86.inc"
 %endif
 
+header
+
 code_section
     entrypoint
         invoke MessageBoxA, HWND_DESKTOP, message, message, MB_OK

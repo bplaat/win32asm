@@ -1,95 +1,108 @@
     ; libwindows-x86.inc - A 32-bit win32 assembly helper library
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
 
-    ; PE header
     _base equ 0x400000
     _alignment equ 0x200
 
-    [BITS 32]
-    [ORG _base]
+    bits 32
+    org _base
 
 %define RVA(address) (address - _base)
 
-    ; DOS Stub
-    db 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00
-    db 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00
-    db 0x0E, 0x1F, 0xBA, 0x0E, 0x00, 0xB4, 0x09, 0xCD, 0x21, 0xB8, 0x01, 0x4C, 0xCD, 0x21, 0x54, 0x68
-    db 0x69, 0x73, 0x20, 0x70, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x20, 0x63, 0x61, 0x6E, 0x6E, 0x6F
-    db 0x74, 0x20, 0x62, 0x65, 0x20, 0x72, 0x75, 0x6E, 0x20, 0x69, 0x6E, 0x20, 0x44, 0x4F, 0x53, 0x20
-    db 0x6D, 0x6F, 0x64, 0x65, 0x2E, 0x0D, 0x0D, 0x0A, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+; Header
+%macro header 0
+    _header:
+        ; MS-DOS Header
+        db 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00
+        db 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00
 
-    db "PE", 0, 0                 ; Signature
-    dw 0x014C                     ; Machine
-    dw 2                          ; NumberOfSections
-    dd 0                          ; TimeDateStamp
-    dd 0                          ; PointerToSymbolTable
-    dd 0                          ; NumberOfSymbols
-    dw 224                        ; SizeOfOptionalHeader
-    dw 0x030F                     ; Characteristics
+        ; MS-DOS Stub
+        db 0x0E, 0x1F, 0xBA, 0x0E, 0x00, 0xB4, 0x09, 0xCD, 0x21, 0xB8, 0x01, 0x4C, 0xCD, 0x21, 0x54, 0x68
+        db 0x69, 0x73, 0x20, 0x70, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x20, 0x63, 0x61, 0x6E, 0x6E, 0x6F
+        db 0x74, 0x20, 0x62, 0x65, 0x20, 0x72, 0x75, 0x6E, 0x20, 0x69, 0x6E, 0x20, 0x44, 0x4F, 0x53, 0x20
+        db 0x6D, 0x6F, 0x64, 0x65, 0x2E, 0x0D, 0x0D, 0x0A, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
-    dw 0x010B                     ; Magic
-    db 0                          ; MajorLinkerVersion
-    db 0                          ; MinorLinkerVersion
-    dd _code_section_aligned_size ; SizeOfCode
-    dd _data_section_aligned_size ; SizeOfInitializedData
-    dd 0                          ; SizeOfUninitializedData
-    dd RVA(_entrypoint)           ; AddressOfEntryPoint
-    dd RVA(_code_section)         ; BaseOfCode
-    dd RVA(_data_section)         ; BaseOfData
+        ; COFF Header
+        db "PE", 0, 0                 ; Signature
+        dw 0x014C                     ; Machine
+        dw 2                          ; NumberOfSections
+        dd __?POSIX_TIME?__           ; TimeDateStamp
+        dd 0                          ; PointerToSymbolTable
+        dd 0                          ; NumberOfSymbols
+        dw 224                        ; SizeOfOptionalHeader
+        dw 0x030F                     ; Characteristics
 
-    dd _base                      ; ImageBase
-    dd _alignment                 ; SectionAlignment
-    dd _alignment                 ; FileAlignment
-    dw 4                          ; MajorOperatingSystemVersion
-    dw 0                          ; MinorOperatingSystemVersion
-    dw 0                          ; MajorImageVersion
-    dw 0                          ; MinorImageVersion
-    dw 4                          ; MajorSubsystemVersion
-    dw 0                          ; MinorSubsystemVersion
-    dd 0                          ; Win32VersionValue
-    dd _file_size                 ; SizeOfImage
-    dd _header_aligned_size       ; SizeOfHeaders
-    dd 0                          ; CheckSum
-    dw 2                          ; Subsystem
-    dw 0                          ; DllCharacteristics
-    dd 0x100000                   ; SizeOfStackReserve
-    dd 0x1000                     ; SizeOfStackCommit
-    dd 0x100000                   ; SizeOfHeapReserve
-    dd 0x1000                     ; SizeOfHeapCommit
-    dd 0                          ; LoaderFlags
-    dd 16                         ; NumberOfRvaAndSizes
+        ; Standard COFF Fields
+        dw 0x010B                     ; Magic
+        db 0                          ; MajorLinkerVersion
+        db 0                          ; MinorLinkerVersion
+        dd _code_section_aligned_size ; SizeOfCode
+        dd _data_section_aligned_size ; SizeOfInitializedData
+        dd 0                          ; SizeOfUninitializedData
+        dd RVA(_entrypoint)           ; AddressOfEntryPoint
+        dd RVA(_code_section)         ; BaseOfCode
+        dd RVA(_data_section)         ; BaseOfData
 
-    dd 0, 0
-    dd RVA(_import_table), _import_table_size
-    times 14 dd 0, 0
+        ; Windows-Specific Fields
+        dd _base                      ; ImageBase
+        dd _alignment                 ; SectionAlignment
+        dd _alignment                 ; FileAlignment
+        dw 4                          ; MajorOperatingSystemVersion
+        dw 0                          ; MinorOperatingSystemVersion
+        dw 0                          ; MajorImageVersion
+        dw 0                          ; MinorImageVersion
+        dw 4                          ; MajorSubsystemVersion
+        dw 0                          ; MinorSubsystemVersion
+        dd 0                          ; Win32VersionValue
+        dd _header_aligned_size + _code_section_aligned_size + _data_section_aligned_size ; SizeOfImage
+        dd _header_aligned_size       ; SizeOfHeaders
+        dd 0                          ; CheckSum
+        dw 2                          ; Subsystem
+        dw 0                          ; DllCharacteristics
+        dd 0x100000                   ; SizeOfStackReserve
+        dd 0x1000                     ; SizeOfStackCommit
+        dd 0x100000                   ; SizeOfHeapReserve
+        dd 0x1000                     ; SizeOfHeapCommit
+        dd 0                          ; LoaderFlags
+        dd 16                         ; NumberOfRvaAndSizes
 
-    db ".text", 0, 0, 0           ; Name
-    dd _code_section_size         ; VirtualSize
-    dd RVA(_code_section)         ; VirtualAddress
-    dd _code_section_aligned_size ; SizeOfRawData
-    dd RVA(_code_section)         ; PointerToRawData
-    dd 0                          ; PointerToRelocations
-    dd 0                          ; PointerToLinenumbers
-    dw 0                          ; NumberOfRelocations
-    dw 0                          ; NumberOfLinenumbers
-    dd 0x60000020                 ; Characteristics
+        ; Data Directories
+        dd 0, 0
+        dd RVA(_import_table), _import_table_size
+        times 14 dd 0, 0
 
-    db ".data", 0, 0, 0           ; Name
-    dd _data_section_size         ; VirtualSize
-    dd RVA(_data_section)         ; VirtualAddress
-    dd _data_section_aligned_size ; SizeOfRawData
-    dd RVA(_data_section)         ; PointerToRawData
-    dd 0                          ; PointerToRelocations
-    dd 0                          ; PointerToLinenumbers
-    dw 0                          ; NumberOfRelocations
-    dw 0                          ; NumberOfLinenumbers
-    dd 0xC0000040                 ; Characteristics
+        ; Section Table
 
-_header_size equ $ - $$
-    align _alignment, db 0
-_header_aligned_size equ $ - $$
+        ; Code Section
+        db ".text", 0, 0, 0           ; Name
+        dd _code_section_size         ; VirtualSize
+        dd RVA(_code_section)         ; VirtualAddress
+        dd _code_section_aligned_size ; SizeOfRawData
+        dd RVA(_code_section)         ; PointerToRawData
+        dd 0                          ; PointerToRelocations
+        dd 0                          ; PointerToLinenumbers
+        dw 0                          ; NumberOfRelocations
+        dw 0                          ; NumberOfLinenumbers
+        dd 0x60000020                 ; Characteristics
+
+        ; Data Section
+        db ".data", 0, 0, 0           ; Name
+        dd _data_section_size         ; VirtualSize
+        dd RVA(_data_section)         ; VirtualAddress
+        dd _data_section_aligned_size ; SizeOfRawData
+        dd RVA(_data_section)         ; PointerToRawData
+        dd 0                          ; PointerToRelocations
+        dd 0                          ; PointerToLinenumbers
+        dw 0                          ; NumberOfRelocations
+        dw 0                          ; NumberOfLinenumbers
+        dd 0xC0000040                 ; Characteristics
+
+    _header_size equ $ - _header
+        align _alignment, db 0
+    _header_aligned_size equ $ - _header
+%endmacro
 
 ; Code section
 %macro code_section 0
@@ -116,8 +129,6 @@ _header_aligned_size equ $ - $$
     _data_section_size equ $ - _data_section
         align _alignment, db 0
     _data_section_aligned_size equ $ - _data_section
-
-    _file_size equ $ - $$
 %endmacro
 
 ; Import section
@@ -159,6 +170,23 @@ _header_aligned_size equ $ - $$
 %endmacro
 
 ; Code helpers
+
+; Virtual registers
+%define _ax eax
+%define _bx ebx
+%define _cx ecx
+%define _dx edx
+%define _si esi
+%define _di edi
+
+; Windows Library sizes
+%define BYTE_size 1
+%define WORD_size 2
+%define DWORD_size 4
+%define QWORD_size 8
+%idefine pointer dword
+%define POINTER_size DWORD_size
+
 %macro struct 3-*
     %1:
         %assign position 0
@@ -168,21 +196,21 @@ _header_aligned_size equ $ - $$
             %assign position position + %2
             %rotate 2
         %endrep
-    %xdefine %1_size position
+        %xdefine %1_size position
 %endmacro
 
 %macro function 1-*
     %1:
-        ._arguments_size equ (%0 - 1) * 4
+        ._arguments_size equ (%0 - 1) * DWORD_size
 
         push ebp
         mov ebp, esp
 
-        %assign i 2
+        %assign position 2
         %rotate 1
         %rep %0 - 1
-            %xdefine %1 ebp + i * 4
-            %assign i i + 1
+            %xdefine %1 ebp + position * DWORD_size
+            %assign position position + 1
             %rotate 1
         %endrep
 %endmacro
@@ -218,9 +246,43 @@ _header_aligned_size equ $ - $$
 %endmacro
 
 %macro push_reverse 1-*
+    %assign index %0 - 1
     %rep %0
-        %rotate -1
-        push dword %1
+        %if index < 0
+            %exitrep
+        %endif
+
+        %rotate -2
+
+        %assign isHandled 0
+
+        %ifstr %1
+            ; Load address helper
+            %if %1 == '&'
+                %rotate 1
+                lea eax, [%1]
+                push eax
+                %rotate -1
+                %assign index index - 2
+                %assign isHandled 1
+            %endif
+
+            ; Ignore float helper only for 64-bit fastcall
+            %if %1 == 'f'
+                %rotate 1
+                push dword %1
+                %rotate -1
+                %assign index index - 2
+                %assign isHandled 1
+            %endif
+        %endif
+
+        ; Or just push the value
+        %if isHandled == 0
+            %rotate 1
+            push dword %1
+            %assign index index - 1
+        %endif
     %endrep
 %endmacro
 
@@ -235,16 +297,13 @@ _header_aligned_size equ $ - $$
 %macro cdeclcall 2+
     push_reverse %2
     call %1
-    add esp, (%0 - 1) * 4
+    add esp, (%0 - 1) * DWORD_size
 %endmacro
 %macro cdeclcall 1
     call %1
 %endmacro
 
-%macro fcall 2+
-    stdcall %1, %2
-%endmacro
-%macro fcall 1
+%macro fcall 1+
     stdcall %1
 %endmacro
 
@@ -261,26 +320,6 @@ _header_aligned_size equ $ - $$
 %macro cinvoke 1
     cdeclcall [%1]
 %endmacro
-
-; Virtual registers constants
-%define _ax eax
-%define _bx ebx
-%define _cx ecx
-%define _dx edx
-%define _si esi
-%define _di edi
-
-; Windows Library sizes
-%define BYTE_size 1
-%define BYTE_size_word byte
-%define WORD_size 2
-%define WORD_size_word word
-%define DWORD_size 4
-%define DWORD_size_word dword
-%define QWORD_size 8
-%define QWORD_size_word qword
-%define POINTER_size DWORD_size
-%define POINTER_size_word DWORD_size_word
 
 ; Include the shared libwindows stuff
 %include "libwindows-shared.inc"
