@@ -172,20 +172,20 @@
 ; Code helpers
 
 ; Virtual registers
-%define _ax eax
-%define _bx ebx
-%define _cx ecx
-%define _dx edx
-%define _si esi
-%define _di edi
+%idefine _ax eax
+%idefine _bx ebx
+%idefine _cx ecx
+%idefine _dx edx
+%idefine _si esi
+%idefine _di edi
 
 ; Windows Library sizes
-%define BYTE_size 1
-%define WORD_size 2
-%define DWORD_size 4
-%define QWORD_size 8
+BYTE_size equ 1
+WORD_size equ 2
+DWORD_size equ 4
+QWORD_size equ 8
 %idefine pointer dword
-%define POINTER_size DWORD_size
+POINTER_size equ DWORD_size
 
 %macro struct 3-*
     %1:
@@ -196,7 +196,7 @@
             %assign position position + %2
             %rotate 2
         %endrep
-        %xdefine %1_size position
+        %1_size equ position
 %endmacro
 
 %macro function 1-*

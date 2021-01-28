@@ -50,8 +50,6 @@ code_section
 
     ; Window procedure function
     function WindowProc, hwnd, uMsg, wParam, lParam
-        frame
-
         mov eax, [uMsg]
         cmp eax, WM_CREATE
         je .wm_create
@@ -67,6 +65,8 @@ code_section
             ; Center new created window
             local window_rect, RECT_size, \
                 new_window_rect, Rect_size
+
+            frame
 
             invoke GetClientRect, [hwnd], addr window_rect
 
@@ -92,6 +92,8 @@ code_section
 
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
 
+            end_frame
+
             jmp .leave
 
             %undef window_rect
@@ -108,6 +110,8 @@ code_section
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
                 font, DWORD_size
+
+            frame
 
             invoke BeginPaint, [hwnd], addr paint_struct
 
@@ -127,17 +131,18 @@ code_section
             invoke DeleteObject, [font]
 
             invoke EndPaint, [hwnd], addr paint_struct
+
+            end_frame
+
             jmp .leave
 
         .wm_destroy:
             invoke PostQuitMessage, 0
         .leave:
-            end_frame
             return 0
 
         .default:
             invoke DefWindowProcA, [hwnd], [uMsg], [wParam], [lParam]
-            end_frame
             return
 
         %undef hwnd

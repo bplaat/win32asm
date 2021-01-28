@@ -116,7 +116,7 @@
 
 %macro entrypoint 0
     _entrypoint:
-        sub rsp, 8
+        sub rsp, QWORD_size
         mov rbp, rsp
 %endmacro
 
@@ -173,20 +173,20 @@
 ; Code helpers
 
 ; Virtual registers constants
-%define _ax rax
-%define _bx rbx
-%define _cx rcx
-%define _dx rdx
-%define _si rsi
-%define _di rdi
+%idefine _ax rax
+%idefine _bx rbx
+%idefine _cx rcx
+%idefine _dx rdx
+%idefine _si rsi
+%idefine _di rdi
 
 ; Windows Library structures
-%define BYTE_size 1
-%define WORD_size 2
-%define DWORD_size 4
-%define QWORD_size 8
+BYTE_size equ 1
+WORD_size equ 2
+DWORD_size equ 4
+QWORD_size equ 8
 %idefine pointer qword
-%define POINTER_size QWORD_size
+POINTER_size equ QWORD_size
 
 %macro struct 3-*
     %1:
@@ -197,7 +197,7 @@
             %assign position position + %2
             %rotate 2
         %endrep
-        %xdefine %1_size position
+        %1_size equ position
 %endmacro
 
 %macro function 1-*
