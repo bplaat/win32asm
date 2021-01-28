@@ -13,8 +13,13 @@ header
 
 code_section
     entrypoint
+        frame
+
         invoke MessageBoxA, HWND_DESKTOP, message, message, MB_OK
+
         invoke ExitProcess, 0
+
+        end_frame
 end_code_section
 
 data_section

@@ -245,6 +245,16 @@
     %endrep
 %endmacro
 
+; Frame macro's are only for 64-bit fastcall
+%macro frame 0
+%endmacro
+
+%macro end_frame 0
+%endmacro
+
+%define float 'f',
+%define addr '&',
+
 %macro push_reverse 1-*
     %assign index %0 - 1
     %rep %0

@@ -258,6 +258,23 @@
     %endrep
 %endmacro
 
+%macro frame 0
+    %ifndef _fastcall_frame
+        %define _fastcall_frame
+        sub rsp, 4 * QWORD_size
+    %endif
+%endmacro
+
+%macro end_frame 0
+    %ifdef _fastcall_frame
+        %undef _fastcall_frame
+        add rsp, 4 * QWORD_size
+    %endif
+%endmacro
+
+%define float 'f',
+%define addr '&',
+
 %macro fastcall 1-*
     ; Count good arguments
     %assign arguments_count 0
@@ -270,10 +287,16 @@
     %endrep
 
     ; Reserve stack space 16 byte aligned
-    %if arguments_count > 4
-        sub rsp, ((arguments_count * QWORD_size) + 15) & (~15)
+    %ifdef _fastcall_frame
+        %if arguments_count > 4
+            sub rsp, (((arguments_count - 4) * QWORD_size) + 15) & (~15)
+        %endif
     %else
-        sub rsp, 4 * QWORD_size
+        %if arguments_count > 4
+            sub rsp, ((arguments_count * QWORD_size) + 15) & (~15)
+        %else
+            sub rsp, 4 * QWORD_size
+        %endif
     %endif
 
     ; Loop over arguments
@@ -360,10 +383,16 @@
     %endrep
 
     ; Free stack space 16 byte aligned
-    %if arguments_count > 4
-        add rsp, ((arguments_count * QWORD_size) + 15) & (~15)
+    %ifdef _fastcall_frame
+        %if arguments_count > 4
+            add rsp, (((arguments_count - 4) * QWORD_size) + 15) & (~15)
+        %endif
     %else
-        add rsp, 4 * QWORD_size
+        %if arguments_count > 4
+            add rsp, ((arguments_count * QWORD_size) + 15) & (~15)
+        %else
+            add rsp, 4 * QWORD_size
+        %endif
     %endif
 %endmacro
 

@@ -22,7 +22,7 @@ code_section
     function rand_generate_seed
         local time, SYSTEMTIME_size
 
-        invoke GetLocalTime, '&', time
+        invoke GetLocalTime, addr time
 
         movzx eax, word [time + SYSTEMTIME.wHour]
         imul eax, 60
@@ -54,6 +54,8 @@ code_section
 
     ; Window procedure function
     function WindowProc, hwnd, uMsg, wParam, lParam
+        frame
+
         mov eax, [uMsg]
         cmp eax, WM_CREATE
         je .wm_create
@@ -80,7 +82,7 @@ code_section
             local window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            invoke GetClientRect, [hwnd], '&', window_rect
+            invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_width]
             shl eax, 1
@@ -121,6 +123,7 @@ code_section
 
         .wm_erasebkgnd:
             ; This window draws it's own background
+            end_frame
             return 1
 
         .wm_getminmaxinfo:
@@ -146,12 +149,12 @@ code_section
                 text_rect, Rect_size, \
                 text_buffer, 64 * BYTE_size
 
-            invoke BeginPaint, [hwnd], '&', paint_struct
+            invoke BeginPaint, [hwnd], addr paint_struct
 
-            invoke GetClientRect, [hwnd], '&', window_rect
+            invoke GetClientRect, [hwnd], addr window_rect
 
             ; Create graphics object
-            invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], '&', graphics
+            invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], addr graphics
 
             ; Enable anti aliasing
             invoke GdipSetSmoothingMode, [graphics], SmoothingModeAntiAlias
@@ -164,7 +167,7 @@ code_section
             mov eax, 3
             cvtsi2ss xmm0, eax
             movss [line_width], xmm0
-            invoke GdipCreatePen1, 0xffffffff, 'f', [line_width], UnitPixel, '&', pen
+            invoke GdipCreatePen1, 0xffffffff, float [line_width], UnitPixel, addr pen
 
             ; Draw a cross with lines
             invoke GdipDrawLineI, [graphics], [pen], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
@@ -200,14 +203,14 @@ code_section
             movss [font_size], xmm0
 
             ; Create font object
-            invoke GdipCreateFontFamilyFromName, font_name, 0, '&', font_family
-            invoke GdipCreateFont, [font_family], 'f', [font_size], FontStyleRegular, UnitPixel, '&', font
+            invoke GdipCreateFontFamilyFromName, font_name, 0, addr font_family
+            invoke GdipCreateFont, [font_family], float [font_size], FontStyleRegular, UnitPixel, addr font
 
             ; Create text solid fill brush object
-            invoke GdipCreateSolidFill, 0xffffffff, '&', text_brush
+            invoke GdipCreateSolidFill, 0xffffffff, addr text_brush
 
             ; Create centered string format object
-            invoke GdipStringFormatGetGenericDefault, '&', string_format
+            invoke GdipStringFormatGetGenericDefault, addr string_format
             invoke GdipSetStringFormatAlign, [string_format], StringAlignmentCenter
 
             ; Calculate text_rect
@@ -231,10 +234,10 @@ code_section
             movss [text_rect + Rect.y], xmm0
 
             ; Generate window size string
-            cinvoke wsprintfW, '&', text_buffer, window_size_format, [window_width], [window_height]
+            cinvoke wsprintfW, addr text_buffer, window_size_format, [window_width], [window_height]
 
             ; Draw window size text
-            invoke GdipDrawString, [graphics], '&',  text_buffer, -1, [font], '&', text_rect, [string_format], [text_brush]
+            invoke GdipDrawString, [graphics], addr text_buffer, -1, [font], addr text_rect, [string_format], [text_brush]
 
             ; Delete the GDI+ objects
             invoke GdipDeleteStringFormat, [string_format]
@@ -244,16 +247,18 @@ code_section
             invoke GdipDeletePen, [pen]
             invoke GdipDeleteGraphics, [graphics]
 
-            invoke EndPaint, [hwnd], '&', paint_struct
+            invoke EndPaint, [hwnd], addr paint_struct
             jmp .leave
 
         .wm_destroy:
             invoke PostQuitMessage, 0
         .leave:
+            end_frame
             return 0
 
         .default:
             invoke DefWindowProcA, [hwnd], [uMsg], [wParam], [lParam]
+            end_frame
             return
 
         %undef hwnd
@@ -266,6 +271,8 @@ code_section
             hwnd, DWORD_size, \
             message, MSG_size
 
+        frame
+
         ; Generate rand seed
         fcall rand_generate_seed
 
@@ -274,7 +281,7 @@ code_section
         mov pointer [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], 0
         mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], 0
         mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], 0
-        invoke GdiplusStartup, '&', gdiplusToken, '&',  gdiplusStartupInput, 0
+        invoke GdiplusStartup, addr gdiplusToken, addr gdiplusStartupInput, 0
 
         ; Register the window class
         mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -303,7 +310,7 @@ code_section
 
         mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
-        invoke RegisterClassExA, '&', window_class
+        invoke RegisterClassExA, addr window_class
 
         ; Create the window
         invoke CreateWindowExA, 0, window_class_name, window_title, WS_OVERLAPPEDWINDOW, \
@@ -315,18 +322,19 @@ code_section
 
         ; Message loop
         .message_loop:
-            invoke GetMessageA, '&', message, 0, 0, 0
+            invoke GetMessageA, addr message, 0, 0, 0
             cmp _ax, 0
             jle .done
 
-            invoke TranslateMessage, '&', message
-            invoke DispatchMessageA, '&', message
+            invoke TranslateMessage, addr message
+            invoke DispatchMessageA, addr message
             jmp .message_loop
         .done:
             ; Shutdown GDI+
             invoke GdiplusShutdown, [gdiplusToken]
 
             invoke ExitProcess, [message + MSG.wParam]
+            end_frame
 end_code_section
 
 data_section

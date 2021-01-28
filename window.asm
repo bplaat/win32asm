@@ -18,7 +18,7 @@ code_section
     function rand_generate_seed
         local time, SYSTEMTIME_size
 
-        invoke GetLocalTime, '&', time
+        invoke GetLocalTime, addr time
 
         movzx eax, word [time + SYSTEMTIME.wHour]
         imul eax, 60
@@ -50,6 +50,8 @@ code_section
 
     ; Window procedure function
     function WindowProc, hwnd, uMsg, wParam, lParam
+        frame
+
         mov eax, [uMsg]
         cmp eax, WM_CREATE
         je .wm_create
@@ -66,7 +68,7 @@ code_section
             local window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            invoke GetClientRect, [hwnd], '&', window_rect
+            invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_width]
             shl eax, 1
@@ -105,35 +107,37 @@ code_section
             ; Draw a centered text in the window
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
-                hfont, DWORD_size
+                font, DWORD_size
 
-            invoke BeginPaint, [hwnd], '&', paint_struct
+            invoke BeginPaint, [hwnd], addr paint_struct
 
-            invoke GetClientRect, [hwnd], '&', window_rect
+            invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_rect + RECT.right]
             shr eax, 4
             invoke CreateFontA, _ax, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
-            mov [hfont], _ax
+            mov [font], _ax
 
-            invoke SelectObject, [paint_struct + PAINTSTRUCT.hdc], [hfont]
+            invoke SelectObject, [paint_struct + PAINTSTRUCT.hdc], [font]
             invoke SetBkMode, [paint_struct + PAINTSTRUCT.hdc], TRANSPARENT
             invoke SetTextColor, [paint_struct + PAINTSTRUCT.hdc], 0x00ffffff
 
-            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, '&', window_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, addr window_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
 
-            invoke DeleteObject, [hfont]
+            invoke DeleteObject, [font]
 
-            invoke EndPaint, [hwnd], '&', paint_struct
+            invoke EndPaint, [hwnd], addr paint_struct
             jmp .leave
 
         .wm_destroy:
             invoke PostQuitMessage, 0
         .leave:
+            end_frame
             return 0
 
         .default:
             invoke DefWindowProcA, [hwnd], [uMsg], [wParam], [lParam]
+            end_frame
             return
 
         %undef hwnd
@@ -143,6 +147,8 @@ code_section
         local window_class, WNDCLASSEX_size, \
             hwnd, DWORD_size, \
             message, MSG_size
+
+        frame
 
         ; Generate rand seed
         fcall rand_generate_seed
@@ -177,7 +183,7 @@ code_section
 
         mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
-        invoke RegisterClassExA, '&', window_class
+        invoke RegisterClassExA, addr window_class
 
         ; Create the window
         invoke CreateWindowExA, 0, window_class_name, window_title, WS_OVERLAPPEDWINDOW, \
@@ -189,15 +195,16 @@ code_section
 
         ; Message loop
         .message_loop:
-            invoke GetMessageA, '&', message, 0, 0, 0
+            invoke GetMessageA, addr message, 0, 0, 0
             cmp _ax, 0
             jle .done
 
-            invoke TranslateMessage, '&', message
-            invoke DispatchMessageA, '&', message
+            invoke TranslateMessage, addr message
+            invoke DispatchMessageA, addr message
             jmp .message_loop
         .done:
             invoke ExitProcess, [message + MSG.wParam]
+            end_frame
 end_code_section
 
 data_section
