@@ -10,7 +10,9 @@
 %define RVA(address) (address - _base)
 
 ; Header
-%macro header 0
+HEADER_GUI equ 2
+HEADER_CONSOLE equ 3
+%macro header 1
     _header:
         ; MS-DOS Header
         db 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00
@@ -58,7 +60,7 @@
         dd _header_aligned_size + _code_section_aligned_size + _data_section_aligned_size ; SizeOfImage
         dd _header_aligned_size       ; SizeOfHeaders
         dd 0                          ; CheckSum
-        dw 2                          ; Subsystem
+        dw %1                         ; Subsystem
         dw 0                          ; DllCharacteristics
         dq 0x100000                   ; SizeOfStackReserve
         dq 0x1000                     ; SizeOfStackCommit
@@ -101,6 +103,9 @@
     _header_size equ $ - _header
         align _alignment, db 0
     _header_aligned_size equ $ - _header
+%endmacro
+%macro header 0
+    header HEADER_GUI
 %endmacro
 
 ; Code section
@@ -234,7 +239,6 @@ POINTER_size equ QWORD_size
     pop rbp
     ret
 %endmacro
-
 %macro return 0
     mov rsp, rbp
     pop rbp

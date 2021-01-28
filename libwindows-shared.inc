@@ -2,6 +2,9 @@
 ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
 
 ; Kernel32
+STD_INPUT_HANDLE equ -10
+STD_OUTPUT_HANDLE equ -11
+
 struct SYSTEMTIME, \
     wYear, WORD_size, \
     wMonth, WORD_size, \
