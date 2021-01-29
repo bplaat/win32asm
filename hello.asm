@@ -3,11 +3,7 @@
     ; 32-bit: nasm -f bin hello.asm -o hello-x86.exe && ./hello-x86
     ; 64-bit: nasm -DWIN64 -f bin hello.asm -o hello-x64.exe && ./hello-x64
 
-%ifdef WIN64
-    %include "libwindows-x64.inc"
-%else
-    %include "libwindows-x86.inc"
-%endif
+%include "libwindows.inc"
 
 header
 
@@ -15,20 +11,24 @@ code_section
     entrypoint
         frame
 
+        ; Show Hello World! messagebox
         invoke MessageBoxA, HWND_DESKTOP, message, message, MB_OK
 
+        ; Exit successfully
         invoke ExitProcess, EXIT_SUCCESS
 
         end_frame
 end_code_section
 
 data_section
+    ; String constants
     %ifdef WIN64
         message db "Hello World! (64-bit)", 0
     %else
         message db "Hello World! (32-bit)", 0
     %endif
 
+    ; Import Table
     import_table
         library kernel_table, "KERNEL32.DLL", \
             user_table, "USER32.DLL"

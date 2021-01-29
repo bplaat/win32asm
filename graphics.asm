@@ -7,11 +7,7 @@
     ; This program uses SSE floating point extentions: this is mandatory for x86-64
     ; but can crash an 32-bit program on a realy old processor
 
-%ifdef WIN64
-    %include "libwindows-x64.inc"
-%else
-    %include "libwindows-x86.inc"
-%endif
+%include "libwindows.inc"
 
 header
 
@@ -125,7 +121,7 @@ code_section
 
         .wm_erasebkgnd:
             ; This window draws it's own background
-            return 1
+            return TRUE
 
         .wm_getminmaxinfo:
             ; Set window min size
@@ -206,7 +202,7 @@ code_section
             movss [font_size], xmm0
 
             ; Create font object
-            invoke GdipCreateFontFamilyFromName, font_name, 0, addr font_family
+            invoke GdipCreateFontFamilyFromName, font_name, NULL, addr font_family
             invoke GdipCreateFont, [font_family], float [font_size], FontStyleRegular, UnitPixel, addr font
 
             ; Create text solid fill brush object
@@ -270,9 +266,10 @@ code_section
     ; Main entry point
     entrypoint
         local gdiplusToken, DWORD_size, \
+            _padding, DWORD_size, \
             gdiplusStartupInput, GdiplusStartupInput_size, \
             window_class, WNDCLASSEX_size, \
-            hwnd, DWORD_size, \
+            hwnd, POINTER_size, \
             message, MSG_size
 
         frame
@@ -282,10 +279,10 @@ code_section
 
         ; Startup GDI+
         mov dword [gdiplusStartupInput + GdiplusStartupInput.GdiplusVersion], 1
-        mov pointer [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], 0
-        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], 0
-        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], 0
-        invoke GdiplusStartup, addr gdiplusToken, addr gdiplusStartupInput, 0
+        mov pointer [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], NULL
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], FALSE
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], FALSE
+        invoke GdiplusStartup, addr gdiplusToken, addr gdiplusStartupInput, NULL
 
         ; Register the window class
         mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -298,19 +295,19 @@ code_section
 
         mov dword [window_class + WNDCLASSEX.cbWndExtra], 0
 
-        invoke GetModuleHandleA, 0
+        invoke GetModuleHandleA, NULL
         mov [window_class + WNDCLASSEX.hInstance], _ax
 
-        invoke LoadIconA, 0, IDI_APPLICATION
+        invoke LoadIconA, NULL, IDI_APPLICATION
         mov [window_class + WNDCLASSEX.hIcon], _ax
         mov [window_class + WNDCLASSEX.hIconSm], _ax
 
-        invoke LoadCursorA, 0, IDC_ARROW
+        invoke LoadCursorA, NULL, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
         mov pointer [window_class + WNDCLASSEX.hbrBackground], COLOR_WINDOW + 1
 
-        mov pointer [window_class + WNDCLASSEX.lpszMenuName], 0
+        mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
         mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
@@ -319,14 +316,14 @@ code_section
         ; Create the window
         invoke CreateWindowExA, 0, window_class_name, window_title, WS_OVERLAPPEDWINDOW, \
             CW_USEDEFAULT, CW_USEDEFAULT, [window_width], [window_height], \
-            HWND_DESKTOP, 0, [window_class + WNDCLASSEX.hInstance], 0
+            HWND_DESKTOP, NULL, [window_class + WNDCLASSEX.hInstance], NULL
         mov [hwnd], _ax
         invoke ShowWindow, [hwnd], SW_SHOWDEFAULT
         invoke UpdateWindow, [hwnd]
 
         ; Message loop
         .message_loop:
-            invoke GetMessageA, addr message, 0, 0, 0
+            invoke GetMessageA, addr message, NULL, 0, 0
             cmp _ax, 0
             jle .done
 
@@ -390,8 +387,8 @@ data_section
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
-            GetModuleHandleA, "GetModuleHandleA", \
-            GetLocalTime, "GetLocalTime"
+            GetLocalTime, "GetLocalTime", \
+            GetModuleHandleA, "GetModuleHandleA"
 
         import user_table, \
             BeginPaint, "BeginPaint", \
@@ -406,8 +403,8 @@ data_section
             LoadIconA, "LoadIconA", \
             PostQuitMessage, "PostQuitMessage", \
             RegisterClassExA, "RegisterClassExA", \
-            ShowWindow, "ShowWindow", \
             SetWindowPos, "SetWindowPos", \
+            ShowWindow, "ShowWindow", \
             TranslateMessage, "TranslateMessage", \
             UpdateWindow, "UpdateWindow", \
             wsprintfW, "wsprintfW"

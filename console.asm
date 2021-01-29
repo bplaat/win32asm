@@ -3,11 +3,7 @@
     ; 32-bit: nasm -f bin console.asm -o console-x86.exe && ./console-x86
     ; 64-bit: nasm -DWIN64 -f bin console.asm -o console-x64.exe && ./console-x64
 
-%ifdef WIN64
-    %include "libwindows-x64.inc"
-%else
-    %include "libwindows-x86.inc"
-%endif
+%include "libwindows.inc"
 
 header HEADER_CONSOLE
 
@@ -26,12 +22,12 @@ code_section
         ; Print question string
         invoke GetStdHandle, STD_OUTPUT_HANDLE
         mov [console_out], _ax
-        invoke WriteConsoleA, [console_out], question, question_size, 0, 0
+        invoke WriteConsoleA, [console_out], question, question_size, NULL, 0
 
         ; Read name answer string
         invoke GetStdHandle, STD_INPUT_HANDLE
         mov [console_in], _ax
-        invoke ReadConsoleA, [console_in], addr name_buffer, name_buffer_size, addr name_bytes_read, 0
+        invoke ReadConsoleA, [console_in], addr name_buffer, name_buffer_size, addr name_bytes_read, NULL
 
         ; Cut trailing CRLF enter characters
         mov eax, [name_bytes_read]
@@ -46,7 +42,7 @@ code_section
 
         ; Print formated answer string
         cinvoke wsprintfA, addr answer_buffer, answer, addr name_buffer
-        invoke WriteConsoleA, [console_out], addr answer_buffer, _ax, 0, 0
+        invoke WriteConsoleA, [console_out], addr answer_buffer, _ax, NULL, 0
 
         ; Exit successfull
         invoke ExitProcess, EXIT_SUCCESS

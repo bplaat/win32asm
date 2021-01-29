@@ -3,25 +3,22 @@
     ; 32-bit: nasm -f bin socket.asm -o socket-x86.exe && ./socket-x86
     ; 64-bit: nasm -DWIN64 -f bin socket.asm -o socket-x64.exe && ./socket-x64
 
-    ; Not working yet
+    ; Not yet finished
 
-%ifdef WIN64
-    %include "libwindows-x64.inc"
-%else
-    %include "libwindows-x86.inc"
-%endif
+%include "libwindows.inc"
 
 header HEADER_CONSOLE
 
 code_section
+    ; A function that zero's out some memory
     function ZeroMemory, address, size
-        mov edi, [address]
-        mov ecx, 0
+        mov _di, [address]
+        xor _cx, _cx
     .repeat:
-        cmp ecx, [size]
+        cmp _cx, [size]
         je .done
-        mov byte [edi + ecx], 0
-        inc ecx
+        mov byte [_di + _cx], 0
+        inc _cx
         jmp .repeat
     .done:
         return
@@ -99,7 +96,7 @@ code_section
         cmp _ax, 0
         je .done
 
-        invoke WriteConsoleA, [console_out], addr data_buffer, _ax, 0, 0
+        invoke WriteConsoleA, [console_out], addr data_buffer, _ax, NULL, 0
         jmp read_socket_write_stout_loop
     .done:
         ; Close socket and WinSock2
