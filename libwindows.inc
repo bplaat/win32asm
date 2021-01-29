@@ -37,18 +37,18 @@ _alignment equ 0x200
 %endif
 
 ; Sizes
-BYTE_size equ 1
-WORD_size equ 2
-DWORD_size equ 4
-QWORD_size equ 8
+%define BYTE_size 1
+%define WORD_size 2
+%define DWORD_size 4
+%define QWORD_size 8
 %ifdef WIN64
     %idefine pointer qword
     %idefine dp dq
-    POINTER_size equ QWORD_size
+    %define POINTER_size QWORD_size
 %else
     %idefine pointer dword
     %idefine dp dd
-    POINTER_size equ DWORD_size
+    %define POINTER_size DWORD_size
 %endif
 
 ; Header
@@ -256,13 +256,33 @@ HEADER_CONSOLE equ 3
 %macro struct 3-*
     %1:
         %rotate 1
+        %assign index 0
         %assign position 0
         %rep (%0 - 1) / 2
             .%1 equ position
             %assign position position + %2
             %rotate 2
+
+            ; Pointer align items
+            %if index != ((%0 - 1) / 2 - 1)
+                %if (position % POINTER_size) > 0
+                    %ifnum %2
+                        %if %2 == POINTER_size
+                            %assign position position + (position % POINTER_size)
+                        %endif
+                    %else
+                        %error struct macro argument: %1, %2
+                    %endif
+                %endif
+            %else
+                %if (position % POINTER_size) > 0
+                    %assign position position + (position % POINTER_size)
+                %endif
+            %endif
+
+            %assign index index + 1
         %endrep
-        %1_size equ position
+        %xdefine %1_size position
 %endmacro
 
 %macro function 1-*
@@ -321,10 +341,26 @@ HEADER_CONSOLE equ 3
 %endmacro
 
 %macro local 2-*
+    %assign index 0
     %assign size 0
     %rep %0 / 2
         %assign size size + %2
         %rotate 2
+
+        ; Pointer align items
+        %if index != (%0 / 2 - 1)
+            %if (size % POINTER_size) > 0
+                %ifnum %2
+                    %if %2 == POINTER_size
+                        %assign size size + (size % POINTER_size)
+                    %endif
+                %else
+                    %error local macro argument: %1, %2
+                %endif
+            %endif
+        %endif
+
+        %assign index index + 1
     %endrep
 
     %ifdef WIN64
@@ -333,11 +369,27 @@ HEADER_CONSOLE equ 3
         sub esp, (size + 3) & (~3)
     %endif
 
+    %assign index 0
     %assign position 0
     %rep %0 / 2
         %assign position position + %2
         %xdefine %1 _bp - position
         %rotate 2
+
+        ; Pointer align items
+        %if index != (%0 / 2 - 1)
+            %if (position % POINTER_size) > 0
+                %ifnum %2
+                    %if %2 == POINTER_size
+                        %assign position position + (position % POINTER_size)
+                    %endif
+                %else
+                    %error local macro argument: %1, %2
+                %endif
+            %endif
+        %endif
+
+        %assign index index + 1
     %endrep
 %endmacro
 
@@ -671,26 +723,14 @@ struct WNDCLASSEX, \
     lpszClassName, POINTER_size, \
     hIconSm, POINTER_size
 
-%ifdef WIN64
-    struct MSG, \
-        hwnd, POINTER_size, \
-        message, DWORD_size, \
-        _padding, DWORD_size, \
-        wParam, POINTER_size, \
-        lParam, POINTER_size, \
-        time, DWORD_size, \
-        pt, POINT_size, \
-        lPrivate, DWORD_size
-%else
-   struct MSG, \
-        hwnd, POINTER_size, \
-        message, DWORD_size, \
-        wParam, POINTER_size, \
-        lParam, POINTER_size, \
-        time, DWORD_size, \
-        pt, POINT_size, \
-        lPrivate, DWORD_size
-%endif
+struct MSG, \
+    hwnd, POINTER_size, \
+    message, DWORD_size, \
+    wParam, POINTER_size, \
+    lParam, POINTER_size, \
+    time, DWORD_size, \
+    pt, POINT_size, \
+    lPrivate, DWORD_size
 
 struct MINMAXINFO, \
     ptReserved, POINT_size, \
@@ -705,7 +745,7 @@ struct PAINTSTRUCT, \
     rcPaint, RECT_size, \
     fRestore, DWORD_size, \
     fIncUpdate, DWORD_size, \
-    rgbReserved, 32 * BYTE_size
+    rgbReserved, 32
 
 ; Gdi32
 DEFAULT_GUI_FONT equ 17
@@ -728,44 +768,23 @@ LVM_FIRST equ 0x1000
 LVM_INSERTITEMA equ LVM_FIRST + 7
 
 LVIF_TEXT equ 0x0001
-%ifdef WIN64
-    struct LVITEM, \
-        mask, DWORD_size, \
-        iItem, DWORD_size, \
-        iSubItem, DWORD_size, \
-        state, DWORD_size, \
-        stateMask, DWORD_size, \
-        _padding1, DWORD_size, \
-        pszText, POINTER_size, \
-        cchTextMax, DWORD_size, \
-        iImage, DWORD_size, \
-        lParam, POINTER_size, \
-        iIndent, DWORD_size, \
-        iGroupId, DWORD_size, \
-        cColumns, DWORD_size, \
-        _padding2, DWORD_size, \
-        puColumns, POINTER_size, \
-        piColFmt, POINTER_size, \
-        iGroup, DWORD_size, \
-        _padding3, DWORD_size
-%else
-    struct LVITEM, \
-        mask, DWORD_size, \
-        iItem, DWORD_size, \
-        iSubItem, DWORD_size, \
-        state, DWORD_size, \
-        stateMask, DWORD_size, \
-        pszText, POINTER_size, \
-        cchTextMax, DWORD_size, \
-        iImage, DWORD_size, \
-        lParam, POINTER_size, \
-        iIndent, DWORD_size, \
-        iGroupId, DWORD_size, \
-        cColumns, DWORD_size, \
-        puColumns, POINTER_size, \
-        piColFmt, POINTER_size, \
-        iGroup, DWORD_size
-%endif
+
+struct LVITEM, \
+    mask, DWORD_size, \
+    iItem, DWORD_size, \
+    iSubItem, DWORD_size, \
+    state, DWORD_size, \
+    stateMask, DWORD_size, \
+    pszText, POINTER_size, \
+    cchTextMax, DWORD_size, \
+    iImage, DWORD_size, \
+    lParam, POINTER_size, \
+    iIndent, DWORD_size, \
+    iGroupId, DWORD_size, \
+    cColumns, DWORD_size, \
+    puColumns, POINTER_size, \
+    piColFmt, POINTER_size, \
+    iGroup, DWORD_size
 
 ; WS2_32 (not yet finished)
 AF_UNSPEC equ 0
@@ -779,11 +798,10 @@ SD_SEND equ 1
 struct WSADATA, \
     wVersion, WORD_size, \
     wHighVersion, WORD_size, \
-    szDescription, (256 + 1) * BYTE_size, \
-    szSystemStatus, (128 + 1) * BYTE_size, \
+    szDescription, 256 + 1, \
+    szSystemStatus, 128 + 1, \
     iMaxSockets, WORD_size, \
     iMaxUdpDg, WORD_size, \
-    _padding, WORD_size, \
     lpVendorInfo, POINTER_size
 
 struct addrinfo, \
@@ -807,20 +825,11 @@ StringAlignmentCenter equ 1
 
 TextRenderingHintClearTypeGridFit equ 5
 
-%ifdef WIN64
-    struct GdiplusStartupInput, \
-        GdiplusVersion, DWORD_size, \
-        _padding, DWORD_size, \
-        DebugEventCallback, POINTER_size, \
-        SuppressBackgroundThread, DWORD_size, \
-        SuppressExternalCodecs, DWORD_size
-%else
-    struct GdiplusStartupInput, \
-        GdiplusVersion, DWORD_size, \
-        DebugEventCallback, POINTER_size, \
-        SuppressBackgroundThread, DWORD_size, \
-        SuppressExternalCodecs, DWORD_size
-%endif
+struct GdiplusStartupInput, \
+    GdiplusVersion, DWORD_size, \
+    DebugEventCallback, POINTER_size, \
+    SuppressBackgroundThread, DWORD_size, \
+    SuppressExternalCodecs, DWORD_size
 
 ; Custom
 EXIT_SUCCESS equ 0

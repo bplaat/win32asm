@@ -266,7 +266,6 @@ code_section
     ; Main entry point
     entrypoint
         local gdiplusToken, DWORD_size, \
-            _padding, DWORD_size, \
             gdiplusStartupInput, GdiplusStartupInput_size, \
             window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
