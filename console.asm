@@ -14,13 +14,12 @@ header HEADER_CONSOLE
 code_section
     entrypoint
         name_buffer_size equ 64 * BYTE_size
-        answer_buffer_size equ 64 * BYTE_size
 
         local console_out, POINTER_size, \
             console_in, POINTER_size, \
             name_buffer, name_buffer_size, \
             name_bytes_read, DWORD_size, \
-            answer_buffer, answer_buffer_size
+            answer_buffer, 64 * BYTE_size
 
         frame
 
@@ -38,12 +37,19 @@ code_section
         mov eax, [name_bytes_read]
         mov byte [name_buffer + _ax - 2], 0
 
+        ; Check if name is empty if so replace with a question mark
+        cmp byte [name_buffer], 0
+        jne .skip
+        mov byte [name_buffer], '?'
+        mov byte [name_buffer + 1], 0
+    .skip:
+
         ; Print formated answer string
         cinvoke wsprintfA, addr answer_buffer, answer, addr name_buffer
         invoke WriteConsoleA, [console_out], addr answer_buffer, _ax, 0, 0
 
         ; Exit successfull
-        invoke ExitProcess, 0
+        invoke ExitProcess, EXIT_SUCCESS
 
         end_frame
 end_code_section

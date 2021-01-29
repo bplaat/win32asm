@@ -105,6 +105,35 @@ CLEARTYPE_QUALITY equ 5
 
 TRANSPARENT equ 1
 
+; WS2_32
+AF_UNSPEC equ 0
+
+SOCK_STREAM equ 1
+
+IPPROTO_TCP equ 6
+
+SD_SEND equ 1
+
+struct WSADATA, \
+    wVersion, WORD_size, \
+    wHighVersion, WORD_size, \
+    szDescription, (256 + 1) * BYTE_size, \
+    szSystemStatus, (128 + 1) * BYTE_size, \
+    iMaxSockets, WORD_size, \
+    iMaxUdpDg, WORD_size, \
+    _padding, 2 * BYTE_size, \
+    lpVendorInfo, POINTER_size
+
+struct addrinfo, \
+    ai_flags, DWORD_size, \
+    ai_family, DWORD_size, \
+    ai_socktype, DWORD_size, \
+    ai_protocol, DWORD_size, \
+    ai_addrlen, POINTER_size, \
+    ai_canonname, POINTER_size, \
+    ai_addr, POINTER_size, \
+    ai_next, POINTER_size
+
 ; Gdiplus
 SmoothingModeAntiAlias equ 5
 
@@ -123,6 +152,9 @@ struct GdiplusStartupInput, \
     SuppressExternalCodecs, DWORD_size
 
 ; Custom
+EXIT_SUCCESS equ 0
+EXIT_FAILURE equ 1
+
 struct Rect, \
     x, DWORD_size, \
     y, DWORD_size, \

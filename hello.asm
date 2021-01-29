@@ -17,7 +17,7 @@ code_section
 
         invoke MessageBoxA, HWND_DESKTOP, message, message, MB_OK
 
-        invoke ExitProcess, 0
+        invoke ExitProcess, EXIT_SUCCESS
 
         end_frame
 end_code_section
