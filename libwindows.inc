@@ -699,6 +699,16 @@ DT_CENTER equ 0x00000001
 DT_VCENTER equ 0x00000004
 DT_SINGLELINE equ 0x00000020
 
+GWLP_USERDATA equ -21
+
+%ifdef WIN64
+    %define GetWindowLongPtrAString 'GetWindowLongPtrA'
+    %define SetWindowLongPtrAString 'SetWindowLongPtrA'
+%else
+    %define GetWindowLongPtrAString 'GetWindowLongA'
+    %define SetWindowLongPtrAString 'SetWindowLongA'
+%endif
+
 struct POINT, \
     x, DWORD_size, \
     y, DWORD_size

@@ -7,6 +7,12 @@
 
 header
 
+struct WindowData, \
+    play_button_hwnd, POINTER_size, \
+    about_button_hwnd, POINTER_size, \
+    exit_button_hwnd, POINTER_size, \
+    list_view_hwnd, POINTER_size
+
 code_section
     PLAY_BUTTON_ID equ 1
     ABOUT_BUTTON_ID equ 2
@@ -47,14 +53,22 @@ code_section
         jmp .default
 
         .wm_create:
-            ; Center new created window
-            local window_rect, RECT_size, \
+            local window_data, POINTER_size, \
+                window_rect, RECT_size, \
                 new_window_rect, Rect_size, \
                 list_item, LVITEM_size, \
                 item_buffer, 128 * BYTE_size
 
             frame
 
+            ; Allocate WindowData structure
+            invoke GetProcessHeap
+            invoke HeapAlloc, _ax, 0, WindowData_size
+            mov [window_data], _ax
+
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
+
+            ; Center new created window
             invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_width]
@@ -82,19 +96,23 @@ code_section
             ; Create window controls
             invoke CreateWindowExA, 0, button_class_name, play_button, WS_CHILD | WS_VISIBLE, \
                 0, 0, 0, 0, [hwnd], PLAY_BUTTON_ID, NULL, NULL
-            mov [play_button_hwnd], _ax
+            mov _di, [window_data]
+            mov [_di + WindowData.play_button_hwnd], _ax
 
             invoke CreateWindowExA, 0, button_class_name, about_button, WS_CHILD | WS_VISIBLE, \
                 0, 0, 0, 0, [hwnd], ABOUT_BUTTON_ID, NULL, NULL
-            mov [about_button_hwnd], _ax
+            mov _di, [window_data]
+            mov [_di + WindowData.about_button_hwnd], _ax
 
             invoke CreateWindowExA, 0, button_class_name, exit_button, WS_CHILD | WS_VISIBLE, \
                 0, 0, 0, 0, [hwnd], EXIT_BUTTON_ID, NULL, NULL
-            mov [exit_button_hwnd], _ax
+            mov _di, [window_data]
+            mov [_di + WindowData.exit_button_hwnd], _ax
 
             invoke CreateWindowExA, 0, listview_class_name, NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_LIST | LVS_SORTASCENDING, \
                 0, 0, 0, 0, [hwnd], EXIT_BUTTON_ID, NULL, NULL
-            mov [list_view_hwnd], _ax
+            mov _di, [window_data]
+            mov [_di + WindowData.list_view_hwnd], _ax
 
             ; Add 500 text items to list view
             mov _bx, 0
@@ -109,7 +127,8 @@ code_section
             lea _ax, [item_buffer]
             mov pointer [list_item + LVITEM.pszText], _ax
 
-            invoke SendMessageA, [list_view_hwnd], LVM_INSERTITEMA, NULL, addr list_item
+            mov _si, [window_data]
+            invoke SendMessageA, [_si + WindowData.list_view_hwnd], LVM_INSERTITEMA, NULL, addr list_item
 
             inc _bx
             jmp .list_view_repeat
@@ -123,12 +142,18 @@ code_section
 
             jmp .leave
 
+            %undef window_data
             %undef window_rect
 
         .wm_size:
-            local rect, Rect_size
+            local window_data, POINTER_size, \
+                rect, Rect_size
 
             frame
+
+            ; Get WindowData structure
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
 
             ; Save new window size
             movzx eax, word [lParam]
@@ -160,7 +185,8 @@ code_section
             idiv ecx
             mov [rect + Rect.height], eax
 
-            invoke SetWindowPos, [play_button_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
+            mov _si, [window_data]
+            invoke SetWindowPos, [_si + WindowData.play_button_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
             ; Resize the about button
             mov eax, [rect + Rect.y]
@@ -168,7 +194,8 @@ code_section
             add eax, padding
             mov [rect + Rect.y], eax
 
-            invoke SetWindowPos, [about_button_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
+            mov _si, [window_data]
+            invoke SetWindowPos, [_si + WindowData.about_button_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
             ; Resize the exit button
             mov eax, [rect + Rect.y]
@@ -176,7 +203,8 @@ code_section
             add eax, padding
             mov [rect + Rect.y], eax
 
-            invoke SetWindowPos, [exit_button_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
+            mov _si, [window_data]
+            invoke SetWindowPos, [_si + WindowData.exit_button_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
             ; Resize the list view
             mov eax, [window_width]
@@ -191,7 +219,8 @@ code_section
             sub eax, padding * 2
             mov [rect + Rect.height], eax
 
-            invoke SetWindowPos, [list_view_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
+            mov _si, [window_data]
+            invoke SetWindowPos, [_si + WindowData.list_view_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
             end_frame
 
@@ -227,7 +256,21 @@ code_section
             jmp .leave
 
         .wm_destroy:
+            local process_heap, POINTER_size
+
+            frame
+
+            ; Free WindowData structure
+            invoke GetProcessHeap
+            mov [process_heap], _ax
+
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            invoke HeapFree, [process_heap], 0, _ax
+
+            ; Close process
             invoke PostQuitMessage, 0
+
+            end_frame
         .leave:
             return 0
 
@@ -324,13 +367,8 @@ data_section
     item_format db "Item %d", 0
 
     ; Global variables
-    window_width dd 800
-    window_height dd 600
-
-    play_button_hwnd dp 0
-    about_button_hwnd dp 0
-    exit_button_hwnd dp 0
-    list_view_hwnd dp 0
+    window_width dd 1024
+    window_height dd 768
 
     ; Import table
     import_table
@@ -348,7 +386,10 @@ data_section
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
-            GetModuleHandleA, "GetModuleHandleA"
+            HeapAlloc, "HeapAlloc", \
+            HeapFree, "HeapFree", \
+            GetModuleHandleA, "GetModuleHandleA", \
+            GetProcessHeap, "GetProcessHeap"
 
         import shell_table, \
             ShellExecuteA, "ShellExecuteA"
@@ -362,12 +403,14 @@ data_section
             GetClientRect, "GetClientRect", \
             GetMessageA, "GetMessageA", \
             GetSystemMetrics, "GetSystemMetrics", \
+            GetWindowLongPtrA, GetWindowLongPtrAString, \
             LoadCursorA, "LoadCursorA", \
             LoadIconA, "LoadIconA", \
             MessageBoxA, "MessageBoxA", \
             PostQuitMessage, "PostQuitMessage", \
             RegisterClassExA, "RegisterClassExA", \
             SendMessageA, "SendMessageA", \
+            SetWindowLongPtrA, SetWindowLongPtrAString, \
             SetWindowPos, "SetWindowPos", \
             ShowWindow, "ShowWindow", \
             TranslateMessage, "TranslateMessage", \
