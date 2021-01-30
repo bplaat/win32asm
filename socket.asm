@@ -24,14 +24,14 @@ code_section
         return
 
     entrypoint
-        data_buffer_size equ 1024 * BYTE_size
+        %define data_buffer_size 1024
 
         local wsaData, WSADATA_size, \
             console_out, POINTER_size, \
             address_hints, addrinfo_size, \
             client_address, addrinfo_size, \
             client_socket, POINTER_size, \
-            request_buffer, 128 * BYTE_size, \
+            request_buffer, 128, \
             data_buffer, data_buffer_size
 
         ; Init WinSock2

@@ -14,9 +14,9 @@ struct WindowData, \
     list_view_hwnd, POINTER_size
 
 code_section
-    PLAY_BUTTON_ID equ 1
-    ABOUT_BUTTON_ID equ 2
-    EXIT_BUTTON_ID equ 3
+    %define PLAY_BUTTON_ID 1
+    %define ABOUT_BUTTON_ID 2
+    %define EXIT_BUTTON_ID 3
 
     ; A function that zero's out some memory
     function ZeroMemory, address, size
@@ -57,7 +57,7 @@ code_section
                 window_rect, RECT_size, \
                 new_window_rect, Rect_size, \
                 list_item, LVITEM_size, \
-                item_buffer, 128 * BYTE_size
+                item_buffer, 128
 
             ; Allocate WindowData structure
             invoke GetProcessHeap
@@ -113,7 +113,7 @@ code_section
             mov [_di + WindowData.list_view_hwnd], _ax
 
             ; Add 500 text items to list view
-            mov _bx, 0
+            xor _bx, _bx
         .list_view_repeat:
             cmp _bx, 500
             je .list_view_done
@@ -159,7 +159,7 @@ code_section
             mov [window_height], eax
 
             ; Resize the window controls
-            padding equ 16
+            %define padding 16
 
             ; Resize the play button
             mov eax, padding

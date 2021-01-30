@@ -10,8 +10,8 @@
 %endif
 
 ; Setup executable base
-_base equ 0x400000
-_alignment equ 0x200
+%define _base 0x400000
+%define _alignment 0x200
 [org _base]
 %define RVA(_address) (_address - _base)
 
@@ -52,8 +52,8 @@ _alignment equ 0x200
 %endif
 
 ; Header
-HEADER_GUI equ 2
-HEADER_CONSOLE equ 3
+%define HEADER_GUI 2
+%define HEADER_CONSOLE 3
 %macro header 1
     _header:
         ; MS-DOS Header
@@ -499,7 +499,15 @@ HEADER_CONSOLE equ 3
                 %elif _position == 4
                     movss xmm3, %1
                 %else
-                    mov rcx, %1
+                    %ifnum %1
+                        %if %1 == 0
+                            xor rcx, rcx
+                        %else
+                            mov rcx, %1
+                        %endif
+                    %else
+                        mov rcx, %1
+                    %endif
                     mov [rsp + (_position - 1) * QWORD_size], rcx
                 %endif
 
@@ -516,15 +524,55 @@ HEADER_CONSOLE equ 3
             %if _position == 0
                 call %1
             %elif _position == 1
-                mov rcx, %1
+                %ifnum %1
+                    %if %1 == 0
+                        xor rcx, rcx
+                    %else
+                        mov rcx, %1
+                    %endif
+                %else
+                    mov rcx, %1
+                %endif
             %elif _position == 2
-                mov rdx, %1
+                %ifnum %1
+                    %if %1 == 0
+                        xor rdx, rdx
+                    %else
+                        mov rdx, %1
+                    %endif
+                %else
+                    mov rdx, %1
+                %endif
             %elif _position == 3
-                mov r8, %1
+                %ifnum %1
+                    %if %1 == 0
+                        xor r8, r8
+                    %else
+                        mov r8, %1
+                    %endif
+                %else
+                    mov r8, %1
+                %endif
             %elif _position == 4
-                mov r9, %1
+                %ifnum %1
+                    %if %1 == 0
+                        xor r9, r9
+                    %else
+                        mov r9, %1
+                    %endif
+                %else
+                    mov r9, %1
+                %endif
             %else
-                mov rcx, %1
+                %ifnum %1
+                    %if %1 == 0
+                        xor rcx, rcx
+                    %else
+                        mov rcx, %1
+                    %endif
+                %else
+                    mov rcx, %1
+                %endif
                 mov [rsp + (_position - 1) * QWORD_size], rcx
             %endif
 
@@ -649,13 +697,13 @@ HEADER_CONSOLE equ 3
 ; Headers
 
 ; Windef
-NULL equ 0
-TRUE equ 1
-FALSE equ 0
+%define NULL 0
+%define TRUE 1
+%define FALSE 0
 
 ; Kernel32
-STD_INPUT_HANDLE equ -10
-STD_OUTPUT_HANDLE equ -11
+%define STD_INPUT_HANDLE -10
+%define STD_OUTPUT_HANDLE -11
 
 struct SYSTEMTIME, \
     wYear, WORD_size, \
@@ -668,50 +716,50 @@ struct SYSTEMTIME, \
     wMilliseconds, WORD_size
 
 ; User32
-HWND_DESKTOP equ 0
-HWND_TOP equ 0
+%define HWND_DESKTOP 0
+%define HWND_TOP 0
 
-MB_OK equ 0x00000000
-MB_ICONINFORMATION equ 0x00000040
+%define MB_OK 0x00000000
+%define MB_ICONINFORMATION 0x00000040
 
-CS_VREDRAW equ 0x0001
-CS_HREDRAW equ 0x0002
+%define CS_VREDRAW 0x0001
+%define CS_HREDRAW 0x0002
 
-COLOR_WINDOW equ 5
+%define COLOR_WINDOW 5
 
-IDI_APPLICATION equ 32512
+%define IDI_APPLICATION 32512
 
-IDC_ARROW equ 32512
+%define IDC_ARROW 32512
 
-CW_USEDEFAULT equ 0x80000000
+%define CW_USEDEFAULT 0x80000000
 
-WS_CHILD equ 0x040000000
-WS_VISIBLE equ 0x010000000
-WS_BORDER equ 000800000h
-WS_OVERLAPPEDWINDOW equ 0x00CF0000
+%define WS_CHILD 0x040000000
+%define WS_VISIBLE 0x010000000
+%define WS_BORDER 000800000h
+%define WS_OVERLAPPEDWINDOW 0x00CF0000
 
-SW_SHOWNORMAL equ 1
-SW_SHOWDEFAULT equ 10
+%define SW_SHOWNORMAL 1
+%define SW_SHOWDEFAULT 10
 
-WM_CREATE equ 0x0001
-WM_SIZE equ 0x0005
-WM_GETMINMAXINFO equ 0x0024
-WM_DESTROY equ 0x0002
-WM_PAINT equ 0x000F
-WM_ERASEBKGND equ 0x0014
-WM_SETFONT equ 0x0030
-WM_COMMAND equ 0x0111
+%define WM_CREATE 0x0001
+%define WM_SIZE 0x0005
+%define WM_GETMINMAXINFO 0x0024
+%define WM_DESTROY 0x0002
+%define WM_PAINT 0x000F
+%define WM_ERASEBKGND 0x0014
+%define WM_SETFONT 0x0030
+%define WM_COMMAND 0x0111
 
-SM_CXSCREEN equ 0
-SM_CYSCREEN equ 1
+%define SM_CXSCREEN 0
+%define SM_CYSCREEN 1
 
-SWP_NOZORDER equ 0x0004
+%define SWP_NOZORDER 0x0004
 
-DT_CENTER equ 0x00000001
-DT_VCENTER equ 0x00000004
-DT_SINGLELINE equ 0x00000020
+%define DT_CENTER 0x00000001
+%define DT_VCENTER 0x00000004
+%define DT_SINGLELINE 0x00000020
 
-GWLP_USERDATA equ -21
+%define GWLP_USERDATA -21
 
 %ifdef WIN64
     %define GetWindowLongPtrAString 'GetWindowLongPtrA'
@@ -770,26 +818,26 @@ struct PAINTSTRUCT, \
     rgbReserved, 32
 
 ; Gdi32
-DEFAULT_GUI_FONT equ 17
+%define DEFAULT_GUI_FONT 17
 
-CLEARTYPE_QUALITY equ 5
+%define CLEARTYPE_QUALITY 5
 
-TRANSPARENT equ 1
+%define TRANSPARENT 1
 
 ; Comctl32
-ICC_WIN95_CLASSES equ 0x000000FF
+%define ICC_WIN95_CLASSES 0x000000FF
 
 struct INITCOMMONCONTROLSEX, \
     dwSize, DWORD_size, \
     dwICC, DWORD_size
 
-LVS_LIST equ 0x0003
-LVS_SORTASCENDING equ 0x0010
+%define LVS_LIST 0x0003
+%define LVS_SORTASCENDING 0x0010
 
-LVM_FIRST equ 0x1000
-LVM_INSERTITEMA equ LVM_FIRST + 7
+%define LVM_FIRST 0x1000
+%define LVM_INSERTITEMA LVM_FIRST + 7
 
-LVIF_TEXT equ 0x0001
+%define LVIF_TEXT 0x0001
 
 struct LVITEM, \
     mask, DWORD_size, \
@@ -809,13 +857,13 @@ struct LVITEM, \
     iGroup, DWORD_size
 
 ; Ws2_32
-AF_UNSPEC equ 0
+%define AF_UNSPEC 0
 
-SOCK_STREAM equ 1
+%define SOCK_STREAM 1
 
-IPPROTO_TCP equ 6
+%define IPPROTO_TCP 6
 
-SD_SEND equ 1
+%define SD_SEND 1
 
 struct WSADATA, \
     wVersion, WORD_size, \
@@ -837,15 +885,15 @@ struct addrinfo, \
     ai_next, POINTER_size
 
 ; Gdiplus
-SmoothingModeAntiAlias equ 5
+%define SmoothingModeAntiAlias 5
 
-UnitPixel equ 2
+%define UnitPixel 2
 
-FontStyleRegular equ 0
+%define FontStyleRegular 0
 
-StringAlignmentCenter equ 1
+%define StringAlignmentCenter 1
 
-TextRenderingHintClearTypeGridFit equ 5
+%define TextRenderingHintClearTypeGridFit 5
 
 struct GdiplusStartupInput, \
     GdiplusVersion, DWORD_size, \
@@ -854,8 +902,8 @@ struct GdiplusStartupInput, \
     SuppressExternalCodecs, DWORD_size
 
 ; Custom
-EXIT_SUCCESS equ 0
-EXIT_FAILURE equ 1
+%define EXIT_SUCCESS 0
+%define EXIT_FAILURE 1
 
 struct Rect, \
     x, DWORD_size, \

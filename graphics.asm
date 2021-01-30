@@ -142,7 +142,7 @@ code_section
                 text_brush, POINTER_size, \
                 string_format, POINTER_size, \
                 text_rect, Rect_size, \
-                text_buffer, 64 * BYTE_size
+                text_buffer, 64
 
             invoke BeginPaint, [hwnd], addr paint_struct
 
@@ -219,7 +219,7 @@ code_section
             mulss xmm1, xmm2
             movss [text_rect + Rect.height], xmm1
 
-            mov eax, 0
+            xor eax, eax
             cvtsi2ss xmm0, eax
             movss [text_rect + Rect.x], xmm0
 

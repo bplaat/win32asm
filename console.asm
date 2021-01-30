@@ -9,13 +9,13 @@ header HEADER_CONSOLE
 
 code_section
     entrypoint
-        name_buffer_size equ 64 * BYTE_size
+        %define name_buffer_size 64
 
         local console_out, POINTER_size, \
             console_in, POINTER_size, \
             name_buffer, name_buffer_size, \
             name_bytes_read, DWORD_size, \
-            answer_buffer, 64 * BYTE_size
+            answer_buffer, 64
 
         ; Print question string
         invoke GetStdHandle, STD_OUTPUT_HANDLE
