@@ -28,6 +28,7 @@ code_section
 
         mov [seed], eax
 
+        end_local
         return
 
     ; Simple random number generator function
@@ -62,8 +63,6 @@ code_section
             local window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            frame
-
             invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_width]
@@ -88,8 +87,7 @@ code_section
 
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
 
-            end_frame
-
+            end_local
             jmp .leave
 
             %undef window_rect
@@ -106,8 +104,6 @@ code_section
             local paint_struct, PAINTSTRUCT_size, \
                 window_rect, RECT_size, \
                 font, DWORD_size
-
-            frame
 
             invoke BeginPaint, [hwnd], addr paint_struct
 
@@ -128,8 +124,7 @@ code_section
 
             invoke EndPaint, [hwnd], addr paint_struct
 
-            end_frame
-
+            end_local
             jmp .leave
 
         .wm_destroy:
@@ -148,8 +143,6 @@ code_section
         local window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
             message, MSG_size
-
-        frame
 
         ; Generate rand seed
         fcall rand_generate_seed
@@ -205,7 +198,8 @@ code_section
             jmp .message_loop
         .done:
             invoke ExitProcess, [message + MSG.wParam]
-            end_frame
+
+        end_local
 end_code_section
 
 data_section

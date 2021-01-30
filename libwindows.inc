@@ -13,7 +13,7 @@
 _base equ 0x400000
 _alignment equ 0x200
 [org _base]
-%define RVA(address) (address - _base)
+%define RVA(_address) (_address - _base)
 
 ; Virtual extended registers
 %ifdef WIN64
@@ -256,33 +256,33 @@ HEADER_CONSOLE equ 3
 %macro struct 3-*
     %1:
         %rotate 1
-        %assign index 0
-        %assign position 0
+        %assign _index 0
+        %assign _position 0
         %rep (%0 - 1) / 2
-            .%1 equ position
-            %assign position position + %2
+            .%1 equ _position
+            %assign _position _position + %2
             %rotate 2
 
             ; Pointer align items
-            %if index != ((%0 - 1) / 2 - 1)
-                %if (position % POINTER_size) > 0
+            %if _index != ((%0 - 1) / 2 - 1)
+                %if (_position % POINTER_size) > 0
                     %ifnum %2
                         %if %2 == POINTER_size
-                            %assign position position + (position % POINTER_size)
+                            %assign _position _position + (_position % POINTER_size)
                         %endif
                     %else
                         %error struct macro argument: %1, %2
                     %endif
                 %endif
             %else
-                %if (position % POINTER_size) > 0
-                    %assign position position + (position % POINTER_size)
+                %if (_position % POINTER_size) > 0
+                    %assign _position _position + (_position % POINTER_size)
                 %endif
             %endif
 
-            %assign index index + 1
+            %assign _index _index + 1
         %endrep
-        %xdefine %1_size position
+        %xdefine %1_size _position
 %endmacro
 
 %macro function 1-*
@@ -291,33 +291,33 @@ HEADER_CONSOLE equ 3
         mov _bp, _sp
 
         %ifdef WIN64
-            %assign index 1
+            %assign _index 1
             %rotate 1
             %rep %0 - 1
-                %xdefine %1 rbp + (index + 1) * QWORD_size
+                %xdefine %1 rbp + (_index + 1) * QWORD_size
 
-                %if index == 1
+                %if _index == 1
                     mov [%1], rcx
                 %endif
-                %if index == 2
+                %if _index == 2
                     mov [%1], rdx
                 %endif
-                %if index == 3
+                %if _index == 3
                     mov [%1], r8
                 %endif
-                %if index == 4
+                %if _index == 4
                     mov [%1], r9
                 %endif
 
-                %assign index index + 1
+                %assign _index _index + 1
                 %rotate 1
             %endrep
         %else
-            %assign index 1
+            %assign _index 1
             %rotate 1
             %rep %0 - 1
-                %xdefine %1 ebp + (index + 1) * DWORD_size
-                %assign index index + 1
+                %xdefine %1 ebp + (_index + 1) * DWORD_size
+                %assign _index _index + 1
                 %rotate 1
             %endrep
 
@@ -341,18 +341,18 @@ HEADER_CONSOLE equ 3
 %endmacro
 
 %macro local 2-*
-    %assign index 0
-    %assign size 0
+    %assign _index 0
+    %assign _size 0
     %rep %0 / 2
-        %assign size size + %2
+        %assign _size _size + %2
         %rotate 2
 
         ; Pointer align items
-        %if index != (%0 / 2 - 1)
-            %if (size % POINTER_size) > 0
+        %if _index != (%0 / 2 - 1)
+            %if (_size % POINTER_size) > 0
                 %ifnum %2
                     %if %2 == POINTER_size
-                        %assign size size + (size % POINTER_size)
+                        %assign _size _size + (_size % POINTER_size)
                     %endif
                 %else
                     %error local macro argument: %1, %2
@@ -360,28 +360,34 @@ HEADER_CONSOLE equ 3
             %endif
         %endif
 
-        %assign index index + 1
+        %assign _index _index + 1
     %endrep
 
     %ifdef WIN64
-        sub rsp, (size + 15) & (~15)
+        %ifndef _fastcall_frame
+            %define _fastcall_frame
+            %assign _size _size + 4 * QWORD_size
+        %endif
+
+        sub rsp, (_size + 15) & (~15)
     %else
-        sub esp, (size + 3) & (~3)
+        sub esp, (_size + 3) & (~3)
     %endif
 
-    %assign index 0
-    %assign position 0
+    %assign _index 0
+    %assign _position 0
     %rep %0 / 2
-        %assign position position + %2
-        %xdefine %1 _bp - position
+        %assign _position _position + %2
+
+        %xdefine %1 _bp - _position
         %rotate 2
 
         ; Pointer align items
-        %if index != (%0 / 2 - 1)
-            %if (position % POINTER_size) > 0
+        %if _index != (%0 / 2 - 1)
+            %if (_position % POINTER_size) > 0
                 %ifnum %2
                     %if %2 == POINTER_size
-                        %assign position position + (position % POINTER_size)
+                        %assign _position _position + (_position % POINTER_size)
                     %endif
                 %else
                     %error local macro argument: %1, %2
@@ -389,8 +395,14 @@ HEADER_CONSOLE equ 3
             %endif
         %endif
 
-        %assign index index + 1
+        %assign _index _index + 1
     %endrep
+%endmacro
+
+%macro end_local 0
+    %ifdef _fastcall_frame
+        %undef _fastcall_frame
+    %endif
 %endmacro
 
 %macro frame 0
@@ -417,119 +429,119 @@ HEADER_CONSOLE equ 3
 ; Fastcall
 %macro fastcall 1-*
     ; Count good arguments
-    %assign arguments_count 0
+    %assign _arguments_count 0
     %rotate 1
     %rep %0 - 1
         %ifnstr %1
-            %assign arguments_count arguments_count + 1
+            %assign _arguments_count _arguments_count + 1
         %endif
         %rotate 1
     %endrep
 
     ; Reserve stack space 16 byte aligned
     %ifdef _fastcall_frame
-        %if arguments_count > 4
-            sub rsp, (((arguments_count - 4) * QWORD_size) + 15) & (~15)
+        %if _arguments_count > 4
+            sub rsp, (((_arguments_count - 4) * QWORD_size) + 15) & (~15)
         %endif
     %else
-        %if arguments_count > 4
-            sub rsp, ((arguments_count * QWORD_size) + 15) & (~15)
+        %if _arguments_count > 4
+            sub rsp, ((_arguments_count * QWORD_size) + 15) & (~15)
         %else
             sub rsp, 4 * QWORD_size
         %endif
     %endif
 
     ; Loop over arguments
-    %assign index %0 - 1
-    %assign position arguments_count
+    %assign _index %0 - 1
+    %assign _position _arguments_count
     %rep %0
-        %if index < 0
+        %if _index < 0
             %exitrep
         %endif
 
         %rotate -2
 
-        %assign isHandled 0
+        %assign _isHandled 0
 
         %ifstr %1
             ; Load address helper
             %if %1 == '&'
                 %rotate 1
 
-                %if position == 1
+                %if _position == 1
                     lea rcx, [%1]
-                %elif position == 2
+                %elif _position == 2
                     lea rdx, [%1]
-                %elif position == 3
+                %elif _position == 3
                     lea r8, [%1]
-                %elif position == 4
+                %elif _position == 4
                     lea r9, [%1]
                 %else
                     lea rcx, [%1]
-                    mov [rsp + (position - 1) * QWORD_size], rcx
+                    mov [rsp + (_position - 1) * QWORD_size], rcx
                 %endif
 
                 %rotate -1
-                %assign index index - 2
-                %assign isHandled 1
+                %assign _index _index - 2
+                %assign _isHandled 1
             %endif
 
             ; Float helper
             %if %1 == 'f'
                 %rotate 1
 
-                %if position == 1
+                %if _position == 1
                     movss xmm0, %1
-                %elif position == 2
+                %elif _position == 2
                     movss xmm1, %1
-                %elif position == 3
+                %elif _position == 3
                     movss xmm2, %1
-                %elif position == 4
+                %elif _position == 4
                     movss xmm3, %1
                 %else
                     mov rcx, %1
-                    mov [rsp + (position - 1) * QWORD_size], rcx
+                    mov [rsp + (_position - 1) * QWORD_size], rcx
                 %endif
 
                 %rotate -1
-                %assign index index - 2
-                %assign isHandled 1
+                %assign _index _index - 2
+                %assign _isHandled 1
             %endif
         %endif
 
         ; Or just a normal value
-        %if isHandled == 0
+        %if _isHandled == 0
             %rotate 1
 
-            %if position == 0
+            %if _position == 0
                 call %1
-            %elif position == 1
+            %elif _position == 1
                 mov rcx, %1
-            %elif position == 2
+            %elif _position == 2
                 mov rdx, %1
-            %elif position == 3
+            %elif _position == 3
                 mov r8, %1
-            %elif position == 4
+            %elif _position == 4
                 mov r9, %1
             %else
                 mov rcx, %1
-                mov [rsp + (position - 1) * QWORD_size], rcx
+                mov [rsp + (_position - 1) * QWORD_size], rcx
             %endif
 
-            %assign index index - 1
+            %assign _index _index - 1
         %endif
 
-        %assign position position - 1
+        %assign _position _position - 1
     %endrep
 
     ; Free stack space 16 byte aligned
     %ifdef _fastcall_frame
-        %if arguments_count > 4
-            add rsp, (((arguments_count - 4) * QWORD_size) + 15) & (~15)
+        %if _arguments_count > 4
+            add rsp, (((_arguments_count - 4) * QWORD_size) + 15) & (~15)
         %endif
     %else
-        %if arguments_count > 4
-            add rsp, ((arguments_count * QWORD_size) + 15) & (~15)
+        %if _arguments_count > 4
+            add rsp, ((_arguments_count * QWORD_size) + 15) & (~15)
         %else
             add rsp, 4 * QWORD_size
         %endif
@@ -538,15 +550,15 @@ HEADER_CONSOLE equ 3
 
 ; Stdcall and cdeclcall
 %macro push_reverse 1-*
-    %assign index %0 - 1
+    %assign _index %0 - 1
     %rep %0
-        %if index < 0
+        %if _index < 0
             %exitrep
         %endif
 
         %rotate -2
 
-        %assign isHandled 0
+        %assign _isHandled 0
 
         %ifstr %1
             ; Load address helper
@@ -555,8 +567,8 @@ HEADER_CONSOLE equ 3
                 lea eax, [%1]
                 push eax
                 %rotate -1
-                %assign index index - 2
-                %assign isHandled 1
+                %assign _index _index - 2
+                %assign _isHandled 1
             %endif
 
             ; Ignore float helper only for 64-bit fastcall
@@ -564,16 +576,16 @@ HEADER_CONSOLE equ 3
                 %rotate 1
                 push dword %1
                 %rotate -1
-                %assign index index - 2
-                %assign isHandled 1
+                %assign _index _index - 2
+                %assign _isHandled 1
             %endif
         %endif
 
         ; Or just push the value
-        %if isHandled == 0
+        %if _isHandled == 0
             %rotate 1
             push dword %1
-            %assign index index - 1
+            %assign _index _index - 1
         %endif
     %endrep
 %endmacro
@@ -796,7 +808,7 @@ struct LVITEM, \
     piColFmt, POINTER_size, \
     iGroup, DWORD_size
 
-; WS2_32 (not yet finished)
+; Ws2_32
 AF_UNSPEC equ 0
 
 SOCK_STREAM equ 1

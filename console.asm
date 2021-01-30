@@ -17,8 +17,6 @@ code_section
             name_bytes_read, DWORD_size, \
             answer_buffer, 64 * BYTE_size
 
-        frame
-
         ; Print question string
         invoke GetStdHandle, STD_OUTPUT_HANDLE
         mov [console_out], _ax
@@ -47,7 +45,7 @@ code_section
         ; Exit successfull
         invoke ExitProcess, EXIT_SUCCESS
 
-        end_frame
+    end_local
 end_code_section
 
 data_section

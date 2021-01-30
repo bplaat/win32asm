@@ -59,8 +59,6 @@ code_section
                 list_item, LVITEM_size, \
                 item_buffer, 128 * BYTE_size
 
-            frame
-
             ; Allocate WindowData structure
             invoke GetProcessHeap
             invoke HeapAlloc, _ax, 0, WindowData_size
@@ -138,8 +136,7 @@ code_section
             invoke GetStockObject, DEFAULT_GUI_FONT
             invoke EnumChildWindows, [hwnd], SetFont, _ax
 
-            end_frame
-
+            end_local
             jmp .leave
 
             %undef window_data
@@ -148,8 +145,6 @@ code_section
         .wm_size:
             local window_data, POINTER_size, \
                 rect, Rect_size
-
-            frame
 
             ; Get WindowData structure
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
@@ -222,8 +217,7 @@ code_section
             mov _si, [window_data]
             invoke SetWindowPos, [_si + WindowData.list_view_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
-            end_frame
-
+            end_local
             jmp .leave
 
         .wm_command:
@@ -258,8 +252,6 @@ code_section
         .wm_destroy:
             local process_heap, POINTER_size
 
-            frame
-
             ; Free WindowData structure
             invoke GetProcessHeap
             mov [process_heap], _ax
@@ -270,7 +262,7 @@ code_section
             ; Close process
             invoke PostQuitMessage, 0
 
-            end_frame
+            end_local
         .leave:
             return 0
 
@@ -286,8 +278,6 @@ code_section
             window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
             message, MSG_size
-
-        frame
 
         ; Init common controls for modern control style
         mov dword [initCommonControlsEx + INITCOMMONCONTROLSEX.dwSize], INITCOMMONCONTROLSEX_size
@@ -342,7 +332,8 @@ code_section
             jmp .message_loop
         .done:
             invoke ExitProcess, [message + MSG.wParam]
-            end_frame
+
+        end_local
 end_code_section
 
 data_section

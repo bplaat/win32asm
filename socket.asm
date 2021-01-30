@@ -34,8 +34,6 @@ code_section
             request_buffer, 128 * BYTE_size, \
             data_buffer, data_buffer_size
 
-        frame
-
         ; Init WinSock2
         invoke WSAStartup, 0x0202, addr wsaData
 
@@ -105,7 +103,7 @@ code_section
 
         invoke ExitProcess, EXIT_SUCCESS
 
-        end_frame
+    end_local
 end_code_section
 
 data_section
