@@ -18,6 +18,19 @@ code_section
     %define ABOUT_BUTTON_ID 2
     %define EXIT_BUTTON_ID 3
 
+    ; A function allocates memory
+    function malloc, size
+        invoke GetProcessHeap
+        invoke HeapAlloc, _ax, 0, [size]
+        return
+        %undef size
+
+    ; A function that frees memory
+    function free, ptr
+        invoke GetProcessHeap
+        invoke HeapFree, _ax, 0, [ptr]
+        return
+
     ; A function that zero's out some memory
     function ZeroMemory, address, size
         mov _di, [address]
@@ -60,8 +73,7 @@ code_section
                 item_buffer, 128
 
             ; Allocate WindowData structure
-            invoke GetProcessHeap
-            invoke HeapAlloc, _ax, 0, WindowData_size
+            fcall malloc, WindowData_size
             mov [window_data], _ax
 
             invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
@@ -250,14 +262,9 @@ code_section
             jmp .leave
 
         .wm_destroy:
-            local process_heap, POINTER_size
-
             ; Free WindowData structure
-            invoke GetProcessHeap
-            mov [process_heap], _ax
-
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
-            invoke HeapFree, [process_heap], 0, _ax
+            fcall free, _ax
 
             ; Close process
             invoke PostQuitMessage, 0

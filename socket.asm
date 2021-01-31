@@ -23,6 +23,7 @@ code_section
     .done:
         return
 
+    ; The program entry point
     entrypoint
         %define data_buffer_size 1024
 
