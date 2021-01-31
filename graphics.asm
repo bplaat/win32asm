@@ -111,7 +111,7 @@ code_section
             movzx eax, word [lParam]
             mov [window_width], eax
 
-            mov eax, dword [lParam]
+            mov eax, [lParam]
             shr eax, 16
             mov [window_height], eax
 

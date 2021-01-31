@@ -23,3 +23,7 @@ nasm -DWIN64 -f bin graphics.asm -o graphics-x64.exe
 # Controls example
 nasm -f bin controls.asm -o controls-x86.exe
 nasm -DWIN64 -f bin controls.asm -o controls-x64.exe
+
+# Custom example
+nasm -f bin custom.asm -o custom-x86.exe
+nasm -DWIN64 -f bin custom.asm -o custom-x64.exe

@@ -73,7 +73,7 @@ code_section
                 list_item, LVITEM_size, \
                 item_buffer, 128
 
-            ; Allocate WindowData structure
+            ; Allocate window data
             fcall malloc, WindowData_size
             mov [window_data], _ax
 
@@ -159,7 +159,7 @@ code_section
             local window_data, POINTER_size, \
                 rect, Rect_size
 
-            ; Get WindowData structure
+            ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
             mov [window_data], _ax
 
@@ -167,7 +167,7 @@ code_section
             movzx eax, word [lParam]
             mov [window_width], eax
 
-            mov eax, dword [lParam]
+            mov eax, [lParam]
             shr eax, 16
             mov [window_height], eax
 
@@ -263,14 +263,12 @@ code_section
             jmp .leave
 
         .wm_destroy:
-            ; Free WindowData structure
+            ; Free window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
             fcall free, _ax
 
             ; Close process
             invoke PostQuitMessage, 0
-
-            end_local
         .leave:
             return 0
 
