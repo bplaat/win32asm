@@ -73,12 +73,6 @@ code_section
                 list_item, LVITEM_size, \
                 item_buffer, 128
 
-            ; Allocate window data
-            fcall malloc, WindowData_size
-            mov [window_data], _ax
-
-            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
-
             ; Center new created window
             invoke GetClientRect, [hwnd], addr window_rect
 
@@ -103,6 +97,12 @@ code_section
             mov [new_window_rect + Rect.y], eax
 
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
+
+            ; Allocate window data
+            fcall malloc, WindowData_size
+            mov [window_data], _ax
+
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
 
             ; Create window controls
             invoke CreateWindowExA, 0, button_class_name, play_button, WS_CHILD | WS_VISIBLE, \
@@ -161,6 +161,8 @@ code_section
 
             ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            cmp _ax, 0
+            je .leave
             mov [window_data], _ax
 
             ; Save new window size

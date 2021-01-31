@@ -346,12 +346,6 @@ code_section
                 window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            ; Allocate window data
-            fcall malloc, WindowData_size
-            mov [window_data], _ax
-
-            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
-
             ; Center new created window
             invoke GetClientRect, [hwnd], addr window_rect
 
@@ -376,6 +370,12 @@ code_section
             mov [new_window_rect + Rect.y], eax
 
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
+
+            ; Allocate window data
+            fcall malloc, WindowData_size
+            mov [window_data], _ax
+
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
 
             ; Creat fonts
             fcall font_new, header_font_name, 700, FONT_STYLE_ITALIC
@@ -436,6 +436,8 @@ code_section
 
             ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            cmp _ax, 0
+            je .leave
             mov [window_data], _ax
 
             ; Save new window size
@@ -449,15 +451,11 @@ code_section
             ; Change header label width
             mov _si, [window_data]
             mov _si, [_si + WindowData.widgets + 0 * POINTER_size]
-            cmp _si, 0
-            je .leave
             fcall widget_set_width, _si, [window_width]
 
             ; Change footer label y and width
             mov _si, [window_data]
             mov _si, [_si + WindowData.widgets + 4 * POINTER_size]
-            cmp _si, 0
-            je .leave
 
             mov eax, [window_height]
             sub eax, 32 + 16

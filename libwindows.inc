@@ -79,14 +79,11 @@
         dd __?POSIX_TIME?__           ; TimeDateStamp
         dd 0                          ; PointerToSymbolTable
         dd 0                          ; NumberOfSymbols
-        %ifdef WIN64
-            dw 240                    ; SizeOfOptionalHeader
-        %else
-            dw 224                    ; SizeOfOptionalHeader
-        %endif
+        dw _optional_header_size      ; SizeOfOptionalHeader
         dw 0x030F                     ; Characteristics
 
         ; Standard COFF Fields
+    _optional_header:
         %ifdef WIN64
             dw 0x020B                 ; Magic
         %else
@@ -141,6 +138,8 @@
         dd 0, 0
         dd RVA(_import_table), _import_table_size
         times 14 dd 0, 0
+
+        _optional_header_size equ $ - _optional_header
 
         ; Section Table
 
