@@ -3,8 +3,8 @@
     ; 32-bit: nasm -f bin custom.asm -o custom-x86.exe && ./custom-x86
     ; 64-bit: nasm -DWIN64 -f bin custom.asm -o custom-x64.exe && ./custom-x64
 
-    ; This programma shows that it is possible to create object orientated widgets
-    ; In assembly an draw custom stuff with GDI. If it is a super plessend experience
+    ; This programma shows that it is possible to create object oriented widgets
+    ; library in assembly with custom drawing. If it is a super plessend experience
     ; is another question. But he it works 🎉
 
 %include "libwindows.inc"
@@ -76,13 +76,37 @@ code_section
         %undef rect
         %undef background_color
 
-    function widget_set_width, widget, new_width
+    function widget_set_x, widget, x
         mov _di, [widget]
-        mov eax, [new_width]
+        mov eax, [x]
+        mov [_di + Widget.rect + Rect.x], eax
+        return
+        %undef widget
+        %undef x
+
+    function widget_set_y, widget, y
+        mov _di, [widget]
+        mov eax, [y]
+        mov [_di + Widget.rect + Rect.y], eax
+        return
+        %undef widget
+        %undef y
+
+    function widget_set_width, widget, width
+        mov _di, [widget]
+        mov eax, [width]
+        mov [_di + Widget.rect + Rect.width], eax
+        return
+        %undef widget
+        %undef width
+
+    function widget_set_height, widget, height
+        mov _di, [widget]
+        mov eax, [height]
         mov [_di + Widget.rect + Rect.height], eax
         return
         %undef widget
-        %undef new_width
+        %undef height
 
     function widget_draw, widget, hdc
         local brush, POINTER_size, \
@@ -369,8 +393,6 @@ code_section
             ; Create header label widget
             mov dword [new_window_rect + Rect.x], 0
             mov dword [new_window_rect + Rect.y], 0
-            mov eax, [window_width]
-            mov [new_window_rect + Rect.width], eax
             mov dword [new_window_rect + Rect.height], 64
             mov _si, [window_data]
             fcall label_new, addr new_window_rect, 0x00222222, window_title, [_si + WindowData.header_font], 24, 0x00ffffff
@@ -398,10 +420,6 @@ code_section
 
             ; Create footer label widget
             mov dword [new_window_rect + Rect.x], 16
-            mov dword [new_window_rect + Rect.y], 16 + 460
-            mov eax, [window_width]
-            sub eax, 32
-            mov [new_window_rect + Rect.width], eax
             mov dword [new_window_rect + Rect.height], 32
             mov _si, [window_data]
             fcall label_new, addr new_window_rect, 0x00eeeeee, about_label, [_si + WindowData.footer_font], 24, 0x00111111
@@ -430,7 +448,24 @@ code_section
 
             ; Change header label width
             mov _si, [window_data]
-            ; fcall widget_set_width, [_si + WindowData.widgets + 0 * POINTER_size], [window_width]
+            mov _si, [_si + WindowData.widgets + 0 * POINTER_size]
+            cmp _si, 0
+            je .leave
+            fcall widget_set_width, _si, [window_width]
+
+            ; Change footer label y and width
+            mov _si, [window_data]
+            mov _si, [_si + WindowData.widgets + 4 * POINTER_size]
+            cmp _si, 0
+            je .leave
+
+            mov eax, [window_height]
+            sub eax, 32 + 16
+            fcall widget_set_y, _si, _ax
+
+            mov eax, [window_width]
+            sub eax, 32
+            fcall widget_set_width, _si, _ax
 
             end_local
             jmp .leave
