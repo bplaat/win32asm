@@ -10,14 +10,15 @@
 header HEADER_CONSOLE
 
 code_section
-    ; A function that zero's out some memory
-    function ZeroMemory, address, size
+    ; A function that fills memory
+    function memset, address, value, size
+        mov al, [value]
         mov _di, [address]
         xor _cx, _cx
     .repeat:
         cmp _cx, [size]
         je .done
-        mov byte [_di + _cx], 0
+        mov [_di + _cx], al
         inc _cx
         jmp .repeat
     .done:
@@ -48,7 +49,7 @@ code_section
         mov [console_out], _ax
 
         ; Fill address hints
-        fcall ZeroMemory, addr address_hints, addrinfo_size
+        fcall memset, addr address_hints, 0, addrinfo_size
         mov dword [address_hints + addrinfo.ai_family], AF_UNSPEC
         mov dword [address_hints + addrinfo.ai_socktype], SOCK_STREAM
         mov dword [address_hints + addrinfo.ai_protocol], IPPROTO_TCP

@@ -31,14 +31,15 @@ code_section
         invoke HeapFree, _ax, 0, [ptr]
         return
 
-    ; A function that zero's out some memory
-    function ZeroMemory, address, size
+    ; A function that fills memory
+    function memset, address, value, size
+        mov al, [value]
         mov _di, [address]
         xor _cx, _cx
     .repeat:
         cmp _cx, [size]
         je .done
-        mov byte [_di + _cx], 0
+        mov [_di + _cx], al
         inc _cx
         jmp .repeat
     .done:
@@ -132,7 +133,7 @@ code_section
 
             cinvoke wsprintfA, addr item_buffer, item_format, _bx
 
-            fcall ZeroMemory, addr list_item, LVITEM_size
+            fcall memset, addr list_item, 0, LVITEM_size
             mov dword [list_item + LVITEM.mask], LVIF_TEXT
             lea _ax, [item_buffer]
             mov pointer [list_item + LVITEM.pszText], _ax
