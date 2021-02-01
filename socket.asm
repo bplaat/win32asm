@@ -94,7 +94,7 @@ data_section
     address_port db "80", 0
     http_request db "GET / HTTP/1.1", 13, 10, \
             "Host: %s", 13, 10, \
-            "Connection: closed", 13, 10, 13, 10, 0
+            "Connection: close", 13, 10, 13, 10, 0
 
     ; Import table
     import_table
