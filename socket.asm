@@ -3,8 +3,6 @@
     ; 32-bit: nasm -f bin socket.asm -o socket-x86.exe && ./socket-x86
     ; 64-bit: nasm -DWIN64 -f bin socket.asm -o socket-x64.exe && ./socket-x64
 
-    ; Not yet finished
-
 %include "libwindows.inc"
 
 header HEADER_CONSOLE
@@ -31,18 +29,13 @@ code_section
         local wsaData, WSADATA_size, \
             console_out, POINTER_size, \
             address_hints, addrinfo_size, \
-            client_address, addrinfo_size, \
+            client_address, POINTER_size, \
             client_socket, POINTER_size, \
             request_buffer, 128, \
             data_buffer, data_buffer_size
 
         ; Init WinSock2
         invoke WSAStartup, 0x0202, addr wsaData
-
-        cmp _ax, 0
-        je .skip_error1
-        invoke ExitProcess, 1 ; WSAStartup failed
-    .skip_error1:
 
         ; Get console out handle
         invoke GetStdHandle, STD_OUTPUT_HANDLE
@@ -57,31 +50,17 @@ code_section
         ; Get address
         invoke getaddrinfo, address_host, address_port, addr address_hints, addr client_address
 
-        cmp _ax, 0
-        je .skip_error2
-        invoke WSACleanup
-        invoke ExitProcess, 2 ; getaddrinfo failed
-    .skip_error2:
-
         ; Create socket
-        invoke socket, [client_address + addrinfo.ai_family], [client_address + addrinfo.ai_socktype], [client_address + addrinfo.ai_protocol]
+        mov _si, [client_address]
+        invoke socket, [_si + addrinfo.ai_family], [_si + addrinfo.ai_socktype], [_si + addrinfo.ai_protocol]
         mov [client_socket], _ax
 
-        cmp _ax, ~0
-        jne .skip_error3
-        invoke ExitProcess, 3 ; socket failed
-    .skip_error3:
-
         ; Connect socket
-        invoke connect, [client_socket], [client_address + addrinfo.ai_addr], [client_address + addrinfo.ai_addrlen]
-
-        cmp _ax, -1
-        jne .skip_error4
-        invoke ExitProcess, 4 ; connect failed
-    .skip_error4:
+        mov _si, [client_address]
+        invoke connect, [client_socket], [_si + addrinfo.ai_addr], [_si + addrinfo.ai_addrlen]
 
         ; Free address
-        invoke freeaddrinfo, addr client_address
+        invoke freeaddrinfo, [client_address]
 
         ; Send http request
         cinvoke wsprintfA, addr request_buffer, http_request, address_host
@@ -90,7 +69,7 @@ code_section
         ; Stop sending data
         invoke shutdown, [client_socket], SD_SEND
 
-        ; Read response and print to console out
+        ; Read response to buffer and print to console out
     read_socket_write_stout_loop:
         invoke recv, [client_socket], addr data_buffer, data_buffer_size, 0
         cmp _ax, 0
@@ -103,6 +82,7 @@ code_section
         invoke closesocket, [client_socket]
         invoke WSACleanup
 
+        ; Exit successfully
         invoke ExitProcess, EXIT_SUCCESS
 
     end_local
@@ -140,7 +120,6 @@ data_section
             shutdown, "shutdown", \
             socket, "socket", \
             WSACleanup, "WSACleanup", \
-            WSAGetLastError, "WSAGetLastError", \
             WSAStartup, "WSAStartup"
     end_import_table
 end_data_section

@@ -8,7 +8,7 @@ nasm -DWIN64 -f bin hello.asm -o hello-x64.exe
 nasm -f bin console.asm -o console-x86.exe
 nasm -DWIN64 -f bin console.asm -o console-x64.exe
 
-# Socket example (not yet finished)
+# Socket example
 nasm -f bin socket.asm -o socket-x86.exe
 nasm -DWIN64 -f bin socket.asm -o socket-x64.exe
 
