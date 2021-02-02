@@ -23,6 +23,18 @@ code_section
         invoke HeapFree, _ax, 0, [ptr]
         return
 
+    function strlen, string
+        mov _si, [string]
+        xor _ax, _ax
+    .repeat:
+        cmp byte [_si], 0
+        je .done
+        inc _si
+        inc _ax
+        jmp .repeat
+    .done:
+        return
+
     ; ### Widget object ###
     struct Widget, \
         rect, Rect_size, \
@@ -271,23 +283,22 @@ code_section
         invoke SetBkMode, [hdc], TRANSPARENT
         mov _si, [label]
         invoke SetTextColor, [hdc], [_si + Label.text_color]
+        invoke SetTextAlign, [hdc], TA_CENTER
 
         mov _si, [label]
-        mov eax, [_si + Widget.rect + Rect.x]
-        mov [rect + RECT.left], eax
+        fcall strlen, [_si + Label.text]
 
-        mov eax, [_si + Widget.rect + Rect.y]
-        mov [rect + RECT.top], eax
+        mov _si, [label]
+        mov edx, [_si + Widget.rect + Rect.width]
+        shr edx, 1
+        add edx, [_si + Widget.rect + Rect.x]
 
-        mov eax, [_si + Widget.rect + Rect.x]
-        add eax, [_si + Widget.rect + Rect.width]
-        mov [rect + RECT.right], eax
+        mov edi, [_si + Widget.rect + Rect.height]
+        sub edi, [_si + Label.text_size]
+        shr edi, 1
+        add edi, [_si + Widget.rect + Rect.y]
 
-        mov eax, [_si + Widget.rect + Rect.y]
-        add eax, [_si + Widget.rect + Rect.height]
-        mov [rect + RECT.bottom], eax
-
-        invoke DrawTextA, [hdc], [_si + Label.text], -1, addr rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+        invoke TextOutA, [hdc], _dx, _di, [_si + Label.text], _ax
 
         ; Free font object
         invoke DeleteObject, [font]
@@ -683,7 +694,9 @@ data_section
             DeleteObject, "DeleteObject", \
             SelectObject, "SelectObject", \
             SetBkMode, "SetBkMode", \
-            SetTextColor, "SetTextColor"
+            SetTextAlign, "SetTextAlign", \
+            SetTextColor, "SetTextColor", \
+            TextOutA, "TextOutA"
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
@@ -697,7 +710,6 @@ data_section
             CreateWindowExA, "CreateWindowExA", \
             DefWindowProcA, "DefWindowProcA", \
             DispatchMessageA, "DispatchMessageA", \
-            DrawTextA, "DrawTextA", \
             EndPaint, "EndPaint", \
             FillRect, "FillRect", \
             GetClientRect, "GetClientRect", \

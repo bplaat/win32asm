@@ -845,6 +845,8 @@ struct PAINTSTRUCT, \
 
 %define TRANSPARENT 1
 
+%define TA_CENTER 6
+
 %define SRCCOPY 0x00CC0020
 
 ; Comctl32

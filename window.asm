@@ -19,6 +19,18 @@ code_section
         invoke HeapFree, _ax, 0, [ptr]
         return
 
+    function strlen, string
+        mov _si, [string]
+        xor _ax, _ax
+    .repeat:
+        cmp byte [_si], 0
+        je .done
+        inc _si
+        inc _ax
+        jmp .repeat
+    .done:
+        return
+
     function srand, seed
         mov eax, [seed]
         mov [rand_seed], eax
@@ -147,6 +159,7 @@ code_section
                 bitmap_buffer, POINTER_size, \
                 brush, POINTER_size, \
                 rect, RECT_size, \
+                font_size, DWORD_size, \
                 font, POINTER_size
 
             ; Get window data
@@ -182,15 +195,27 @@ code_section
             ; Draw centered text
             mov eax, [window_width]
             shr eax, 4
-            invoke CreateFontA, _ax, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, \
+            mov [font_size], eax
+
+            invoke CreateFontA, [font_size], 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, \
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name
             mov [font], _ax
 
             invoke SelectObject, [hdc_buffer], [font]
             invoke SetBkMode, [hdc_buffer], TRANSPARENT
             invoke SetTextColor, [hdc_buffer], 0x00ffffff
+            invoke SetTextAlign, [hdc_buffer], TA_CENTER
 
-            invoke DrawTextA, [hdc_buffer], window_title, -1, addr rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+            fcall strlen, window_title
+
+            mov esi, [window_width]
+            shr esi, 1
+
+            mov edi, [window_height]
+            sub edi, [font_size]
+            shr edi, 1
+
+            invoke TextOutA, [hdc_buffer], _si, _di, window_title, _ax
 
             invoke DeleteObject, [font]
 
@@ -310,7 +335,9 @@ data_section
             DeleteObject, "DeleteObject", \
             SelectObject, "SelectObject", \
             SetBkMode, "SetBkMode", \
-            SetTextColor, "SetTextColor"
+            SetTextAlign, "SetTextAlign", \
+            SetTextColor, "SetTextColor", \
+            TextOutA, "TextOutA"
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
@@ -325,7 +352,6 @@ data_section
             CreateWindowExA, "CreateWindowExA", \
             DefWindowProcA, "DefWindowProcA", \
             DispatchMessageA, "DispatchMessageA", \
-            DrawTextA, "DrawTextA", \
             EndPaint, "EndPaint", \
             FillRect, "FillRect", \
             GetClientRect, "GetClientRect", \
