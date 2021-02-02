@@ -2,6 +2,7 @@
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
     ; 32-bit: nasm -f bin redsquare.asm -o redsquare-x86.exe && ./redsquare-x86
     ; 64-bit: nasm -DWIN64 -f bin redsquare.asm -o redsquare-x64.exe && ./redsquare-x64
+    ; Depends on the image file: redsquare-logo.bmp
 
 %include "libwindows.inc"
 
@@ -58,6 +59,7 @@ code_section
         vy, DWORD_size
 
     struct WindowData, \
+        logo_bitmap, POINTER_size, \
         background_color, DWORD_size, \
         time, DWORD_size, \
         score, DWORD_size, \
@@ -193,12 +195,14 @@ code_section
         jmp .default
 
         .wm_create:
-            local time, SYSTEMTIME_size, \
+            local window_data, POINTER_size, \
+                time, SYSTEMTIME_size, \
                 window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
             ; Create window data
             fcall malloc, WindowData_size
+            mov [window_data], _ax
             invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
 
             ; Generate random seed by time
@@ -215,6 +219,11 @@ code_section
             add eax, ecx
 
             fcall srand, _ax
+
+            ; Load bitmap
+            invoke LoadImageA, NULL, logo_file, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+            mov _di, [window_data]
+            mov [_di + WindowData.logo_bitmap], _ax
 
             ; Center  window
             invoke GetClientRect, [hwnd], addr window_rect
@@ -246,6 +255,8 @@ code_section
 
             end_local
             jmp .leave
+
+            %undef window_data
 
         .wm_timer:
             mov eax, [wParam]
@@ -556,6 +567,7 @@ code_section
                 bitmap_buffer, POINTER_size, \
                 brush, POINTER_size, \
                 rect, RECT_size, \
+                hdc_bitmap_buffer, POINTER_size, \
                 font, POINTER_size, \
                 stats_buffer, 128, \
                 index, DWORD_size
@@ -660,6 +672,19 @@ code_section
 
             invoke DeleteObject, [brush]
 
+            ; Draw logo bitmap
+            invoke CreateCompatibleDC, [hdc_buffer]
+            mov [hdc_bitmap_buffer], _ax
+
+            mov _si, [window_data]
+            invoke SelectObject, [hdc_bitmap_buffer], [_si + WindowData.logo_bitmap]
+
+            mov _si, [window_width]
+            sub _si, 56 + 16
+            invoke BitBlt, [hdc_buffer], _si, 16, 56, 56, [hdc_bitmap_buffer], 0, 0, SRCCOPY
+
+            invoke DeleteDC, [hdc_bitmap_buffer]
+
             ; Draw stats label
             invoke CreateFontA, 20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, \
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name
@@ -689,10 +714,14 @@ code_section
             invoke TextOutA, [hdc_buffer], 16, 16 + 20 + 16, help_label, _ax
 
             ; Draw footer label
+            invoke SetTextAlign, [hdc_buffer], TA_CENTER
+
             fcall strlen, addr footer_label
-            mov esi, [window_height]
-            sub esi, 16 + 20
-            invoke TextOutA, [hdc_buffer], 20, _si, footer_label, _ax
+            mov esi, [window_width]
+            shr esi, 1
+            mov edi, [window_height]
+            sub edi, 16 + 20
+            invoke TextOutA, [hdc_buffer], _si, _di, footer_label, _ax
 
             invoke DeleteObject, [font]
 
@@ -707,13 +736,26 @@ code_section
             end_local
             jmp .leave
 
+            %undef window_data
+
         .wm_destroy:
-            ; Free window data
+            local window_data, POINTER_size
+
+            ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
+
+            ; Delete logo bitmap
+            mov _si, [window_data]
+            invoke DeleteObject, [_si + WindowData.logo_bitmap]
+
+            ; Free window data
             fcall free, _ax
 
             ; Close process
             invoke PostQuitMessage, 0
+
+            end_local
         .leave:
             return 0
 
@@ -786,6 +828,7 @@ data_section
     window_class_name db "redsquare", 0
     window_title db "RedSquare", 0
     font_name db "Tahoma", 0
+    logo_file db 'redsquare-logo.bmp', 0
     stats_label db "Score: %06d  -  Time: %02d s  -  Level: %02d", 0
     help_label db "Help: move the red square avoid the edge and the blue squares", 0
     footer_label db "Made by Bastiaan van der Plaat with a lot of love for you, the Windows API is weird but in a cool way!", 0
@@ -816,6 +859,7 @@ data_section
             DeleteObject, "DeleteObject", \
             SelectObject, "SelectObject", \
             SetBkMode, "SetBkMode", \
+            SetTextAlign, "SetTextAlign", \
             SetTextColor, "SetTextColor", \
             TextOutA, "TextOutA"
 
@@ -846,6 +890,7 @@ data_section
             InvalidateRect, "InvalidateRect", \
             LoadCursorA, "LoadCursorA", \
             LoadIconA, "LoadIconA", \
+            LoadImageA, "LoadImageA", \
             MessageBoxA, "MessageBoxA", \
             PostQuitMessage, "PostQuitMessage", \
             RegisterClassExA, "RegisterClassExA", \
