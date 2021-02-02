@@ -8,7 +8,7 @@
 header HEADER_CONSOLE
 
 code_section
-    ; A function that fills memory
+    ; ### Some stdlib like Win32 wrappers ###
     function memset, address, value, size
         mov al, [value]
         mov _di, [address]
@@ -22,7 +22,7 @@ code_section
     .done:
         return
 
-    ; The program entry point
+    ; ### Socket code ###
     entrypoint
         %define data_buffer_size 1024
 

@@ -12,6 +12,17 @@
 header
 
 code_section
+    ; ### Some stdlib like Win32 wrappers ###
+    function malloc, size
+        invoke GetProcessHeap
+        invoke HeapAlloc, _ax, 0, [size]
+        return
+
+    function free, ptr
+        invoke GetProcessHeap
+        invoke HeapFree, _ax, 0, [ptr]
+        return
+
     ; ### Simple random number generator code ###
 
     ; Generate rand seed by time
@@ -48,6 +59,8 @@ code_section
         return _dx
 
     ; ### Window code ###
+    struct WindowData, \
+        background_color, DWORD_size
 
     ; Window procedure function
     function WindowProc, hwnd, uMsg, wParam, lParam
@@ -67,16 +80,26 @@ code_section
         jmp .default
 
         .wm_create:
-            local window_rect, RECT_size, \
+            local window_data, POINTER_size, \
+                window_rect, RECT_size, \
                 new_window_rect, Rect_size
+
+            ; Create window data
+            fcall malloc, WindowData_size
+            mov [window_data], _ax
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
+
+            ; Generate random seed
+            fcall rand_generate_seed
 
             ; Generate random background color
             fcall rand_rand
             and eax, 0x00ffffff
             or eax, 0xff000000
-            mov [background_color], eax
+            mov _di, [window_data]
+            mov [_di + WindowData.background_color], eax
 
-            ; Center new created window
+            ; Center window
             invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_width]
@@ -104,7 +127,7 @@ code_section
             end_local
             jmp .leave
 
-            %undef window_rect
+            %undef window_data
 
         .wm_size:
             ; Save new window size
@@ -117,10 +140,6 @@ code_section
 
             jmp .leave
 
-        .wm_erasebkgnd:
-            ; This window draws it's own background
-            return TRUE
-
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
@@ -128,14 +147,22 @@ code_section
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
             jmp .leave
 
+        .wm_erasebkgnd:
+            ; Draw no background
+            return TRUE
+
         .wm_paint:
             ; Draw stuff in the window via GDI+
-            local paint_struct, PAINTSTRUCT_size, \
-                window_rect, RECT_size, \
+            local window_data, POINTER_size, \
+                paint_struct, PAINTSTRUCT_size, \
+                hdc_buffer, POINTER_size, \
+                bitmap_buffer, POINTER_size, \
                 graphics, POINTER_size, \
+                \
                 line_width, DWORD_size, \
                 pen, POINTER_size, \
                 items_rect, Rect_size, \
+                \
                 font_family, POINTER_size, \
                 font_size, DWORD_size, \
                 font, POINTER_size, \
@@ -144,19 +171,30 @@ code_section
                 text_rect, Rect_size, \
                 text_buffer, 64
 
+            ; Get window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
+
+            ; Begin paint
             invoke BeginPaint, [hwnd], addr paint_struct
 
-            invoke GetClientRect, [hwnd], addr window_rect
+            ; Create back buffer
+            invoke CreateCompatibleDC, [paint_struct + PAINTSTRUCT.hdc]
+            mov [hdc_buffer], _ax
+            invoke CreateCompatibleBitmap, [paint_struct + PAINTSTRUCT.hdc], [window_width], [window_height]
+            mov [bitmap_buffer], _ax
+            invoke SelectObject, [hdc_buffer], [bitmap_buffer]
 
             ; Create graphics object
-            invoke GdipCreateFromHDC, [paint_struct + PAINTSTRUCT.hdc], addr graphics
+            invoke GdipCreateFromHDC, [hdc_buffer], addr graphics
 
             ; Enable anti aliasing
             invoke GdipSetSmoothingMode, [graphics], SmoothingModeAntiAlias
             invoke GdipSetTextRenderingHint, [graphics], TextRenderingHintClearTypeGridFit
 
             ; Clear screen with window background color
-            invoke GdipGraphicsClear, [graphics], [background_color]
+            mov _di, [window_data]
+            invoke GdipGraphicsClear, [graphics], [_di + WindowData.background_color]
 
             ; Create pen object
             mov eax, 3
@@ -165,23 +203,23 @@ code_section
             invoke GdipCreatePen1, 0xffffffff, float [line_width], UnitPixel, addr pen
 
             ; Draw a cross with lines
-            invoke GdipDrawLineI, [graphics], [pen], 0, 0, [window_rect + RECT.right], [window_rect + RECT.bottom]
-            invoke GdipDrawLineI, [graphics], [pen], [window_rect + RECT.right], 0, 0, [window_rect + RECT.bottom]
+            invoke GdipDrawLineI, [graphics], [pen], 0, 0, [window_width], [window_height]
+            invoke GdipDrawLineI, [graphics], [pen], [window_width], 0, 0, [window_height]
 
             ; Calculate items rect
-            mov eax, [window_rect + RECT.right]
+            mov eax, [window_width]
             shr eax, 2
             mov [items_rect + Rect.x], eax
 
-            mov eax, [window_rect + RECT.bottom]
+            mov eax, [window_height]
             shr eax, 2
             mov [items_rect + Rect.y], eax
 
-            mov eax, [window_rect + RECT.right]
+            mov eax, [window_width]
             shr eax, 1
             mov [items_rect + Rect.width], eax
 
-            mov eax, [window_rect + RECT.bottom]
+            mov eax, [window_height]
             shr eax, 1
             mov [items_rect + Rect.height], eax
 
@@ -209,7 +247,7 @@ code_section
             invoke GdipSetStringFormatAlign, [string_format], StringAlignmentCenter
 
             ; Calculate text_rect
-            mov eax, [window_rect + RECT.right]
+            mov eax, [window_width]
             cvtsi2ss xmm0, eax
             movss [text_rect + Rect.width], xmm0
 
@@ -223,7 +261,7 @@ code_section
             cvtsi2ss xmm0, eax
             movss [text_rect + Rect.x], xmm0
 
-            mov eax, [window_rect + RECT.bottom]
+            mov eax, [window_height]
             cvtsi2ss xmm0, eax
             subss xmm0, xmm1
             movss [text_rect + Rect.y], xmm0
@@ -242,12 +280,23 @@ code_section
             invoke GdipDeletePen, [pen]
             invoke GdipDeleteGraphics, [graphics]
 
+            ; Draw and delete back buffer
+            invoke BitBlt, [paint_struct + PAINTSTRUCT.hdc], 0, 0, [window_width], [window_height], [hdc_buffer], 0, 0, SRCCOPY
+            invoke DeleteObject, [bitmap_buffer]
+            invoke DeleteDC, [hdc_buffer]
+
+            ; End paint
             invoke EndPaint, [hwnd], addr paint_struct
 
             end_local
             jmp .leave
 
         .wm_destroy:
+            ; Free window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            fcall free, _ax
+
+            ; Close process
             invoke PostQuitMessage, 0
         .leave:
             return 0
@@ -265,9 +314,6 @@ code_section
             window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
             message, MSG_size
-
-        ; Generate rand seed
-        fcall rand_generate_seed
 
         ; Startup GDI+
         mov dword [gdiplusStartupInput + GdiplusStartupInput.GdiplusVersion], 1
@@ -297,7 +343,7 @@ code_section
         invoke LoadCursorA, NULL, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
-        mov pointer [window_class + WNDCLASSEX.hbrBackground], COLOR_WINDOW + 1
+        mov pointer [window_class + WNDCLASSEX.hbrBackground], NULL
 
         mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
@@ -346,13 +392,21 @@ data_section
     seed dd 0
     window_width dd 1280
     window_height dd 720
-    background_color dd 0
 
     ; Import table
     import_table
-        library gdiplus_table, "gdiplus.dll", \
+        library gdi_table, "GDI32.DLL", \
+            gdiplus_table, "gdiplus.dll", \
             kernel_table, "KERNEL32.DLL", \
             user_table, "USER32.DLL"
+
+        import gdi_table, \
+            BitBlt, "BitBlt", \
+            CreateCompatibleBitmap, "CreateCompatibleBitmap", \
+            CreateCompatibleDC, "CreateCompatibleDC", \
+            DeleteDC, "DeleteDC", \
+            DeleteObject, "DeleteObject", \
+            SelectObject, "SelectObject"
 
         import gdiplus_table, \
             GdipCreateFont, "GdipCreateFont", \
@@ -381,7 +435,10 @@ data_section
         import kernel_table, \
             ExitProcess, "ExitProcess", \
             GetLocalTime, "GetLocalTime", \
-            GetModuleHandleA, "GetModuleHandleA"
+            GetModuleHandleA, "GetModuleHandleA", \
+            GetProcessHeap, "GetProcessHeap", \
+            HeapAlloc, "HeapAlloc", \
+            HeapFree, "HeapFree"
 
         import user_table, \
             BeginPaint, "BeginPaint", \
@@ -392,10 +449,12 @@ data_section
             GetClientRect, "GetClientRect", \
             GetMessageA, "GetMessageA", \
             GetSystemMetrics, "GetSystemMetrics", \
+            GetWindowLongPtrA, GetWindowLongPtrAString, \
             LoadCursorA, "LoadCursorA", \
             LoadIconA, "LoadIconA", \
             PostQuitMessage, "PostQuitMessage", \
             RegisterClassExA, "RegisterClassExA", \
+            SetWindowLongPtrA, SetWindowLongPtrAString, \
             SetWindowPos, "SetWindowPos", \
             ShowWindow, "ShowWindow", \
             TranslateMessage, "TranslateMessage", \

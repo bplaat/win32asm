@@ -8,6 +8,17 @@
 header
 
 code_section
+    ; ### Some stdlib like Win32 wrappers ###
+    function malloc, size
+        invoke GetProcessHeap
+        invoke HeapAlloc, _ax, 0, [size]
+        return
+
+    function free, ptr
+        invoke GetProcessHeap
+        invoke HeapFree, _ax, 0, [ptr]
+        return
+
     ; ### Simple random number generator code ###
 
     ; Generate rand seed by time
@@ -44,14 +55,20 @@ code_section
         return _dx
 
     ; ### Window code ###
+    struct WindowData, \
+        background_color, DWORD_size
 
     ; Window procedure function
     function WindowProc, hwnd, uMsg, wParam, lParam
         mov eax, [uMsg]
         cmp eax, WM_CREATE
         je .wm_create
+        cmp eax, WM_SIZE
+        je .wm_size
         cmp eax, WM_GETMINMAXINFO
         je .wm_getminmaxinfo
+        cmp eax, WM_ERASEBKGND
+        je .wm_erasebkgnd
         cmp eax, WM_PAINT
         je .wm_paint
         cmp eax, WM_DESTROY
@@ -59,10 +76,25 @@ code_section
         jmp .default
 
         .wm_create:
-            ; Center new created window
-            local window_rect, RECT_size, \
+            local window_data, POINTER_size, \
+                window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
+            ; Create window data
+            fcall malloc, WindowData_size
+            mov [window_data], _ax
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
+
+            ; Generate random seed
+            fcall rand_generate_seed
+
+            ; Generate random background color
+            fcall rand_rand
+            and eax, 0x00ffffff
+            mov _di, [window_data]
+            mov [_di + WindowData.background_color], eax
+
+            ; Center window
             invoke GetClientRect, [hwnd], addr window_rect
 
             mov eax, [window_width]
@@ -90,7 +122,18 @@ code_section
             end_local
             jmp .leave
 
-            %undef window_rect
+            %undef window_data
+
+        .wm_size:
+            ; Save new window size
+            movzx eax, word [lParam]
+            mov [window_width], eax
+
+            mov eax, [lParam]
+            shr eax, 16
+            mov [window_height], eax
+
+            jmp .leave
 
         .wm_getminmaxinfo:
             ; Set window min size
@@ -99,35 +142,80 @@ code_section
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
             jmp .leave
 
+        .wm_erasebkgnd:
+            ; Draw no background
+            return TRUE
+
         .wm_paint:
-            ; Draw a centered text in the window
-            local paint_struct, PAINTSTRUCT_size, \
-                window_rect, RECT_size, \
+            local window_data, POINTER_size, \
+                paint_struct, PAINTSTRUCT_size, \
+                hdc_buffer, POINTER_size, \
+                bitmap_buffer, POINTER_size, \
+                brush, POINTER_size, \
+                rect, RECT_size, \
                 font, DWORD_size
 
+            ; Get window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
+
+            ; Begin paint
             invoke BeginPaint, [hwnd], addr paint_struct
 
-            invoke GetClientRect, [hwnd], addr window_rect
+            ; Create back buffer
+            invoke CreateCompatibleDC, [paint_struct + PAINTSTRUCT.hdc]
+            mov [hdc_buffer], _ax
+            invoke CreateCompatibleBitmap, [paint_struct + PAINTSTRUCT.hdc], [window_width], [window_height]
+            mov [bitmap_buffer], _ax
+            invoke SelectObject, [hdc_buffer], [bitmap_buffer]
 
-            mov eax, [window_rect + RECT.right]
+            ; Draw background color
+            mov _di, [window_data]
+            invoke CreateSolidBrush, [_di + WindowData.background_color]
+            mov [brush], _ax
+
+            mov dword [rect + RECT.left], 0
+            mov dword [rect + RECT.top], 0
+            mov eax, [window_width]
+            mov [rect + RECT.right], eax
+            mov eax, [window_height]
+            mov [rect + RECT.bottom], eax
+
+            invoke FillRect, [hdc_buffer], addr rect, [brush]
+
+            invoke DeleteObject, [brush]
+
+            ; Draw centered text
+            mov eax, [window_width]
             shr eax, 4
             invoke CreateFontA, _ax, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
             mov [font], _ax
 
-            invoke SelectObject, [paint_struct + PAINTSTRUCT.hdc], [font]
-            invoke SetBkMode, [paint_struct + PAINTSTRUCT.hdc], TRANSPARENT
-            invoke SetTextColor, [paint_struct + PAINTSTRUCT.hdc], 0x00ffffff
+            invoke SelectObject, [hdc_buffer], [font]
+            invoke SetBkMode, [hdc_buffer], TRANSPARENT
+            invoke SetTextColor, [hdc_buffer], 0x00ffffff
 
-            invoke DrawTextA, [paint_struct + PAINTSTRUCT.hdc], window_title, -1, addr window_rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
+            invoke DrawTextA, [hdc_buffer], window_title, -1, addr rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER
 
             invoke DeleteObject, [font]
 
+            ; Draw and delete back buffer
+            invoke BitBlt, [paint_struct + PAINTSTRUCT.hdc], 0, 0, [window_width], [window_height], [hdc_buffer], 0, 0, SRCCOPY
+            invoke DeleteObject, [bitmap_buffer]
+            invoke DeleteDC, [hdc_buffer]
+
+            ; End paint
             invoke EndPaint, [hwnd], addr paint_struct
 
             end_local
             jmp .leave
 
         .wm_destroy:
+            ; Free window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            fcall free, _ax
+
+            ; Close process
             invoke PostQuitMessage, 0
         .leave:
             return 0
@@ -143,9 +231,6 @@ code_section
         local window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
             message, MSG_size
-
-        ; Generate rand seed
-        fcall rand_generate_seed
 
         ; Register the window class
         mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -168,10 +253,7 @@ code_section
         invoke LoadCursorA, NULL, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
-        fcall rand_rand
-        and eax, 0x00ffffff
-        invoke CreateSolidBrush, _ax
-        mov [window_class + WNDCLASSEX.hbrBackground], _ax
+        mov pointer [window_class + WNDCLASSEX.hbrBackground], NULL
 
         mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
@@ -224,8 +306,12 @@ data_section
             user_table, "USER32.DLL"
 
         import gdi_table, \
+            BitBlt, "BitBlt", \
+            CreateCompatibleBitmap, "CreateCompatibleBitmap", \
+            CreateCompatibleDC, "CreateCompatibleDC", \
             CreateFontA, "CreateFontA", \
             CreateSolidBrush, "CreateSolidBrush", \
+            DeleteDC, "DeleteDC", \
             DeleteObject, "DeleteObject", \
             SelectObject, "SelectObject", \
             SetBkMode, "SetBkMode", \
@@ -234,7 +320,10 @@ data_section
         import kernel_table, \
             ExitProcess, "ExitProcess", \
             GetLocalTime, "GetLocalTime", \
-            GetModuleHandleA, "GetModuleHandleA"
+            GetModuleHandleA, "GetModuleHandleA", \
+            GetProcessHeap, "GetProcessHeap", \
+            HeapAlloc, "HeapAlloc", \
+            HeapFree, "HeapFree"
 
         import user_table, \
             BeginPaint, "BeginPaint", \
@@ -243,13 +332,16 @@ data_section
             DispatchMessageA, "DispatchMessageA", \
             DrawTextA, "DrawTextA", \
             EndPaint, "EndPaint", \
+            FillRect, "FillRect", \
             GetClientRect, "GetClientRect", \
             GetMessageA, "GetMessageA", \
             GetSystemMetrics, "GetSystemMetrics", \
+            GetWindowLongPtrA, GetWindowLongPtrAString, \
             LoadCursorA, "LoadCursorA", \
             LoadIconA, "LoadIconA", \
             PostQuitMessage, "PostQuitMessage", \
             RegisterClassExA, "RegisterClassExA", \
+            SetWindowLongPtrA, SetWindowLongPtrAString, \
             SetWindowPos, "SetWindowPos", \
             ShowWindow, "ShowWindow", \
             TranslateMessage, "TranslateMessage", \

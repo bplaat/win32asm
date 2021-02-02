@@ -7,31 +7,19 @@
 
 header
 
-struct WindowData, \
-    play_button_hwnd, POINTER_size, \
-    about_button_hwnd, POINTER_size, \
-    exit_button_hwnd, POINTER_size, \
-    list_view_hwnd, POINTER_size
-
 code_section
-    %define PLAY_BUTTON_ID 1
-    %define ABOUT_BUTTON_ID 2
-    %define EXIT_BUTTON_ID 3
-
-    ; A function allocates memory
+    ; ### Some stdlib like Win32 wrappers ###
     function malloc, size
         invoke GetProcessHeap
         invoke HeapAlloc, _ax, 0, [size]
         return
         %undef size
 
-    ; A function that frees memory
     function free, ptr
         invoke GetProcessHeap
         invoke HeapFree, _ax, 0, [ptr]
         return
 
-    ; A function that fills memory
     function memset, address, value, size
         mov al, [value]
         mov _di, [address]
@@ -45,6 +33,17 @@ code_section
     .done:
         return
 
+    ; ### Window code ###
+    %define PLAY_BUTTON_ID 1
+    %define ABOUT_BUTTON_ID 2
+    %define EXIT_BUTTON_ID 3
+
+    struct WindowData, \
+        play_button_hwnd, POINTER_size, \
+        about_button_hwnd, POINTER_size, \
+        exit_button_hwnd, POINTER_size, \
+        list_view_hwnd, POINTER_size
+
     ; Set font function
     function SetFont, hwnd, font
         invoke SendMessageA, [hwnd], WM_SETFONT, [font], TRUE
@@ -56,10 +55,10 @@ code_section
         mov eax, [uMsg]
         cmp eax, WM_CREATE
         je .wm_create
-        cmp eax, WM_SIZE
-        je .wm_size
         cmp eax, WM_COMMAND
         je .wm_command
+        cmp eax, WM_SIZE
+        je .wm_size
         cmp eax, WM_GETMINMAXINFO
         je .wm_getminmaxinfo
         cmp eax, WM_DESTROY
@@ -68,41 +67,15 @@ code_section
 
         .wm_create:
             local window_data, POINTER_size, \
-                window_rect, RECT_size, \
-                new_window_rect, Rect_size, \
                 list_item, LVITEM_size, \
-                item_buffer, 128
+                item_buffer, 128, \
+                window_rect, RECT_size, \
+                new_window_rect, Rect_size
 
-            ; Center new created window
-            invoke GetClientRect, [hwnd], addr window_rect
-
-            mov eax, [window_width]
-            shl eax, 1
-            sub eax, [window_rect + RECT.right]
-            mov [new_window_rect + Rect.width], eax
-
-            mov eax, [window_height]
-            shl eax, 1
-            sub eax, [window_rect + RECT.bottom]
-            mov [new_window_rect + Rect.height], eax
-
-            invoke GetSystemMetrics, SM_CXSCREEN
-            sub eax, [new_window_rect + Rect.width]
-            shr eax, 1
-            mov [new_window_rect + Rect.x], eax
-
-            invoke GetSystemMetrics, SM_CYSCREEN
-            sub eax, [new_window_rect + Rect.height]
-            shr eax, 1
-            mov [new_window_rect + Rect.y], eax
-
-            invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
-
-            ; Allocate window data
+            ; Create window data
             fcall malloc, WindowData_size
             mov [window_data], _ax
-
-            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
 
             ; Create window controls
             invoke CreateWindowExA, 0, button_class_name, play_button, WS_CHILD | WS_VISIBLE, \
@@ -127,9 +100,9 @@ code_section
 
             ; Add 500 text items to list view
             xor _bx, _bx
-        .list_view_repeat:
+        .wm_create.list_view_repeat:
             cmp _bx, 500
-            je .list_view_done
+            je .wm_create.list_view_done
 
             cinvoke wsprintfA, addr item_buffer, item_format, _bx
 
@@ -142,18 +115,64 @@ code_section
             invoke SendMessageA, [_si + WindowData.list_view_hwnd], LVM_INSERTITEMA, NULL, addr list_item
 
             inc _bx
-            jmp .list_view_repeat
-        .list_view_done:
+            jmp .wm_create.list_view_repeat
+        .wm_create.list_view_done:
 
             ; Change font to default font
             invoke GetStockObject, DEFAULT_GUI_FONT
             invoke EnumChildWindows, [hwnd], SetFont, _ax
 
+            ; Center window
+            invoke GetClientRect, [hwnd], addr window_rect
+
+            mov eax, [window_width]
+            shl eax, 1
+            sub eax, [window_rect + RECT.right]
+            mov [new_window_rect + Rect.width], eax
+
+            mov eax, [window_height]
+            shl eax, 1
+            sub eax, [window_rect + RECT.bottom]
+            mov [new_window_rect + Rect.height], eax
+
+            invoke GetSystemMetrics, SM_CXSCREEN
+            sub eax, [new_window_rect + Rect.width]
+            shr eax, 1
+            mov [new_window_rect + Rect.x], eax
+
+            invoke GetSystemMetrics, SM_CYSCREEN
+            sub eax, [new_window_rect + Rect.height]
+            shr eax, 1
+            mov [new_window_rect + Rect.y], eax
+
+            invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
+
             end_local
             jmp .leave
 
             %undef window_data
-            %undef window_rect
+
+        .wm_command:
+            movzx eax, word [wParam]
+            cmp eax, PLAY_BUTTON_ID
+            je .wm_command.play_button
+            cmp eax, ABOUT_BUTTON_ID
+            je .wm_command.about_button
+            cmp eax, EXIT_BUTTON_ID
+            je .wm_command.exit_button
+            jmp .leave
+
+        .wm_command.play_button:
+            invoke ShellExecuteA, [hwnd], open_operation, website_url, NULL, NULL, SW_SHOWNORMAL
+            jmp .leave
+
+        .wm_command.about_button:
+            invoke MessageBoxA, [hwnd], about_message, about_button, MB_OK | MB_ICONINFORMATION
+            jmp .leave
+
+        .wm_command.exit_button:
+            invoke DestroyWindow, [hwnd]
+            jmp .leave
 
         .wm_size:
             local window_data, POINTER_size, \
@@ -161,8 +180,6 @@ code_section
 
             ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
-            cmp _ax, 0
-            je .leave
             mov [window_data], _ax
 
             ; Save new window size
@@ -233,28 +250,6 @@ code_section
             invoke SetWindowPos, [_si + WindowData.list_view_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
             end_local
-            jmp .leave
-
-        .wm_command:
-            movzx eax, word [wParam]
-            cmp eax, PLAY_BUTTON_ID
-            je .play_button
-            cmp eax, ABOUT_BUTTON_ID
-            je .about_button
-            cmp eax, EXIT_BUTTON_ID
-            je .exit_button
-            jmp .leave
-
-        .play_button:
-            invoke ShellExecuteA, [hwnd], open_operation, website_url, NULL, NULL, SW_SHOWNORMAL
-            jmp .leave
-
-        .about_button:
-            invoke MessageBoxA, [hwnd], about_message, about_button, MB_OK | MB_ICONINFORMATION
-            jmp .leave
-
-        .exit_button:
-            invoke DestroyWindow, [hwnd]
             jmp .leave
 
         .wm_getminmaxinfo:

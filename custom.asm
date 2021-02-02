@@ -12,19 +12,16 @@
 header
 
 code_section
-    ; A function allocates memory
+    ; ### Some stdlib like Win32 wrappers ###
     function malloc, size
         invoke GetProcessHeap
         invoke HeapAlloc, _ax, 0, [size]
         return
-        %undef size
 
-    ; A function that frees memory
     function free, ptr
         invoke GetProcessHeap
         invoke HeapFree, _ax, 0, [ptr]
         return
-        %undef ptr
 
     ; ### Widget object ###
     struct Widget, \
@@ -307,8 +304,8 @@ code_section
         %undef label
 
     ; ### Window Code ###
-
     struct WindowData, \
+        background_color, DWORD_size, \
         header_font, POINTER_size, \
         footer_font, POINTER_size, \
         widgets, 64 * POINTER_size, \
@@ -335,6 +332,8 @@ code_section
         je .wm_size
         cmp eax, WM_GETMINMAXINFO
         je .wm_getminmaxinfo
+        cmp eax, WM_ERASEBKGND
+        je .wm_erasebkgnd
         cmp eax, WM_PAINT
         je .wm_paint
         cmp eax, WM_DESTROY
@@ -346,36 +345,14 @@ code_section
                 window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
-            ; Center new created window
-            invoke GetClientRect, [hwnd], addr window_rect
-
-            mov eax, [window_width]
-            shl eax, 1
-            sub eax, [window_rect + RECT.right]
-            mov [new_window_rect + Rect.width], eax
-
-            mov eax, [window_height]
-            shl eax, 1
-            sub eax, [window_rect + RECT.bottom]
-            mov [new_window_rect + Rect.height], eax
-
-            invoke GetSystemMetrics, SM_CXSCREEN
-            sub eax, [new_window_rect + Rect.width]
-            shr eax, 1
-            mov [new_window_rect + Rect.x], eax
-
-            invoke GetSystemMetrics, SM_CYSCREEN
-            sub eax, [new_window_rect + Rect.height]
-            shr eax, 1
-            mov [new_window_rect + Rect.y], eax
-
-            invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
-
-            ; Allocate window data
+            ; Create window data
             fcall malloc, WindowData_size
             mov [window_data], _ax
+            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
 
-            invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, [window_data]
+            ; Set background color
+            mov _di, [window_data]
+            mov dword [_di + WindowData.background_color], 0x00ffffff
 
             ; Creat fonts
             fcall font_new, header_font_name, 700, FONT_STYLE_ITALIC
@@ -425,19 +402,41 @@ code_section
             fcall label_new, addr new_window_rect, 0x00eeeeee, about_label, [_si + WindowData.footer_font], 24, 0x00111111
             fcall window_add_widget, [window_data], _ax
 
+            ; Center window
+            invoke GetClientRect, [hwnd], addr window_rect
+
+            mov eax, [window_width]
+            shl eax, 1
+            sub eax, [window_rect + RECT.right]
+            mov [new_window_rect + Rect.width], eax
+
+            mov eax, [window_height]
+            shl eax, 1
+            sub eax, [window_rect + RECT.bottom]
+            mov [new_window_rect + Rect.height], eax
+
+            invoke GetSystemMetrics, SM_CXSCREEN
+            sub eax, [new_window_rect + Rect.width]
+            shr eax, 1
+            mov [new_window_rect + Rect.x], eax
+
+            invoke GetSystemMetrics, SM_CYSCREEN
+            sub eax, [new_window_rect + Rect.height]
+            shr eax, 1
+            mov [new_window_rect + Rect.y], eax
+
+            invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
+
             end_local
             jmp .leave
 
             %undef window_data
-            %undef window_rect
 
     .wm_size:
             local window_data, POINTER_size
 
             ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
-            cmp _ax, 0
-            je .leave
             mov [window_data], _ax
 
             ; Save new window size
@@ -477,9 +476,16 @@ code_section
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
             jmp .leave
 
+        .wm_erasebkgnd:
+            ; Draw no background
+            return TRUE
+
         .wm_paint:
             local window_data, POINTER_size, \
                 paint_struct, PAINTSTRUCT_size, \
+                hdc_buffer, POINTER_size, \
+                bitmap_buffer, POINTER_size, \
+                brush, POINTER_size, \
                 index, DWORD_size
 
             ; Get window data
@@ -488,6 +494,29 @@ code_section
 
             ; Begin paint
             invoke BeginPaint, [hwnd], addr paint_struct
+
+            ; Create back buffer
+            invoke CreateCompatibleDC, [paint_struct + PAINTSTRUCT.hdc]
+            mov [hdc_buffer], _ax
+            invoke CreateCompatibleBitmap, [paint_struct + PAINTSTRUCT.hdc], [window_width], [window_height]
+            mov [bitmap_buffer], _ax
+            invoke SelectObject, [hdc_buffer], [bitmap_buffer]
+
+            ; Draw background color
+            mov _di, [window_data]
+            invoke CreateSolidBrush, [_di + WindowData.background_color]
+            mov [brush], _ax
+
+            mov dword [rect + RECT.left], 0
+            mov dword [rect + RECT.top], 0
+            mov eax, [window_width]
+            mov [rect + RECT.right], eax
+            mov eax, [window_height]
+            mov [rect + RECT.bottom], eax
+
+            invoke FillRect, [hdc_buffer], addr rect, [brush]
+
+            invoke DeleteObject, [brush]
 
             ; Draw widgets
             mov dword [index], 0
@@ -498,11 +527,16 @@ code_section
             je .wm_paint.done
 
             mov _si, [_si + WindowData.widgets + _cx * POINTER_size]
-            fcall [_si + Widget.draw_function], _si, [paint_struct + PAINTSTRUCT.hdc]
+            fcall [_si + Widget.draw_function], _si, [hdc_buffer]
 
             inc dword [index]
             jmp .wm_paint.repeat
         .wm_paint.done:
+
+            ; Draw and delete back buffer
+            invoke BitBlt, [paint_struct + PAINTSTRUCT.hdc], 0, 0, [window_width], [window_height], [hdc_buffer], 0, 0, SRCCOPY
+            invoke DeleteObject, [bitmap_buffer]
+            invoke DeleteDC, [hdc_buffer]
 
             ; End paint
             invoke EndPaint, [hwnd], addr paint_struct
@@ -585,7 +619,7 @@ code_section
         invoke LoadCursorA, NULL, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
 
-        mov pointer [window_class + WNDCLASSEX.hbrBackground], COLOR_WINDOW + 1
+        mov pointer [window_class + WNDCLASSEX.hbrBackground], NULL
 
         mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
@@ -639,8 +673,12 @@ data_section
             user_table, "USER32.DLL"
 
         import gdi_table, \
+            BitBlt, "BitBlt", \
+            CreateCompatibleBitmap, "CreateCompatibleBitmap", \
+            CreateCompatibleDC, "CreateCompatibleDC", \
             CreateFontA, "CreateFontA", \
             CreateSolidBrush, "CreateSolidBrush", \
+            DeleteDC, "DeleteDC", \
             DeleteObject, "DeleteObject", \
             SelectObject, "SelectObject", \
             SetBkMode, "SetBkMode", \
