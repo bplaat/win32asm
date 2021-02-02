@@ -3,7 +3,6 @@
     ; 32-bit: nasm -f bin redsquare.asm -o redsquare-x86.exe && ./redsquare-x86
     ; 64-bit: nasm -DWIN64 -f bin redsquare.asm -o redsquare-x64.exe && ./redsquare-x64
 
-    ; Not finished yet
 %include "libwindows.inc"
 
 header
@@ -32,40 +31,20 @@ code_section
     .done:
         return
 
-    ; ### Simple random number generator code ###
-
-    ; Generate rand seed by time
-    function rand_generate_seed
-        local time, SYSTEMTIME_size
-
-        invoke GetLocalTime, addr time
-
-        movzx eax, word [time + SYSTEMTIME.wHour]
-        imul eax, 60
-
-        movzx ecx, word [time + SYSTEMTIME.wMinute]
-        add eax, ecx
-        imul eax, 60
-
-        movzx ecx, word [time + SYSTEMTIME.wSecond]
-        add eax, ecx
-
-        mov [seed], eax
-
-        end_local
+    function srand, seed
+        mov eax, [seed]
+        mov [rand_seed], eax
         return
-        %undef time
 
-    ; Simple random number generator function
-    function rand_rand
-        imul eax, [seed], 1103515245
+    function rand
+        imul eax, [rand_seed], 1103515245
         add eax, 12345
 
         xor edx, edx
         mov ecx, 1 << 31
         idiv ecx
 
-        mov [seed], edx
+        mov [rand_seed], edx
         return _dx
 
     ; ### Window code ###
@@ -96,7 +75,7 @@ code_section
         mov [window_data], _ax
 
         ; Generate random background color
-        fcall rand_rand
+        fcall rand
         and eax, 0x00808080
         mov _di, [window_data]
         mov [_di + WindowData.background_color], eax
@@ -214,15 +193,28 @@ code_section
         jmp .default
 
         .wm_create:
-            local window_rect, RECT_size, \
+            local time, SYSTEMTIME_size, \
+                window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
             ; Create window data
             fcall malloc, WindowData_size
             invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
 
-            ; Generate random seed
-            fcall rand_generate_seed
+            ; Generate random seed by time
+            invoke GetLocalTime, addr time
+
+            movzx eax, word [time + SYSTEMTIME.wHour]
+            imul eax, 60
+
+            movzx ecx, word [time + SYSTEMTIME.wMinute]
+            add eax, ecx
+            imul eax, 60
+
+            movzx ecx, word [time + SYSTEMTIME.wSecond]
+            add eax, ecx
+
+            fcall srand, _ax
 
             ; Center  window
             invoke GetClientRect, [hwnd], addr window_rect
@@ -803,7 +795,7 @@ data_section
     gameover_message db "You are game over!", 0
 
     ; Global variables
-    seed dd 0
+    rand_seed dd 0
     window_width dd 800
     window_height dd 600
 

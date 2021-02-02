@@ -23,39 +23,20 @@ code_section
         invoke HeapFree, _ax, 0, [ptr]
         return
 
-    ; ### Simple random number generator code ###
-
-    ; Generate rand seed by time
-    function rand_generate_seed
-        local time, SYSTEMTIME_size
-
-        invoke GetLocalTime, addr time
-
-        movzx eax, word [time + SYSTEMTIME.wHour]
-        imul eax, 60
-
-        movzx ecx, word [time + SYSTEMTIME.wMinute]
-        add eax, ecx
-        imul eax, 60
-
-        movzx ecx, word [time + SYSTEMTIME.wSecond]
-        add eax, ecx
-
-        mov [seed], eax
-
-        end_local
+    function srand, seed
+        mov eax, [seed]
+        mov [rand_seed], eax
         return
 
-    ; Simple random number generator function
-    function rand_rand
-        imul eax, [seed], 1103515245
+    function rand
+        imul eax, [rand_seed], 1103515245
         add eax, 12345
 
         xor edx, edx
         mov ecx, 1 << 31
         idiv ecx
 
-        mov [seed], edx
+        mov [rand_seed], edx
         return _dx
 
     ; ### Window code ###
@@ -81,6 +62,7 @@ code_section
 
         .wm_create:
             local window_data, POINTER_size, \
+                time, SYSTEMTIME_size, \
                 window_rect, RECT_size, \
                 new_window_rect, Rect_size
 
@@ -89,11 +71,23 @@ code_section
             mov [window_data], _ax
             invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
 
-            ; Generate random seed
-            fcall rand_generate_seed
+            ; Generate random seed by time
+            invoke GetLocalTime, addr time
+
+            movzx eax, word [time + SYSTEMTIME.wHour]
+            imul eax, 60
+
+            movzx ecx, word [time + SYSTEMTIME.wMinute]
+            add eax, ecx
+            imul eax, 60
+
+            movzx ecx, word [time + SYSTEMTIME.wSecond]
+            add eax, ecx
+
+            fcall srand, _ax
 
             ; Generate random background color
-            fcall rand_rand
+            fcall rand
             and eax, 0x00ffffff
             or eax, 0xff000000
             mov _di, [window_data]
@@ -389,7 +383,7 @@ data_section
     window_size_format dw "(","%","d","x","%","d",")", 0
 
     ; Global variables
-    seed dd 0
+    rand_seed dd 0
     window_width dd 1280
     window_height dd 720
 
