@@ -262,7 +262,8 @@ code_section
         ; Create font object
         mov _si, [label]
         mov _di, [_si + Label.font]
-        invoke CreateFontA, [_si + Label.text_size], 0, 0, 0, [_di + Font.font_weight], [_di + Font.font_style], 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, [_di + Font.font_name]
+        invoke CreateFontA, [_si + Label.text_size], 0, 0, 0, [_di + Font.font_weight], [_di + Font.font_style], FALSE, FALSE, \
+            ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, [_di + Font.font_name]
         mov [font], _ax
 
         ; Draw label

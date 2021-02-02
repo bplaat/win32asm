@@ -828,7 +828,20 @@ struct PAINTSTRUCT, \
 ; Gdi32
 %define DEFAULT_GUI_FONT 17
 
+%define FW_NORMAL 400
+%define FW_BOLD 700
+
+%define ANSI_CHARSET 0
+
+%define OUT_DEFAULT_PRECIS 0
+
+%define CLIP_DEFAULT_PRECIS 0
+
 %define CLEARTYPE_QUALITY 5
+
+%define DEFAULT_PITCH 0
+
+%define FF_DONTCARE 0
 
 %define TRANSPARENT 1
 

@@ -32,6 +32,42 @@ code_section
     .done:
         return
 
+    ; ### Simple random number generator code ###
+
+    ; Generate rand seed by time
+    function rand_generate_seed
+        local time, SYSTEMTIME_size
+
+        invoke GetLocalTime, addr time
+
+        movzx eax, word [time + SYSTEMTIME.wHour]
+        imul eax, 60
+
+        movzx ecx, word [time + SYSTEMTIME.wMinute]
+        add eax, ecx
+        imul eax, 60
+
+        movzx ecx, word [time + SYSTEMTIME.wSecond]
+        add eax, ecx
+
+        mov [seed], eax
+
+        end_local
+        return
+        %undef time
+
+    ; Simple random number generator function
+    function rand_rand
+        imul eax, [seed], 1103515245
+        add eax, 12345
+
+        xor edx, edx
+        mov ecx, 1 << 31
+        idiv ecx
+
+        mov [seed], edx
+        return _dx
+
     ; ### Window code ###
     %define FPS 50
     %define FRAME_TIMER_ID 1
@@ -43,15 +79,15 @@ code_section
         vy, DWORD_size
 
     struct WindowData, \
+        background_color, DWORD_size, \
         time, DWORD_size, \
         score, DWORD_size, \
         level, DWORD_size, \
-        is_gameover, DWORD_size, \
         is_dragging, DWORD_size, \
         red_square, Square_size, \
         blue_squares, BLUE_SQUARES_COUNT * Square_size
 
-    ; ; Start game function
+    ; Start game function
     function game_start, hwnd
         local window_data, POINTER_size
 
@@ -59,12 +95,16 @@ code_section
         invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
         mov [window_data], _ax
 
-        ; Set window data
+        ; Generate random background color
+        fcall rand_rand
+        and eax, 0x00808080
         mov _di, [window_data]
+        mov [_di + WindowData.background_color], eax
+
+        ; Set window data
         mov dword [_di + WindowData.time], 0
         mov dword [_di + WindowData.score], 0
         mov dword [_di + WindowData.level], 1
-        mov dword [_di + WindowData.is_gameover], FALSE
         mov dword [_di + WindowData.is_dragging], FALSE
 
         ; Set red square
@@ -181,6 +221,9 @@ code_section
             fcall malloc, WindowData_size
             invoke SetWindowLongPtrA, [hwnd], GWLP_USERDATA, _ax
 
+            ; Generate random seed
+            fcall rand_generate_seed
+
             ; Center  window
             invoke GetClientRect, [hwnd], addr window_rect
 
@@ -227,12 +270,8 @@ code_section
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
             mov [window_data], _ax
 
-            ; When gameover
-            mov _si, [window_data]
-            cmp dword [_si + WindowData.is_gameover], TRUE
-            je .wm_timer.frame_timer.gameover
-
             ; Increase score
+            mov _si, [window_data]
             mov eax, [_si + WindowData.level]
             add [_si + WindowData.score], eax
 
@@ -248,7 +287,28 @@ code_section
             cmp edx, 0
             je .wm_timer.frame_timer.increase_level
 
+            ; Check border collision
+            cmp dword [_si + WindowData.red_square + Square.rect + Rect.x], 16
+            jl .wm_timer.frame_timer.gameover
+
+            cmp dword [_si + WindowData.red_square + Square.rect + Rect.y], 16 + 20 + 16 + 20 + 16
+            jl .wm_timer.frame_timer.gameover
+
+            mov eax, [_si + WindowData.red_square + Square.rect + Rect.x]
+            add eax, [_si + WindowData.red_square + Square.rect + Rect.width]
+            mov ecx, [window_width]
+            sub ecx, 16
+            cmp eax, ecx
+            jge .wm_timer.frame_timer.gameover
+
+            mov eax, [_si + WindowData.red_square + Square.rect + Rect.y]
+            add eax, [_si + WindowData.red_square + Square.rect + Rect.height]
+            mov ecx, [window_height]
+            sub ecx, 16 + 20 + 16
+            cmp eax, ecx
+            jge .wm_timer.frame_timer.gameover
         .wm_timer.frame_timer.increase_level_done:
+
             ; Update blue sqaures
             mov dword [index], 0
         .wm_timer.frame_timer.repeat:
@@ -282,18 +342,41 @@ code_section
             add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.height]
             cmp eax, [window_height]
             jg .wm_timer.frame_timer.repeat.invert_vy
-
         .wm_timer.frame_timer.invert_done:
+
             ; Check speed increase
             cmp dword [is_leveled], TRUE
             je .wm_timer.frame_timer.increase_speed
-
         .wm_timer.frame_timer.increase_speed_done:
+
+            ; Check square collision
+            mov eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x]
+            add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.width]
+            cmp [_di + WindowData.red_square + Square.rect + Rect.x], eax
+            jge .wm_timer.frame_timer.square_collision_done
+
+            mov eax, [_di + WindowData.red_square + Square.rect + Rect.x]
+            add eax, [_di + WindowData.red_square + Square.rect + Rect.width]
+            cmp eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x]
+            jl .wm_timer.frame_timer.square_collision_done
+
+            mov eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y]
+            add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.height]
+            cmp [_di + WindowData.red_square + Square.rect + Rect.y], eax
+            jge .wm_timer.frame_timer.square_collision_done
+
+            mov eax, [_di + WindowData.red_square + Square.rect + Rect.y]
+            add eax, [_di + WindowData.red_square + Square.rect + Rect.height]
+            cmp eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y]
+            jl .wm_timer.frame_timer.square_collision_done
+
+            jmp .wm_timer.frame_timer.gameover
+        .wm_timer.frame_timer.square_collision_done:
+
             ; Go to next blue square
             inc dword [index]
             jmp .wm_timer.frame_timer.repeat
         .wm_timer.frame_timer.done:
-
             ; Redraw window
             invoke InvalidateRect, [hwnd], NULL, TRUE
 
@@ -319,7 +402,10 @@ code_section
 
         .wm_timer.frame_timer.gameover:
             ; Stop frame timer
-            invoke KillTimer, FRAME_TIMER_ID
+            invoke KillTimer, [hwnd], FRAME_TIMER_ID
+
+            ; Redraw window
+            invoke InvalidateRect, [hwnd], NULL, TRUE
 
             ; Show alert
             invoke MessageBoxA, [hwnd], gameover_message, gameover_title, MB_RETRYCANCEL | MB_ICONINFORMATION
@@ -478,7 +564,7 @@ code_section
                 bitmap_buffer, POINTER_size, \
                 brush, POINTER_size, \
                 rect, RECT_size, \
-                font, DWORD_size, \
+                font, POINTER_size, \
                 stats_buffer, 128, \
                 index, DWORD_size
 
@@ -497,7 +583,8 @@ code_section
             invoke SelectObject, [hdc_buffer], [bitmap_buffer]
 
             ; Draw background color
-            invoke CreateSolidBrush, 0x00e9e9ee
+            mov _si, [window_data]
+            invoke CreateSolidBrush, [_si + WindowData.background_color]
             mov [brush], _ax
 
             mov dword [rect + RECT.left], 0
@@ -512,7 +599,10 @@ code_section
             invoke DeleteObject, [brush]
 
             ; Draw border
-            invoke CreateSolidBrush, 0x00d8d8dd
+            mov _si, [window_data]
+            mov eax, [_si + WindowData.background_color]
+            add eax, 0x00171717
+            invoke CreateSolidBrush, _ax
             mov [brush], _ax
 
             mov dword [rect + RECT.left], 16
@@ -578,16 +668,16 @@ code_section
 
             invoke DeleteObject, [brush]
 
-            ; Draw labels
-            invoke CreateFontA, 20, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
+            ; Draw stats label
+            invoke CreateFontA, 20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, \
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name
             mov [font], _ax
 
             invoke SelectObject, [hdc_buffer], [font]
             invoke SetBkMode, [hdc_buffer], TRANSPARENT
-            invoke SetTextColor, [hdc_buffer], 0x00111111
+            invoke SetTextColor, [hdc_buffer], 0x00ffffff
 
             mov _si, [window_data]
-
             mov eax, [_si + WindowData.time]
             xor edx, edx
             mov ecx, FPS
@@ -595,9 +685,18 @@ code_section
             cinvoke wsprintfA, addr stats_buffer, stats_label, [_si + WindowData.score], _ax, [_si + WindowData.level]
             invoke TextOutA, [hdc_buffer], 16, 16, addr stats_buffer, _ax
 
+            invoke DeleteObject, [font]
+
+            ; Draw help label
+            invoke CreateFontA, 20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, \
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name
+            mov [font], _ax
+            invoke SelectObject, [hdc_buffer], [font]
+
             fcall strlen, addr help_label
             invoke TextOutA, [hdc_buffer], 16, 16 + 20 + 16, help_label, _ax
 
+            ; Draw footer label
             fcall strlen, addr footer_label
             mov esi, [window_height]
             sub esi, 16 + 20
@@ -695,15 +794,16 @@ data_section
     window_class_name db "redsquare", 0
     window_title db "RedSquare", 0
     font_name db "Tahoma", 0
-    stats_label db "Score: %06d  -  Time: %02ds  -  Level: %02d", 0
+    stats_label db "Score: %06d  -  Time: %02d s  -  Level: %02d", 0
     help_label db "Help: move the red square avoid the edge and the blue squares", 0
-    footer_label db "Made by Bastiaan van der Plaat with a lot of love for you, Windows is weird but cool at the same time!", 0
+    footer_label db "Made by Bastiaan van der Plaat with a lot of love for you, the Windows API is weird but in a cool way!", 0
     open_operation db "open", 0
     website_url db "https://bastiaan.ml/", 0
     gameover_title db "Game over!", 0
     gameover_message db "You are game over!", 0
 
     ; Global variables
+    seed dd 0
     window_width dd 800
     window_height dd 600
 
@@ -729,6 +829,7 @@ data_section
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
+            GetLocalTime, "GetLocalTime", \
             GetModuleHandleA, "GetModuleHandleA", \
             GetProcessHeap, "GetProcessHeap", \
             HeapAlloc, "HeapAlloc", \

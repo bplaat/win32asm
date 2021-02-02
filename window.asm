@@ -153,7 +153,7 @@ code_section
                 bitmap_buffer, POINTER_size, \
                 brush, POINTER_size, \
                 rect, RECT_size, \
-                font, DWORD_size
+                font, POINTER_size
 
             ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
@@ -188,7 +188,8 @@ code_section
             ; Draw centered text
             mov eax, [window_width]
             shr eax, 4
-            invoke CreateFontA, _ax, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, CLEARTYPE_QUALITY, 0, font_name
+            invoke CreateFontA, _ax, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, \
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name
             mov [font], _ax
 
             invoke SelectObject, [hdc_buffer], [font]
