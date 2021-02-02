@@ -750,7 +750,7 @@ code_section
             invoke DeleteObject, [_si + WindowData.logo_bitmap]
 
             ; Free window data
-            fcall free, _ax
+            fcall free, [window_data]
 
             ; Close process
             invoke PostQuitMessage, 0
