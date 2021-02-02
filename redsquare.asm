@@ -157,6 +157,12 @@ code_section
         je .wm_timer
         cmp eax, WM_SIZE
         je .wm_size
+        cmp eax, WM_LBUTTONDOWN
+        je .wm_lbuttondown
+        cmp eax, WM_MOUSEMOVE
+        je .wm_mousemove
+        cmp eax, WM_LBUTTONUP
+        je .wm_lbuttonup
         cmp eax, WM_GETMINMAXINFO
         je .wm_getminmaxinfo
         cmp eax, WM_ERASEBKGND
@@ -334,6 +340,113 @@ code_section
 
             %undef window_data
             %undef index
+
+        .wm_lbuttondown:
+            local window_data, POINTER_size, \
+                x, DWORD_size, \
+                y, DWORD_size
+
+            ; Get window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
+
+            ; Get mouse position
+            movzx eax, word [lParam]
+            mov [x], eax
+
+            mov eax, [lParam]
+            shr eax, 16
+            mov [y], eax
+
+            ; Check position is in red square
+            mov _di, [window_data]
+            mov eax, [_di + WindowData.red_square + Square.rect + Rect.x]
+            cmp [x], eax
+            jl .leave
+
+            mov eax, [_di + WindowData.red_square + Square.rect + Rect.y]
+            cmp [y], eax
+            jl .leave
+
+            mov eax, [_di + WindowData.red_square + Square.rect + Rect.x]
+            add eax, [_di + WindowData.red_square + Square.rect + Rect.width]
+            cmp [x], eax
+            jge .leave
+
+            mov eax, [_di + WindowData.red_square + Square.rect + Rect.y]
+            add eax, [_di + WindowData.red_square + Square.rect + Rect.height]
+            cmp [y], eax
+            jge .leave
+
+            ; Start dragging
+            mov dword [_di + WindowData.is_dragging], TRUE
+
+            mov eax, [x]
+            sub eax, [_di + WindowData.red_square + Square.rect + Rect.x]
+            mov [_di + WindowData.red_square + Square.vx], eax
+
+            mov eax, [y]
+            sub eax, [_di + WindowData.red_square + Square.rect + Rect.y]
+            mov [_di + WindowData.red_square + Square.vy], eax
+
+            end_local
+            jmp .leave
+
+            %undef window_data
+
+        .wm_mousemove:
+            local window_data, POINTER_size
+
+            ; Get window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
+
+            ; Check is dragging
+            mov _di, [window_data]
+            cmp dword [_di + WindowData.is_dragging], FALSE
+            je .leave
+
+            ; Update x position
+            movzx eax, word [lParam]
+            sub eax, [_di + WindowData.red_square + Square.vx]
+            mov [_di + WindowData.red_square + Square.rect + Rect.x], eax
+
+            ; Update y position
+            mov eax, [lParam]
+            shr eax, 16
+            sub eax, [_di + WindowData.red_square + Square.vy]
+            mov [_di + WindowData.red_square + Square.rect + Rect.y], eax
+
+            end_local
+            jmp .leave
+
+            %undef window_data
+
+        .wm_lbuttonup:
+            local window_data, POINTER_size
+
+            ; Get window data
+            invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
+            mov [window_data], _ax
+
+            ; Stop dragging
+            mov _di, [window_data]
+            mov dword [_di + WindowData.is_dragging], FALSE
+
+            ; Check footer click
+            mov eax, [lParam]
+            shr eax, 16
+            mov ecx, [window_height]
+            sub ecx, 16 + 20 + 16
+            cmp eax, ecx
+            jl .leave
+
+            invoke ShellExecuteA, [hwnd], open_operation, website_url, NULL, NULL, SW_SHOWNORMAL
+
+            end_local
+            jmp .leave
+
+            %undef window_data
 
         .wm_size:
             ; Save new window size
@@ -584,7 +697,9 @@ data_section
     font_name db "Tahoma", 0
     stats_label db "Score: %06d  -  Time: %02ds  -  Level: %02d", 0
     help_label db "Help: move the red square avoid the edge and the blue squares", 0
-    footer_label db "Made by Bastiaan van der Plaat (https://bastiaan.ml/)", 0
+    footer_label db "Made by Bastiaan van der Plaat with a lot of love for you, Windows is weird but cool at the same time!", 0
+    open_operation db "open", 0
+    website_url db "https://bastiaan.ml/", 0
     gameover_title db "Game over!", 0
     gameover_message db "You are game over!", 0
 
@@ -596,6 +711,7 @@ data_section
     import_table
         library gdi_table, "GDI32.DLL", \
             kernel_table, "KERNEL32.DLL", \
+            shell_table, "SHELL32.DLL", \
             user_table, "USER32.DLL"
 
         import gdi_table, \
@@ -617,6 +733,9 @@ data_section
             GetProcessHeap, "GetProcessHeap", \
             HeapAlloc, "HeapAlloc", \
             HeapFree, "HeapFree"
+
+        import shell_table, \
+            ShellExecuteA, "ShellExecuteA"
 
         import user_table, \
             BeginPaint, "BeginPaint", \
