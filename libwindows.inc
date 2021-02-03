@@ -51,10 +51,17 @@
     %define POINTER_size DWORD_size
 %endif
 
+; Unicode macro
+%define utf16(string) __?utf16?__(string)
+
 ; Header
 %define HEADER_GUI 2
 %define HEADER_CONSOLE 3
-%macro header 1
+
+%define HEADER_HAS_NO_RESOURCES 0
+%define HEADER_HAS_RESOURCES 1
+
+%macro header 2
     _header:
         ; MS-DOS Header
         db 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00
@@ -75,7 +82,7 @@
         %else
             dw 0x014C                 ; Machine
         %endif
-        dw 2                          ; NumberOfSections
+        dw _sections_count            ; NumberOfSections
         dd __?POSIX_TIME?__           ; TimeDateStamp
         dd 0                          ; PointerToSymbolTable
         dd 0                          ; NumberOfSymbols
@@ -115,7 +122,11 @@
         dw 4                          ; MajorSubsystemVersion
         dw 0                          ; MinorSubsystemVersion
         dd 0                          ; Win32VersionValue
-        dd _header_aligned_size + _code_section_aligned_size + _data_section_aligned_size ; SizeOfImage
+        %if %2 == HEADER_HAS_RESOURCES
+            dd _header_aligned_size + _code_section_aligned_size + _data_section_aligned_size + _resources_section_aligned_size ; SizeOfImage
+        %else
+            dd _header_aligned_size + _code_section_aligned_size + _data_section_aligned_size ; SizeOfImage
+        %endif
         dd _header_aligned_size       ; SizeOfHeaders
         dd 0                          ; CheckSum
         dw %1                         ; Subsystem
@@ -136,12 +147,21 @@
 
         ; Data Directories
         dd 0, 0
+
         dd RVA(_import_table), _import_table_size
-        times 14 dd 0, 0
+
+        %if %2 == HEADER_HAS_RESOURCES
+            dd RVA(_resources_section), _resources_section_size
+        %else
+            dd 0, 0
+        %endif
+
+        times 13 dd 0, 0
 
         _optional_header_size equ $ - _optional_header
 
         ; Section Table
+    _sections:
 
         ; Code Section
         db ".text", 0, 0, 0           ; Name
@@ -167,12 +187,31 @@
         dw 0                          ; NumberOfLinenumbers
         dd 0xC0000040                 ; Characteristics
 
+        ; Resources Section
+        %if %2 == HEADER_HAS_RESOURCES
+            db ".rsrc", 0, 0, 0           ; Name
+            dd _resources_section_size    ; VirtualSize
+            dd RVA(_resources_section)    ; VirtualAddress
+            dd _resources_section_aligned_size ; SizeOfRawData
+            dd RVA(_resources_section)    ; PointerToRawData
+            dd 0                          ; PointerToRelocations
+            dd 0                          ; PointerToLinenumbers
+            dw 0                          ; NumberOfRelocations
+            dw 0                          ; NumberOfLinenumbers
+            dd 0x40000040                 ; Characteristics
+        %endif
+
+        _sections_count equ ($ - _sections) / (8 + 4 * 6 + 2 * 2 + 4)
+
     _header_size equ $ - _header
         align _alignment, db 0
     _header_aligned_size equ $ - _header
 %endmacro
+%macro header 1
+    header %1, HEADER_HAS_NO_RESOURCES
+%endmacro
 %macro header 0
-    header HEADER_GUI
+    header HEADER_GUI, HEADER_HAS_NO_RESOURCES
 %endmacro
 
 ; Code section
@@ -205,7 +244,7 @@
     _data_section_aligned_size equ $ - _data_section
 %endmacro
 
-; Import section
+; Import table
 %macro import_table 0
     _import_table:
 %endmacro
@@ -249,6 +288,158 @@
             _%1 db 0, 0, %2, 0
             %rotate 2
         %endrep
+%endmacro
+
+; Resources section
+%macro resources_section 0
+    _resources_section:
+%endmacro
+
+%macro end_resources_section 0
+    _resources_section_size equ $ - _resources_section
+        align _alignment, db 0
+    _resources_section_aligned_size equ $ - _resources_section
+%endmacro
+
+%macro directory 2-*
+    dd 0, __?POSIX_TIME?__, 0, %0 / 2
+    %rep %0 / 2
+        dd %1, 0x80000000 + (%2 - _resources_section)
+        %rotate 2
+    %endrep
+%endmacro
+
+%define RT_BITMAP 2
+%define RT_VERSION 16
+%define RT_MANIFEST 24
+
+%define LANG_NEUTRAL 0
+%define LANG_ENGLISH 9
+%define SUBLANG_ENGLISH_US (1 << 10)
+
+%macro resource 4-*
+    %1:
+        dd 0, __?POSIX_TIME?__, 0, (%0 - 1) / 2
+
+        %rotate 1
+        %rep (%0 - 1) / 3
+            dd %1, 0x80000000 + (.%3 - _resources_section)
+            %rotate 3
+        %endrep
+
+        %rotate 1
+        %rep (%0 - 1) / 3
+            .%3:
+                dd 0, __?POSIX_TIME?__, 0, 1
+
+                dd %2, (%3 - _resources_section)
+                %rotate 3
+        %endrep
+%endmacro
+
+%macro bitmap 2
+    %1:
+        dd RVA(.data), .data_size, 0, 0
+        .data:
+            incbin %2
+        .data_size equ $ - .data
+%endmacro
+
+%define VOS__WINDOWS32 0x00000004
+
+%define VFT_APP 0x00000001
+
+%define VFT2_UNKNOWN 0x00000000
+
+%macro versioninfo 1-*
+    %1:
+        dd RVA(.data), .data_size, %8, 0
+        .data:
+            dw .data_size, .version_info_size
+            dw 0, utf16("VS_VERSION_INFO"), 0, 0
+
+            .version_info:
+                dd 0xFEEF04BD ;dwSignature
+                dw 1, 0 ; dwStrucVersion
+
+                dq %2 ; dwFileVersion
+
+                dq %3 ; dwProductVersion
+
+                dd 0 ; dwFileFlagsMask
+                dd 0 ; dwFileFlags
+
+                dd %4 ; dwFileOS
+                dd %5 ; dwFileType
+                dd %6 ; dwFileSubtype
+
+                dd 0 ; dwFileDateMS
+                dd 0 ; dwFileDateLS
+            .version_info_size equ $ - .version_info
+
+            .string_file_info:
+                dw .string_file_info_size, 0
+                dw 1, utf16("StringFileInfo"), 0
+
+                .string_table:
+                    dw .string_table_size, 0
+                    dw 1, utf16("04090000"), 0
+
+                    %rotate 8
+
+                    %rep (%0 - 8) / 2
+                        .string_table_%1:
+                            dw .string_table_%1_size
+                            dw .string_table_%1.value_size / 2
+
+                            .string_table_%1.key:
+                            %defstr key %1
+                            dw 1, utf16(key), 0
+                            %undef key
+                            .string_table_%1.key_size equ $ - .string_table_%1.key
+
+                            %if (.string_table_%1.key_size % 1) == 1
+                                dw 0
+                            %endif
+
+                            .string_table_%1.value:
+                                dw utf16(%2), 0
+                            .string_table_%1.value_size equ $ - .string_table_%1.value
+
+                        .string_table_%1_size equ $ - .string_table_%1
+
+                        %rotate 2
+                    %endrep
+
+                .string_table_size equ $ - .string_table
+
+            .string_file_info_size equ $ - .string_file_info
+
+            .var_file_info:
+                dw .var_file_info_size, 0
+                dw 1, utf16("VarFileInfo"), 0, 0
+
+                .var:
+                    dw .var_size, .var.value_size
+                    dw 0, utf16("Translation"), 0, 0
+
+                    .var.value:
+                        dw %7, %8
+                    .var.value_size equ $ - .var.value
+
+                .var_size equ $ - .var
+
+            .var_file_info_size equ $ - .var_file_info
+
+        .data_size equ $ - .data
+%endmacro
+
+%macro manifest 2
+    %1:
+        dd RVA(.data), .data_size, 0, 0
+        .data:
+            incbin %2
+        .data_size equ $ - .data
 %endmacro
 
 ; Code helpers
@@ -422,8 +613,8 @@
     %endif
 %endmacro
 
-%define float 'f',
-%define addr '&',
+%define float "f",
+%define addr "&",
 
 ; Fastcall
 %macro fastcall 1-*
@@ -464,7 +655,7 @@
 
         %ifstr %1
             ; Load address helper
-            %if %1 == '&'
+            %if %1 == "&"
                 %rotate 1
 
                 %if _position == 1
@@ -486,7 +677,7 @@
             %endif
 
             ; Float helper
-            %if %1 == 'f'
+            %if %1 == "f"
                 %rotate 1
 
                 %if _position == 1
@@ -609,7 +800,7 @@
 
         %ifstr %1
             ; Load address helper
-            %if %1 == '&'
+            %if %1 == "&"
                 %rotate 1
                 lea eax, [%1]
                 push eax
@@ -619,7 +810,7 @@
             %endif
 
             ; Ignore float helper only for 64-bit fastcall
-            %if %1 == 'f'
+            %if %1 == "f"
                 %rotate 1
                 push dword %1
                 %rotate -1
@@ -780,11 +971,11 @@ struct SYSTEMTIME, \
 %define GWLP_USERDATA -21
 
 %ifdef WIN64
-    %define GetWindowLongPtrAString 'GetWindowLongPtrA'
-    %define SetWindowLongPtrAString 'SetWindowLongPtrA'
+    %define GetWindowLongPtrAString "GetWindowLongPtrA"
+    %define SetWindowLongPtrAString "SetWindowLongPtrA"
 %else
-    %define GetWindowLongPtrAString 'GetWindowLongA'
-    %define SetWindowLongPtrAString 'SetWindowLongA'
+    %define GetWindowLongPtrAString "GetWindowLongA"
+    %define SetWindowLongPtrAString "SetWindowLongA"
 %endif
 
 struct POINT, \

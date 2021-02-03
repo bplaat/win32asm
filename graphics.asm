@@ -379,8 +379,8 @@ data_section
     %else
         window_title db "This is a test GDI+ window (32-bit)", 0
     %endif
-    font_name dw "T","a","h","o","m","a", 0
-    window_size_format dw "(","%","d","x","%","d",")", 0
+    font_name dw utf16("Tahoma"), 0
+    window_size_format dw utf16("(%d x %d)"), 0
 
     ; Global variables
     rand_seed dd 0
