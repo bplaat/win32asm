@@ -341,7 +341,7 @@
     %1:
         dd RVA(.data), .data_size, 0, 0
         .data:
-            incbin %2
+            incbin %2, 0x0e
         .data_size equ $ - .data
 %endmacro
 
