@@ -1,0 +1,38 @@
+// Manifest
+1 MANIFEST "redsquare.manifest"
+
+// Icon
+1 ICON "icon.ico"
+
+// Bitmap
+1 BITMAP "bassiebas.bmp"
+
+// Version Information
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK 0
+FILEFLAGS 0
+FILEOS VOS__WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904B0"
+        {
+            VALUE "CompanyName", "PlaatSoft"
+            VALUE "FileDescription", "RedSquare"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "RedSquare"
+            VALUE "LegalCopyright", "Copyright \u00a9 2021 PlaatSoft"
+            VALUE "OriginalFilename", "redsquare-x64.exe"
+            VALUE "ProductName", "RedSquare"
+            VALUE "ProductVersion", "1.0.0.0"
+        }
+    }
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x409, 1200
+    }
+}

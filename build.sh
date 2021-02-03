@@ -29,5 +29,4 @@ nasm -f bin custom.asm -o custom-x86.exe
 nasm -DWIN64 -f bin custom.asm -o custom-x64.exe
 
 # RedSquare game
-nasm -f bin redsquare.asm -o redsquare-x86.exe
-nasm -DWIN64 -f bin redsquare.asm -o redsquare-x64.exe
+./redsquare/build.sh

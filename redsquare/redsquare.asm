@@ -2,9 +2,9 @@
     ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
     ; 32-bit: nasm -f bin redsquare.asm -o redsquare-x86.exe && ./redsquare-x86
     ; 64-bit: nasm -DWIN64 -f bin redsquare.asm -o redsquare-x64.exe && ./redsquare-x64
-    ; Depends on the image file: redsquare-logo.bmp
+    ; Use the build script to embed the resources
 
-%include "libwindows.inc"
+%include "../libwindows.inc"
 
 header
 
@@ -49,6 +49,9 @@ code_section
         return _dx
 
     ; ### Window code ###
+    %define ICON_ID 1
+    %define BASSIEBAS_BITMAP_ID 1
+
     %define FPS 50
     %define FRAME_TIMER_ID 1
     %define BLUE_SQUARES_COUNT 4
@@ -59,7 +62,7 @@ code_section
         vy, DWORD_size
 
     struct WindowData, \
-        logo_bitmap, POINTER_size, \
+        bassiebas_bitmap, POINTER_size, \
         background_color, DWORD_size, \
         time, DWORD_size, \
         score, DWORD_size, \
@@ -221,9 +224,14 @@ code_section
             fcall srand, _ax
 
             ; Load bitmap
-            invoke LoadImageA, NULL, logo_file, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE
+            mov _si, [lParam]
+            invoke LoadImageA, [_si + POINTER_size], BASSIEBAS_BITMAP_ID, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR
+
+            cmp _ax, 0
+            je .wm_destroy
+
             mov _di, [window_data]
-            mov [_di + WindowData.logo_bitmap], _ax
+            mov [_di + WindowData.bassiebas_bitmap], _ax
 
             ; Center  window
             invoke GetClientRect, [hwnd], addr window_rect
@@ -672,12 +680,12 @@ code_section
 
             invoke DeleteObject, [brush]
 
-            ; Draw logo bitmap
+            ; Draw bassiebas bitmap
             invoke CreateCompatibleDC, [hdc_buffer]
             mov [hdc_bitmap_buffer], _ax
 
             mov _si, [window_data]
-            invoke SelectObject, [hdc_bitmap_buffer], [_si + WindowData.logo_bitmap]
+            invoke SelectObject, [hdc_bitmap_buffer], [_si + WindowData.bassiebas_bitmap]
 
             mov _si, [window_width]
             sub _si, 56 + 16
@@ -745,9 +753,9 @@ code_section
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
             mov [window_data], _ax
 
-            ; Delete logo bitmap
+            ; Delete bassiebas bitmap
             mov _si, [window_data]
-            invoke DeleteObject, [_si + WindowData.logo_bitmap]
+            invoke DeleteObject, [_si + WindowData.bassiebas_bitmap]
 
             ; Free window data
             fcall free, [window_data]
@@ -767,9 +775,15 @@ code_section
 
     ; Main entry point
     entrypoint
-        local window_class, WNDCLASSEX_size, \
+        local initCommonControlsEx, INITCOMMONCONTROLSEX_size, \
+            window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
             message, MSG_size
+
+        ; Init common controls for modern control style
+        mov dword [initCommonControlsEx + INITCOMMONCONTROLSEX.dwSize], INITCOMMONCONTROLSEX_size
+        mov dword [initCommonControlsEx + INITCOMMONCONTROLSEX.dwICC], ICC_WIN95_CLASSES
+        invoke InitCommonControlsEx, addr initCommonControlsEx
 
         ; Register the window class
         mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -785,9 +799,8 @@ code_section
         invoke GetModuleHandleA, NULL
         mov [window_class + WNDCLASSEX.hInstance], _ax
 
-        invoke LoadIconA, NULL, IDI_APPLICATION
+        invoke LoadImageA, [window_class + WNDCLASSEX.hInstance], ICON_ID, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_DEFAULTCOLOR | LR_SHARED
         mov [window_class + WNDCLASSEX.hIcon], _ax
-        mov [window_class + WNDCLASSEX.hIconSm], _ax
 
         invoke LoadCursorA, NULL, IDC_ARROW
         mov [window_class + WNDCLASSEX.hCursor], _ax
@@ -797,6 +810,13 @@ code_section
         mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
         mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
+
+        invoke GetSystemMetrics, SM_CXSMICON
+        mov _si, _ax
+        invoke GetSystemMetrics, SM_CYSMICON
+        mov _di, _ax
+        invoke LoadImageA, [window_class + WNDCLASSEX.hInstance], ICON_ID, IMAGE_ICON, _si, _di, LR_DEFAULTCOLOR | LR_SHARED
+        mov [window_class + WNDCLASSEX.hIconSm], _ax
 
         invoke RegisterClassExA, addr window_class
 
@@ -828,7 +848,6 @@ data_section
     window_class_name db "redsquare", 0
     window_title db "RedSquare", 0
     font_name db "Tahoma", 0
-    logo_file db 'redsquare-logo.bmp', 0
     stats_label db "Score: %06d  -  Time: %02d s  -  Level: %02d", 0
     help_label db "Help: move the red square avoid the edge and the blue squares", 0
     footer_label db "Made by Bastiaan van der Plaat with a lot of love for you, the Windows API is weird but in a cool way!", 0
@@ -844,10 +863,14 @@ data_section
 
     ; Import table
     import_table
-        library gdi_table, "GDI32.DLL", \
+        library comctl_table, "COMCTL32.DLL", \
+            gdi_table, "GDI32.DLL", \
             kernel_table, "KERNEL32.DLL", \
             shell_table, "SHELL32.DLL", \
             user_table, "USER32.DLL"
+
+        import comctl_table, \
+            InitCommonControlsEx, "InitCommonControlsEx"
 
         import gdi_table, \
             BitBlt, "BitBlt", \
@@ -889,7 +912,6 @@ data_section
             KillTimer, "KillTimer", \
             InvalidateRect, "InvalidateRect", \
             LoadCursorA, "LoadCursorA", \
-            LoadIconA, "LoadIconA", \
             LoadImageA, "LoadImageA", \
             MessageBoxA, "MessageBoxA", \
             PostQuitMessage, "PostQuitMessage", \
