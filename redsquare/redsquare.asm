@@ -227,8 +227,9 @@ code_section
             mov _si, [lParam]
             invoke LoadImageA, [_si + POINTER_size], BASSIEBAS_BITMAP_ID, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR
 
-            cmp _ax, 0
-            je .wm_destroy
+            ; Bitmap won't load on Windows 10
+            ; cmp _ax, 0
+            ; je .wm_destroy
 
             mov _di, [window_data]
             mov [_di + WindowData.bassiebas_bitmap], _ax
