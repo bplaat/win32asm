@@ -5,7 +5,7 @@
 
 %include "libwindows.inc"
 
-header
+header HEADER_GUI, HEADER_HAS_RESOURCES
 
 code_section
     ; ### Some stdlib like Win32 wrappers ###
@@ -412,3 +412,12 @@ data_section
             wsprintfA, "wsprintfA"
     end_import_table
 end_data_section
+
+resources_section
+    directory RT_MANIFEST, manifests
+
+    resource manifests, \
+        1, LANG_NEUTRAL, app_manifest
+
+    manifest app_manifest, "controls.manifest"
+end_resources_section
