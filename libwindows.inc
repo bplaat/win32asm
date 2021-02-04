@@ -302,7 +302,9 @@
 %endmacro
 
 %macro directory 2-*
-    dd 0, __?POSIX_TIME?__, 0, %0 / 2
+    dd 0, 0, 0
+    dw 0, %0 / 2
+
     %rep %0 / 2
         dd %1, 0x80000000 + (%2 - _resources_section)
         %rotate 2
@@ -319,7 +321,8 @@
 
 %macro resource 4-*
     %1:
-        dd 0, __?POSIX_TIME?__, 0, (%0 - 1) / 2
+        dd 0, 0, 0
+        dw 0, (%0 - 1) / 2
 
         %rotate 1
         %rep (%0 - 1) / 3
@@ -330,7 +333,8 @@
         %rotate 1
         %rep (%0 - 1) / 3
             .%3:
-                dd 0, __?POSIX_TIME?__, 0, 1
+                dd 0, 0, 0
+                dw 0, 1
 
                 dd %2, (%3 - _resources_section)
                 %rotate 3
@@ -353,7 +357,7 @@
 
 %macro versioninfo 1-*
     %1:
-        dd RVA(.data), .data_size, %8, 0
+        dd RVA(.data), .data_size, 0, 0
         .data:
             dw .data_size, .version_info_size
             dw 0, utf16("VS_VERSION_INFO"), 0, 0
@@ -362,9 +366,11 @@
                 dd 0xFEEF04BD ;dwSignature
                 dw 1, 0 ; dwStrucVersion
 
-                dq %2 ; dwFileVersion
+                dd %2 >> 32 ; dwFileVersionMS
+                dd %2 & 0xffffffff ; dwFileVersionLS
 
-                dq %3 ; dwProductVersion
+                dd %3 >> 32 ; dwProductVersionMS
+                dd %3 & 0xffffffff ; dwProductVersionLS
 
                 dd 0 ; dwFileFlagsMask
                 dd 0 ; dwFileFlags
@@ -383,28 +389,22 @@
 
                 .string_table:
                     dw .string_table_size, 0
-                    dw 1, utf16("04090000"), 0
+                    dw 1, utf16("04090000"), 0 ; Harcode language string id
 
-                    %rotate 8
+                    %rotate 7
 
-                    %rep (%0 - 8) / 2
+                    %rep (%0 - 7) / 2
                         .string_table_%1:
-                            dw .string_table_%1_size
-                            dw .string_table_%1.value_size / 2
-
-                            .string_table_%1.key:
+                            dw .string_table_%1_size, .string_table_%1.value_size / 2
                             %defstr key %1
                             dw 1, utf16(key), 0
                             %undef key
-                            .string_table_%1.key_size equ $ - .string_table_%1.key
-
-                            %if (.string_table_%1.key_size % 1) == 1
-                                dw 0
-                            %endif
+                            align 4, db 0
 
                             .string_table_%1.value:
                                 dw utf16(%2), 0
                             .string_table_%1.value_size equ $ - .string_table_%1.value
+                            align 4, db 0
 
                         .string_table_%1_size equ $ - .string_table_%1
 
@@ -424,7 +424,7 @@
                     dw 0, utf16("Translation"), 0, 0
 
                     .var.value:
-                        dw %7, %8
+                        dw %7, 0
                     .var.value_size equ $ - .var.value
 
                 .var_size equ $ - .var
