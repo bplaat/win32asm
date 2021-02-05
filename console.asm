@@ -32,7 +32,8 @@ code_section
         mov byte [name_buffer + _ax - 2], 0
 
         ; Check if name is empty if so replace with a question mark
-        cmp byte [name_buffer], 0
+        mov al, [name_buffer]
+        test al, al
         jne .skip
         mov byte [name_buffer], '?'
         mov byte [name_buffer + 1], 0

@@ -25,15 +25,15 @@ code_section
 
     function strlen, string
         mov _si, [string]
-        xor _ax, _ax
     .repeat:
-        cmp byte [_si], 0
+        mov al, [_si]
+        test al, al
         je .done
         inc _si
-        inc _ax
         jmp .repeat
     .done:
-        return
+        sub _si, [string]
+        return _si
 
     ; ### Widget object ###
     struct Widget, \
@@ -650,7 +650,7 @@ code_section
         ; Message loop
         .message_loop:
             invoke GetMessageA, addr message, NULL, 0, 0
-            cmp _ax, 0
+            test _ax, _ax
             jle .done
 
             invoke TranslateMessage, addr message

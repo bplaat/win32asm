@@ -12,12 +12,13 @@ code_section
     function memset, address, value, size
         mov al, [value]
         mov _di, [address]
-        xor _cx, _cx
+        mov _si, _di
+        add _si, [size]
     .repeat:
-        cmp _cx, [size]
+        cmp _di, _si
         je .done
-        mov [_di + _cx], al
-        inc _cx
+        mov [_di], al
+        inc _di
         jmp .repeat
     .done:
         return
@@ -72,7 +73,7 @@ code_section
         ; Read response to buffer and print to console out
     read_socket_write_stout_loop:
         invoke recv, [client_socket], addr data_buffer, data_buffer_size, 0
-        cmp _ax, 0
+        test _ax, _ax
         je .done
 
         invoke WriteConsoleA, [console_out], addr data_buffer, _ax, NULL, 0

@@ -356,7 +356,7 @@ code_section
         ; Message loop
         .message_loop:
             invoke GetMessageA, addr message, NULL, 0, 0
-            cmp _ax, 0
+            test _ax, _ax
             jle .done
 
             invoke TranslateMessage, addr message

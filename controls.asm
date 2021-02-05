@@ -23,12 +23,13 @@ code_section
     function memset, address, value, size
         mov al, [value]
         mov _di, [address]
-        xor _cx, _cx
+        mov _si, _di
+        add _si, [size]
     .repeat:
-        cmp _cx, [size]
+        cmp _di, _si
         je .done
-        mov [_di + _cx], al
-        inc _cx
+        mov [_di], al
+        inc _di
         jmp .repeat
     .done:
         return
@@ -327,7 +328,7 @@ code_section
         ; Message loop
         .message_loop:
             invoke GetMessageA, addr message, NULL, 0, 0
-            cmp _ax, 0
+            test _ax, _ax
             jle .done
 
             invoke TranslateMessage, addr message
