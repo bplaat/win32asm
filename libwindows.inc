@@ -516,8 +516,7 @@
 %endmacro
 
 %macro return 0
-    mov _sp, _bp
-    pop _bp
+    leave
 
     %ifdef WIN64
         ret
