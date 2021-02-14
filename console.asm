@@ -33,11 +33,10 @@ code_section
 
         ; Check if name is empty if so replace with a question mark
         mov al, [name_buffer]
-        test al, al
-        jne .skip
-        mov byte [name_buffer], '?'
-        mov byte [name_buffer + 1], 0
-    .skip:
+        if al, "==", 0
+            mov byte [name_buffer], "?"
+            mov byte [name_buffer + 1], 0
+        end_if
 
         ; Print formated answer string
         cinvoke wsprintfA, addr answer_buffer, answer, addr name_buffer

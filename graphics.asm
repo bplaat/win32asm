@@ -354,19 +354,19 @@ code_section
         invoke UpdateWindow, [hwnd]
 
         ; Message loop
-        .message_loop:
+        loop
             invoke GetMessageA, addr message, NULL, 0, 0
             test _ax, _ax
-            jle .done
+            jle %$end_loop
 
             invoke TranslateMessage, addr message
             invoke DispatchMessageA, addr message
-            jmp .message_loop
-        .done:
-            ; Shutdown GDI+
-            invoke GdiplusShutdown, [gdiplusToken]
+        end_loop
 
-            invoke ExitProcess, [message + MSG.wParam]
+        ; Shutdown GDI+
+        invoke GdiplusShutdown, [gdiplusToken]
+
+        invoke ExitProcess, [message + MSG.wParam]
 
         end_local
 end_code_section

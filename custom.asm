@@ -25,13 +25,13 @@ code_section
 
     function strlen, string
         mov _si, [string]
-    .repeat:
-        mov al, [_si]
-        test al, al
-        je .done
-        inc _si
-        jmp .repeat
-    .done:
+        loop
+            mov al, [_si]
+            test al, al
+            je %$end_loop
+
+            inc _si
+        end_loop
         sub _si, [string]
         return _si
 
@@ -532,18 +532,16 @@ code_section
 
             ; Draw widgets
             mov dword [index], 0
-        .wm_paint.repeat:
             mov ecx, [index]
             mov _si, [window_data]
-            cmp ecx, [_si + WindowData.widgets_size]
-            je .wm_paint.done
+            while ecx, "!=", [_si + WindowData.widgets_size]
+                mov _si, [_si + WindowData.widgets + _cx * POINTER_size]
+                fcall [_si + Widget.draw_function], _si, [hdc_buffer]
 
-            mov _si, [_si + WindowData.widgets + _cx * POINTER_size]
-            fcall [_si + Widget.draw_function], _si, [hdc_buffer]
-
-            inc dword [index]
-            jmp .wm_paint.repeat
-        .wm_paint.done:
+                inc dword [index]
+                mov ecx, [index]
+                mov _si, [window_data]
+            end_while
 
             ; Draw and delete back buffer
             invoke BitBlt, [paint_struct + PAINTSTRUCT.hdc], 0, 0, [window_width], [window_height], [hdc_buffer], 0, 0, SRCCOPY
@@ -575,18 +573,16 @@ code_section
 
             ; Free widgets
             mov dword [index], 0
-        .wm_destroy.repeat:
             mov ecx, [index]
             mov _si, [window_data]
-            cmp ecx, [_si + WindowData.widgets_size]
-            je .wm_destroy.done
+            while ecx, "!=", [_si + WindowData.widgets_size]
+                mov _si, [_si + WindowData.widgets + _cx * POINTER_size]
+                fcall [_si + Widget.free_function], _si
 
-            mov _si, [_si + WindowData.widgets + _cx * POINTER_size]
-            fcall [_si + Widget.free_function], _si
-
-            inc dword [index]
-            jmp .wm_destroy.repeat
-        .wm_destroy.done:
+                inc dword [index]
+                mov ecx, [index]
+                mov _si, [window_data]
+            end_while
 
             ; Free window data
             fcall free, [window_data]
@@ -648,16 +644,16 @@ code_section
         invoke UpdateWindow, [hwnd]
 
         ; Message loop
-        .message_loop:
+        loop
             invoke GetMessageA, addr message, NULL, 0, 0
             test _ax, _ax
-            jle .done
+            jle %$end_loop
 
             invoke TranslateMessage, addr message
             invoke DispatchMessageA, addr message
-            jmp .message_loop
-        .done:
-            invoke ExitProcess, [message + MSG.wParam]
+        end_loop
+
+        invoke ExitProcess, [message + MSG.wParam]
 
         end_local
 end_code_section

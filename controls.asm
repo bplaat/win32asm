@@ -25,13 +25,10 @@ code_section
         mov _di, [address]
         mov _si, _di
         add _si, [size]
-    .repeat:
-        cmp _di, _si
-        je .done
-        mov [_di], al
-        inc _di
-        jmp .repeat
-    .done:
+        while _di, "!=", _si
+            mov [_di], al
+            inc _di
+        end_while
         return
 
     ; ### Window code ###
@@ -69,6 +66,7 @@ code_section
         .wm_create:
             local window_data, POINTER_size, \
                 list_item, LVITEM_size, \
+                index, DWORD_size, \
                 item_buffer, 128, \
                 window_rect, RECT_size, \
                 new_window_rect, Rect_size
@@ -100,24 +98,22 @@ code_section
             mov [_di + WindowData.list_view_hwnd], _ax
 
             ; Add 500 text items to list view
-            xor _bx, _bx
-        .wm_create.list_view_repeat:
-            cmp _bx, 500
-            je .wm_create.list_view_done
+            mov dword [index], 0
+            mov ecx, [index]
+            while ecx, "!=", 500
+                cinvoke wsprintfA, addr item_buffer, item_format, [index]
 
-            cinvoke wsprintfA, addr item_buffer, item_format, _bx
+                fcall memset, addr list_item, 0, LVITEM_size
+                mov dword [list_item + LVITEM.mask], LVIF_TEXT
+                lea _ax, [item_buffer]
+                mov pointer [list_item + LVITEM.pszText], _ax
 
-            fcall memset, addr list_item, 0, LVITEM_size
-            mov dword [list_item + LVITEM.mask], LVIF_TEXT
-            lea _ax, [item_buffer]
-            mov pointer [list_item + LVITEM.pszText], _ax
+                mov _si, [window_data]
+                invoke SendMessageA, [_si + WindowData.list_view_hwnd], LVM_INSERTITEMA, NULL, addr list_item
 
-            mov _si, [window_data]
-            invoke SendMessageA, [_si + WindowData.list_view_hwnd], LVM_INSERTITEMA, NULL, addr list_item
-
-            inc _bx
-            jmp .wm_create.list_view_repeat
-        .wm_create.list_view_done:
+                inc dword [index]
+                mov ecx, [index]
+            end_while
 
             ; Change font to default font
             invoke GetStockObject, DEFAULT_GUI_FONT
@@ -326,16 +322,16 @@ code_section
         invoke UpdateWindow, [hwnd]
 
         ; Message loop
-        .message_loop:
+        loop
             invoke GetMessageA, addr message, NULL, 0, 0
             test _ax, _ax
-            jle .done
+            jle %$end_loop
 
             invoke TranslateMessage, addr message
             invoke DispatchMessageA, addr message
-            jmp .message_loop
-        .done:
-            invoke ExitProcess, [message + MSG.wParam]
+        end_loop
+
+        invoke ExitProcess, [message + MSG.wParam]
 
         end_local
 end_code_section

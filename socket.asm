@@ -14,13 +14,10 @@ code_section
         mov _di, [address]
         mov _si, _di
         add _si, [size]
-    .repeat:
-        cmp _di, _si
-        je .done
-        mov [_di], al
-        inc _di
-        jmp .repeat
-    .done:
+        while _di, "!=", _si
+            mov [_di], al
+            inc _di
+        end_while
         return
 
     ; ### Socket code ###
@@ -71,14 +68,14 @@ code_section
         invoke shutdown, [client_socket], SD_SEND
 
         ; Read response to buffer and print to console out
-    read_socket_write_stout_loop:
-        invoke recv, [client_socket], addr data_buffer, data_buffer_size, 0
-        test _ax, _ax
-        je .done
+        loop
+            invoke recv, [client_socket], addr data_buffer, data_buffer_size, 0
+            test _ax, _ax
+            je %$end_loop
 
-        invoke WriteConsoleA, [console_out], addr data_buffer, _ax, NULL, 0
-        jmp read_socket_write_stout_loop
-    .done:
+            invoke WriteConsoleA, [console_out], addr data_buffer, _ax, NULL, 0
+        end_loop
+
         ; Close socket and WinSock2
         invoke closesocket, [client_socket]
         invoke WSACleanup

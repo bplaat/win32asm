@@ -22,13 +22,11 @@ code_section
 
     function strlen, string
         mov _si, [string]
-    .repeat:
         mov al, [_si]
-        test al, al
-        je .done
-        inc _si
-        jmp .repeat
-    .done:
+        while al, "!=", 0
+            inc _si
+            mov al, [_si]
+        end_while
         sub _si, [string]
         return _si
 
@@ -227,7 +225,7 @@ code_section
             mov _si, [lParam]
             invoke LoadImageA, [_si + POINTER_size], BASSIEBAS_BITMAP_ID, IMAGE_BITMAP, 0, 0,  LR_DEFAULTSIZE | LR_DEFAULTCOLOR
 
-            ; Bitmap won't load on Windows 10
+            ; Bitmap will not load on Windows 10 😭
             ; cmp _ax, NULL
             ; je .wm_destroy
 
@@ -296,8 +294,10 @@ code_section
             xor edx, edx
             mov ecx, FPS * 10
             idiv ecx
-            test edx, edx
-            je .wm_timer.frame_timer.increase_level
+            if edx, "==", 0
+                inc dword [_si + WindowData.level]
+                mov dword [is_leveled], TRUE
+            end_if
 
             ; Check border collision
             cmp dword [_si + WindowData.red_square + Square.rect + Rect.x], 16
@@ -319,98 +319,85 @@ code_section
             sub ecx, 16 + 20 + 16
             cmp eax, ecx
             jge .wm_timer.frame_timer.gameover
-        .wm_timer.frame_timer.increase_level_done:
 
             ; Update blue sqaures
             mov dword [index], 0
-        .wm_timer.frame_timer.repeat:
             mov ecx, [index]
-            cmp ecx, BLUE_SQUARES_COUNT
-            je .wm_timer.frame_timer.done
+            while ecx, "!=", BLUE_SQUARES_COUNT
+                mov _si, [window_data]
+                imul edi, ecx, Square_size
+                lea edi, [_si + WindowData.blue_squares + _di]
 
-            imul ecx, Square_size
-            mov _di, [window_data]
+                ; Check speed increase
+                mov eax, [is_leveled]
+                if eax, "==", TRUE
+                    shl dword [_di + Square.vx], 1
+                    shl dword [_di + Square.vy], 1
+                end_if
 
-            ; Update blue square position
-            mov eax, [_di + WindowData.blue_squares + _cx + Square.vx]
-            add [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x], eax
+                ; Update blue square position
+                mov eax, [_di + Square.vx]
+                add [_di + Square.rect + Rect.x], eax
 
-            mov eax, [_di + WindowData.blue_squares + _cx + Square.vy]
-            add [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y], eax
+                mov eax, [_di + Square.vy]
+                add [_di + Square.rect + Rect.y], eax
 
-            ; Blue square bounds check
-            cmp dword [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x], 0
-            jl .wm_timer.frame_timer.repeat.invert_vx
+                ; Blue square bounds check
+                mov eax, [_di + Square.rect + Rect.x]
+                if eax, "<=", 0
+                    neg dword [_di + Square.vx]
+                end_if
 
-            cmp dword [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y], 0
-            jl .wm_timer.frame_timer.repeat.invert_vy
+                mov eax, [_di + Square.rect + Rect.y]
+                if eax, "<=", 0
+                    neg dword [_di + Square.vy]
+                end_if
 
-            mov eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x]
-            add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.width]
-            cmp eax, [window_width]
-            jg .wm_timer.frame_timer.repeat.invert_vx
+                mov eax, [_di + Square.rect + Rect.x]
+                add eax, [_di + Square.rect + Rect.width]
+                mov ecx, [window_width]
+                dec ecx
+                if eax, ">=", ecx
+                    neg dword [_di + Square.vx]
+                end_if
 
-            mov eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y]
-            add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.height]
-            cmp eax, [window_height]
-            jg .wm_timer.frame_timer.repeat.invert_vy
-        .wm_timer.frame_timer.invert_done:
+                mov eax, [_di + Square.rect + Rect.y]
+                add eax, [_di + Square.rect + Rect.height]
+                mov ecx, [window_height]
+                dec ecx
+                if eax, ">=", ecx
+                    neg dword [_di + Square.vy]
+                end_if
 
-            ; Check speed increase
-            cmp dword [is_leveled], TRUE
-            je .wm_timer.frame_timer.increase_speed
-        .wm_timer.frame_timer.increase_speed_done:
+                ; Check square collision
+                mov eax, [_di + Square.rect + Rect.x]
+                mov ecx, [_si + WindowData.red_square + Square.rect + Rect.x]
+                add ecx, [_si + WindowData.red_square + Square.rect + Rect.width]
+                if eax, "<", ecx
+                    mov eax, [_di + Square.rect + Rect.x]
+                    add eax, [_di + Square.rect + Rect.width]
+                    if eax, ">", [_si + WindowData.red_square + Square.rect + Rect.x]
+                        mov eax, [_di + Square.rect + Rect.y]
+                        mov ecx, [_si + WindowData.red_square + Square.rect + Rect.y]
+                        add ecx, [_si + WindowData.red_square + Square.rect + Rect.height]
+                        if eax, "<", ecx
+                            mov eax, [_di + Square.rect + Rect.y]
+                            add eax, [_di + Square.rect + Rect.height]
+                            if eax, ">", [_si + WindowData.red_square + Square.rect + Rect.y]
+                                jmp .wm_timer.frame_timer.gameover
+                            end_if
+                        end_if
+                    end_if
+                end_if
 
-            ; Check square collision
-            mov eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x]
-            add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.width]
-            cmp [_di + WindowData.red_square + Square.rect + Rect.x], eax
-            jge .wm_timer.frame_timer.square_collision_done
+                inc dword [index]
+                mov ecx, [index]
+            end_while
 
-            mov eax, [_di + WindowData.red_square + Square.rect + Rect.x]
-            add eax, [_di + WindowData.red_square + Square.rect + Rect.width]
-            cmp eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.x]
-            jl .wm_timer.frame_timer.square_collision_done
-
-            mov eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y]
-            add eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.height]
-            cmp [_di + WindowData.red_square + Square.rect + Rect.y], eax
-            jge .wm_timer.frame_timer.square_collision_done
-
-            mov eax, [_di + WindowData.red_square + Square.rect + Rect.y]
-            add eax, [_di + WindowData.red_square + Square.rect + Rect.height]
-            cmp eax, [_di + WindowData.blue_squares + _cx + Square.rect + Rect.y]
-            jl .wm_timer.frame_timer.square_collision_done
-
-            jmp .wm_timer.frame_timer.gameover
-        .wm_timer.frame_timer.square_collision_done:
-
-            ; Go to next blue square
-            inc dword [index]
-            jmp .wm_timer.frame_timer.repeat
-        .wm_timer.frame_timer.done:
             ; Redraw window
             invoke InvalidateRect, [hwnd], NULL, TRUE
 
             jmp .leave
-
-        .wm_timer.frame_timer.increase_level:
-            inc dword [_si + WindowData.level]
-            mov dword [is_leveled], TRUE
-            jmp .wm_timer.frame_timer.increase_level_done
-
-        .wm_timer.frame_timer.repeat.invert_vx:
-            neg dword [_di + WindowData.blue_squares + _cx + Square.vx]
-            jmp .wm_timer.frame_timer.invert_done
-
-        .wm_timer.frame_timer.repeat.invert_vy:
-            neg dword [_di + WindowData.blue_squares + _cx + Square.vy]
-            jmp .wm_timer.frame_timer.invert_done
-
-        .wm_timer.frame_timer.increase_speed:
-            shl dword [_di + WindowData.blue_squares + _cx + Square.vx], 1
-            shl dword [_di + WindowData.blue_squares + _cx + Square.vy], 1
-            jmp .wm_timer.frame_timer.increase_speed_done
 
         .wm_timer.frame_timer.gameover:
             ; Stop frame timer
@@ -421,17 +408,11 @@ code_section
 
             ; Show alert
             invoke MessageBoxA, [hwnd], gameover_message, gameover_title, MB_RETRYCANCEL | MB_ICONINFORMATION
-            cmp _ax, IDRETRY
-            je .wm_timer.frame_timer.gameover.retry
-
-            ; When cancel close window
-            invoke DestroyWindow, [hwnd]
-
-            jmp .leave
-
-        .wm_timer.frame_timer.gameover.retry:
-            ; When retry start game
-            fcall game_start, [hwnd]
+            if _ax, "==", IDRETRY
+                fcall game_start, [hwnd]
+            else
+                invoke DestroyWindow, [hwnd]
+            end_if
 
             end_local
             jmp .leave
@@ -457,35 +438,33 @@ code_section
             mov [y], eax
 
             ; Check position is in red square
-            mov _di, [window_data]
-            mov eax, [_di + WindowData.red_square + Square.rect + Rect.x]
-            cmp [x], eax
-            jl .leave
-
-            mov eax, [_di + WindowData.red_square + Square.rect + Rect.y]
-            cmp [y], eax
-            jl .leave
-
-            mov eax, [_di + WindowData.red_square + Square.rect + Rect.x]
-            add eax, [_di + WindowData.red_square + Square.rect + Rect.width]
-            cmp [x], eax
-            jge .leave
-
-            mov eax, [_di + WindowData.red_square + Square.rect + Rect.y]
-            add eax, [_di + WindowData.red_square + Square.rect + Rect.height]
-            cmp [y], eax
-            jge .leave
-
-            ; Start dragging
-            mov dword [_di + WindowData.is_dragging], TRUE
-
+            mov _si, [window_data]
             mov eax, [x]
-            sub eax, [_di + WindowData.red_square + Square.rect + Rect.x]
-            mov [_di + WindowData.red_square + Square.vx], eax
+            if eax, ">=", [_si + WindowData.red_square + Square.rect + Rect.x]
+                mov eax, [y]
+                if eax, ">=", [_si + WindowData.red_square + Square.rect + Rect.y]
+                    mov eax, [x]
+                    mov ecx, [_si + WindowData.red_square + Square.rect + Rect.x]
+                    add ecx, [_si + WindowData.red_square + Square.rect + Rect.width]
+                    if eax, "<", ecx
+                        mov eax, [y]
+                        mov ecx, [_si + WindowData.red_square + Square.rect + Rect.y]
+                        add ecx, [_si + WindowData.red_square + Square.rect + Rect.height]
+                        if eax, "<", ecx
+                            ; Start dragging
+                            mov dword [_si + WindowData.is_dragging], TRUE
 
-            mov eax, [y]
-            sub eax, [_di + WindowData.red_square + Square.rect + Rect.y]
-            mov [_di + WindowData.red_square + Square.vy], eax
+                            mov eax, [x]
+                            sub eax, [_si + WindowData.red_square + Square.rect + Rect.x]
+                            mov [_si + WindowData.red_square + Square.vx], eax
+
+                            mov eax, [y]
+                            sub eax, [_si + WindowData.red_square + Square.rect + Rect.y]
+                            mov [_si + WindowData.red_square + Square.vy], eax
+                        end_if
+                    end_if
+                end_if
+            end_if
 
             end_local
             jmp .leave
@@ -500,20 +479,20 @@ code_section
             mov [window_data], _ax
 
             ; Check is dragging
-            mov _di, [window_data]
-            cmp dword [_di + WindowData.is_dragging], FALSE
-            je .leave
+            mov _si, [window_data]
+            mov eax, [_si + WindowData.is_dragging]
+            if eax, "==", TRUE
+                ; Update x position
+                movzx eax, word [lParam]
+                sub eax, [_si + WindowData.red_square + Square.vx]
+                mov [_si + WindowData.red_square + Square.rect + Rect.x], eax
 
-            ; Update x position
-            movzx eax, word [lParam]
-            sub eax, [_di + WindowData.red_square + Square.vx]
-            mov [_di + WindowData.red_square + Square.rect + Rect.x], eax
-
-            ; Update y position
-            mov eax, [lParam]
-            shr eax, 16
-            sub eax, [_di + WindowData.red_square + Square.vy]
-            mov [_di + WindowData.red_square + Square.rect + Rect.y], eax
+                ; Update y position
+                mov eax, [lParam]
+                shr eax, 16
+                sub eax, [_si + WindowData.red_square + Square.vy]
+                mov [_si + WindowData.red_square + Square.rect + Rect.y], eax
+            end_if
 
             end_local
             jmp .leave
@@ -528,18 +507,17 @@ code_section
             mov [window_data], _ax
 
             ; Stop dragging
-            mov _di, [window_data]
-            mov dword [_di + WindowData.is_dragging], FALSE
+            mov _si, [window_data]
+            mov dword [_si + WindowData.is_dragging], FALSE
 
             ; Check footer click
             mov eax, [lParam]
             shr eax, 16
             mov ecx, [window_height]
             sub ecx, 16 + 20 + 16
-            cmp eax, ecx
-            jl .leave
-
-            invoke ShellExecuteA, [hwnd], open_operation, website_url, NULL, NULL, SW_SHOWNORMAL
+            if eax, ">=", ecx
+                invoke ShellExecuteA, [hwnd], open_operation, website_url, NULL, NULL, SW_SHOWNORMAL
+            end_if
 
             end_local
             jmp .leave
@@ -636,29 +614,29 @@ code_section
             mov [brush], _ax
 
             mov dword [index], 0
-        .wm_paint.repeat:
             mov ecx, [index]
-            cmp ecx, BLUE_SQUARES_COUNT
-            je .wm_paint.done
+            while ecx, '!=', BLUE_SQUARES_COUNT
+                mov _si, [window_data]
+                imul edi, ecx, Square_size
+                lea edi, [_si + WindowData.blue_squares + _di]
 
-            imul ecx, Square_size
-            mov _si, [window_data]
-            mov eax, [_si + WindowData.blue_squares + _cx + Square.rect + Rect.x]
-            mov dword [rect + RECT.left], eax
-            mov eax, [_si + WindowData.blue_squares + _cx + Square.rect + Rect.y]
-            mov dword [rect + RECT.top], eax
-            mov eax, [_si + WindowData.blue_squares + _cx + Square.rect + Rect.x]
-            add eax, [_si + WindowData.blue_squares + _cx + Square.rect + Rect.width]
-            mov [rect + RECT.right], eax
-            mov eax, [_si + WindowData.blue_squares + _cx + Square.rect + Rect.y]
-            add eax, [_si + WindowData.blue_squares + _cx + Square.rect + Rect.height]
-            mov [rect + RECT.bottom], eax
+                mov eax, [_di + Square.rect + Rect.x]
+                mov [rect + RECT.left], eax
+                mov eax, [_di + Square.rect + Rect.y]
+                mov [rect + RECT.top], eax
+                mov eax, [_di + Square.rect + Rect.x]
+                add eax, [_di + Square.rect + Rect.width]
+                mov [rect + RECT.right], eax
+                mov eax, [_di + Square.rect + Rect.y]
+                add eax, [_di + Square.rect + Rect.height]
+                mov [rect + RECT.bottom], eax
 
-            invoke FillRect, [hdc_buffer], addr rect, [brush]
+                invoke FillRect, [hdc_buffer], addr rect, [brush]
 
-            inc dword [index]
-            jmp .wm_paint.repeat
-        .wm_paint.done:
+                inc dword [index]
+                mov ecx, [index]
+            end_while
+
             invoke DeleteObject, [brush]
 
             ; Draw red square
@@ -667,9 +645,9 @@ code_section
 
             mov _si, [window_data]
             mov eax, [_si + WindowData.red_square + Square.rect + Rect.x]
-            mov dword [rect + RECT.left], eax
+            mov [rect + RECT.left], eax
             mov eax, [_si + WindowData.red_square + Square.rect + Rect.y]
-            mov dword [rect + RECT.top], eax
+            mov [rect + RECT.top], eax
             mov eax, [_si + WindowData.red_square + Square.rect + Rect.x]
             add eax, [_si + WindowData.red_square + Square.rect + Rect.width]
             mov [rect + RECT.right], eax
@@ -831,16 +809,16 @@ code_section
         invoke UpdateWindow, [hwnd]
 
         ; Message loop
-        .message_loop:
+        loop
             invoke GetMessageA, addr message, NULL, 0, 0
             test _ax, _ax
-            jle .done
+            jle %$end_loop
 
             invoke TranslateMessage, addr message
             invoke DispatchMessageA, addr message
-            jmp .message_loop
-        .done:
-            invoke ExitProcess, [message + MSG.wParam]
+        end_loop
+
+        invoke ExitProcess, [message + MSG.wParam]
 
         end_local
 end_code_section

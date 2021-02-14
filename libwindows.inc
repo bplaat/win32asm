@@ -594,6 +594,125 @@
     %endif
 %endmacro
 
+%macro if 3
+    %push if
+
+    %ifnum %3
+        %if %3 == 0
+            test %1, %1
+        %else
+            cmp %1, %3
+        %endif
+    %else
+        cmp %1, %3
+    %endif
+
+    %ifstr %2
+        %if %2 == "=="
+            jne %$if_not
+        %elif %2 == "!="
+            je %$if_not
+        %elif %2 == "<"
+            jge %$if_not
+        %elif %2 == "<="
+            jg %$if_not
+        %elif %2 == ">"
+            jle %$if_not
+        %elif %2 == ">="
+            jl %$if_not
+        %else
+            j%-2 %$if_not
+        %endif
+    %else
+        j%-2 %$if_not
+    %endif
+%endmacro
+
+%macro else 0
+    %ifctx if
+        %repl else
+        jmp %$if_end
+        %$if_not:
+    %else
+        %error "expected if macro before else macro"
+    %endif
+%endmacro
+
+%macro end_if 0
+    %ifctx if
+        %$if_not:
+        %pop
+    %elifctx else
+        %$if_end:
+        %pop
+    %else
+        %error "expected if or else macro before end_if macro"
+    %endif
+%endmacro
+
+%macro loop 0
+    %push loop
+
+    %$loop:
+%endmacro
+
+%macro end_loop 0
+    %ifctx loop
+        jmp %$loop
+        %$end_loop:
+        %pop
+    %else
+        %error "expected loop macro before end_loop macro"
+    %endif
+%endmacro
+
+%macro while 3
+    %push while
+
+    %$while:
+
+    %ifnum %3
+        %if %3 == 0
+            test %1, %1
+        %else
+            cmp %1, %3
+        %endif
+    %else
+        cmp %1, %3
+    %endif
+
+    %ifstr %2
+        %if %2 == "=="
+            jne %$end_while
+        %elif %2 == "!="
+            je %$end_while
+        %elif %2 == "<"
+            jge %$end_while
+        %elif %2 == "<="
+            jg %$end_while
+        %elif %2 == ">"
+            jle %$end_while
+        %elif %2 == ">="
+            jl %$end_while
+        %else
+            j%-2 %$end_while
+        %endif
+    %else
+        j%-2 %$end_while
+    %endif
+%endmacro
+
+%macro end_while 0
+    %ifctx while
+        jmp %$while
+        %$end_while:
+        %pop
+    %else
+        %error "expected while macro before end_while macro"
+    %endif
+%endmacro
+
+; Calling conventions
 %macro frame 0
     %ifdef WIN64
         %ifndef _fastcall_frame

@@ -21,13 +21,11 @@ code_section
 
     function strlen, string
         mov _si, [string]
-    .repeat:
         mov al, [_si]
-        test al, al
-        je .done
-        inc _si
-        jmp .repeat
-    .done:
+        while al, "!=", 0
+            inc _si
+            mov al, [_si]
+        end_while
         sub _si, [string]
         return _si
 
@@ -290,16 +288,16 @@ code_section
         invoke UpdateWindow, [hwnd]
 
         ; Message loop
-        .message_loop:
+        loop
             invoke GetMessageA, addr message, NULL, 0, 0
             test _ax, _ax
-            jle .done
+            jle %$end_loop
 
             invoke TranslateMessage, addr message
             invoke DispatchMessageA, addr message
-            jmp .message_loop
-        .done:
-            invoke ExitProcess, [message + MSG.wParam]
+        end_loop
+
+        invoke ExitProcess, [message + MSG.wParam]
 
         end_local
 end_code_section
