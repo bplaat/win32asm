@@ -94,7 +94,7 @@ code_section
 
             ; Generate random background color
             fcall rand
-            and eax, 0x00ffffff
+            and eax, 0x007f7f7f
             mov _di, [window_data]
             mov [_di + WindowData.background_color], eax
 
@@ -124,7 +124,7 @@ code_section
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -137,14 +137,15 @@ code_section
             shr eax, 16
             mov [window_height], eax
 
-            jmp .leave
+            return 0
 
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
-            jmp .leave
+
+            return 0
 
         .wm_erasebkgnd:
             ; Draw no background
@@ -226,7 +227,7 @@ code_section
             invoke EndPaint, [hwnd], addr paint_struct
 
             end_local
-            jmp .leave
+            return 0
 
         .wm_destroy:
             ; Free window data
@@ -235,7 +236,7 @@ code_section
 
             ; Close process
             invoke PostQuitMessage, 0
-        .leave:
+
             return 0
 
         .default:

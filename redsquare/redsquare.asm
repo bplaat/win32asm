@@ -166,8 +166,8 @@ code_section
 
         end_local
         return
-        %undef hwnd
 
+        %undef hwnd
         %undef window_data
 
     ; Window procedure function
@@ -261,7 +261,7 @@ code_section
             fcall game_start, [hwnd]
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -269,7 +269,7 @@ code_section
             mov eax, [wParam]
             cmp eax, FRAME_TIMER_ID
             je .wm_timer.frame_timer
-            jmp .leave
+            return 0
 
         .wm_timer.frame_timer:
             local window_data, POINTER_size, \
@@ -397,7 +397,7 @@ code_section
             ; Redraw window
             invoke InvalidateRect, [hwnd], NULL, TRUE
 
-            jmp .leave
+            return 0
 
         .wm_timer.frame_timer.gameover:
             ; Stop frame timer
@@ -415,7 +415,7 @@ code_section
             end_if
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
             %undef index
@@ -467,7 +467,7 @@ code_section
             end_if
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -495,7 +495,7 @@ code_section
             end_if
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -520,7 +520,7 @@ code_section
             end_if
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -533,14 +533,15 @@ code_section
             shr eax, 16
             mov [window_height], eax
 
-            jmp .leave
+            return 0
 
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
-            jmp .leave
+
+            return 0
 
         .wm_erasebkgnd:
             ; Draw no background
@@ -721,7 +722,7 @@ code_section
             invoke EndPaint, [hwnd], addr paint_struct
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -743,7 +744,6 @@ code_section
             invoke PostQuitMessage, 0
 
             end_local
-        .leave:
             return 0
 
         .default:

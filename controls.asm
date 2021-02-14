@@ -13,6 +13,7 @@ code_section
         invoke GetProcessHeap
         invoke HeapAlloc, _ax, 0, [size]
         return
+
         %undef size
 
     function free, ptr
@@ -46,6 +47,7 @@ code_section
     function SetFont, hwnd, font
         invoke SendMessageA, [hwnd], WM_SETFONT, [font], TRUE
         return TRUE
+
         %undef hwnd
 
     ; Window procedure function
@@ -145,7 +147,7 @@ code_section
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -157,19 +159,19 @@ code_section
             je .wm_command.about_button
             cmp eax, EXIT_BUTTON_ID
             je .wm_command.exit_button
-            jmp .leave
+            return 0
 
         .wm_command.play_button:
             invoke ShellExecuteA, [hwnd], open_operation, website_url, NULL, NULL, SW_SHOWNORMAL
-            jmp .leave
+            return 0
 
         .wm_command.about_button:
             invoke MessageBoxA, [hwnd], about_message, about_button, MB_OK | MB_ICONINFORMATION
-            jmp .leave
+            return 0
 
         .wm_command.exit_button:
             invoke DestroyWindow, [hwnd]
-            jmp .leave
+            return 0
 
         .wm_size:
             local window_data, POINTER_size, \
@@ -247,14 +249,15 @@ code_section
             invoke SetWindowPos, [_si + WindowData.list_view_hwnd], NULL, [rect + Rect.x], [rect + Rect.y], [rect + Rect.width], [rect + Rect.height], SWP_NOZORDER
 
             end_local
-            jmp .leave
+            return 0
 
         .wm_getminmaxinfo:
             ; Set window min size
             mov _ax, [lParam]
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
-            jmp .leave
+
+            return 0
 
         .wm_destroy:
             ; Free window data
@@ -263,7 +266,7 @@ code_section
 
             ; Close process
             invoke PostQuitMessage, 0
-        .leave:
+
             return 0
 
         .default:

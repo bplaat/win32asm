@@ -52,6 +52,7 @@ code_section
 
         end_local
         return [widget]
+
         %undef rect
         %undef background_color
 
@@ -81,6 +82,7 @@ code_section
         mov pointer [_di + Widget.free_function], widget_free
 
         return
+
         %undef widget
         %undef rect
         %undef background_color
@@ -90,6 +92,7 @@ code_section
         mov eax, [x]
         mov [_di + Widget.rect + Rect.x], eax
         return
+
         %undef widget
         %undef x
 
@@ -98,6 +101,7 @@ code_section
         mov eax, [y]
         mov [_di + Widget.rect + Rect.y], eax
         return
+
         %undef widget
         %undef y
 
@@ -106,6 +110,7 @@ code_section
         mov eax, [width]
         mov [_di + Widget.rect + Rect.width], eax
         return
+
         %undef widget
         %undef width
 
@@ -114,6 +119,7 @@ code_section
         mov eax, [height]
         mov [_di + Widget.rect + Rect.height], eax
         return
+
         %undef widget
         %undef height
 
@@ -149,6 +155,7 @@ code_section
 
         end_local
         return
+
         %undef widget
         %undef hdc
 
@@ -158,6 +165,7 @@ code_section
     function widget_free, widget
         fcall free, [widget]
         return
+
         %undef widget
 
     ; ### Font object ###
@@ -179,6 +187,7 @@ code_section
 
         end_local
         return [font]
+
         %undef font_name
         %undef font_weight
         %undef font_style
@@ -198,6 +207,7 @@ code_section
         mov [_di + Font.font_style], eax
 
         return
+
         %undef font
         %undef font_name
         %undef font_weight
@@ -206,6 +216,7 @@ code_section
     function font_free, font
         fcall free, [font]
         return
+
         %undef font
 
     ; Label object
@@ -226,6 +237,7 @@ code_section
 
         end_local
         return [label]
+
         %undef rect
         %undef background_color
         %undef text
@@ -256,6 +268,7 @@ code_section
         mov [_di + Label.text_color], eax
 
         return
+
         %undef label
         %undef rect
         %undef background_color
@@ -305,6 +318,7 @@ code_section
 
         end_local
         return
+
         %undef label
         %undef hdc
 
@@ -313,6 +327,7 @@ code_section
     function label_free, label
         fcall free, [label]
         return
+
         %undef label
 
     ; ### Window Code ###
@@ -332,6 +347,7 @@ code_section
         inc ecx
         mov [_di + WindowData.widgets_size], ecx
         return
+
         %undef window_data
         %undef widget
 
@@ -440,7 +456,7 @@ code_section
             invoke SetWindowPos, [hwnd], HWND_TOP, [new_window_rect + Rect.x], [new_window_rect + Rect.y], [new_window_rect + Rect.width], [new_window_rect + Rect.height], SWP_NOZORDER
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -477,7 +493,7 @@ code_section
             fcall widget_set_width, _si, _ax
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
 
@@ -486,7 +502,8 @@ code_section
             mov _ax, [lParam]
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
             mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
-            jmp .leave
+
+            return 0
 
         .wm_erasebkgnd:
             ; Draw no background
@@ -552,7 +569,7 @@ code_section
             invoke EndPaint, [hwnd], addr paint_struct
 
             end_local
-            jmp .leave
+            return 0
 
             %undef window_data
             %undef index
@@ -591,7 +608,6 @@ code_section
             invoke PostQuitMessage, 0
 
             end_local
-        .leave:
             return 0
 
         .default:
