@@ -80,6 +80,7 @@ code_section
         ; Generate random background color
         fcall rand
         and eax, 0x007f7f7f
+        or eax, 0xff000000
         mov _di, [window_data]
         mov [_di + WindowData.background_color], eax
 
@@ -553,12 +554,12 @@ code_section
                 paint_struct, PAINTSTRUCT_size, \
                 hdc_buffer, POINTER_size, \
                 bitmap_buffer, POINTER_size, \
+                graphics, POINTER_size, \
                 brush, POINTER_size, \
-                rect, RECT_size, \
+                index, DWORD_size, \
                 hdc_bitmap_buffer, POINTER_size, \
                 font, POINTER_size, \
-                stats_buffer, 128, \
-                index, DWORD_size
+                stats_buffer, 128
 
             ; Get window data
             invoke GetWindowLongPtrA, [hwnd], GWLP_USERDATA
@@ -574,91 +575,54 @@ code_section
             mov [bitmap_buffer], _ax
             invoke SelectObject, [hdc_buffer], [bitmap_buffer]
 
+            ; Create graphics object
+            invoke GdipCreateFromHDC, [hdc_buffer], addr graphics
+
             ; Draw background color
             mov _si, [window_data]
-            invoke CreateSolidBrush, [_si + WindowData.background_color]
-            mov [brush], _ax
-
-            mov dword [rect + RECT.left], 0
-            mov dword [rect + RECT.top], 0
-            mov eax, [window_width]
-            mov [rect + RECT.right], eax
-            mov eax, [window_height]
-            mov [rect + RECT.bottom], eax
-
-            invoke FillRect, [hdc_buffer], addr rect, [brush]
-
-            invoke DeleteObject, [brush]
+            invoke GdipGraphicsClear, [graphics], [_si + WindowData.background_color]
 
             ; Draw border
-            mov _si, [window_data]
-            mov eax, [_si + WindowData.background_color]
-            add eax, 0x00171717
-            invoke CreateSolidBrush, _ax
-            mov [brush], _ax
+            invoke GdipCreateSolidFill, 0x22ffffff, addr brush
 
-            mov dword [rect + RECT.left], 16
-            mov dword [rect + RECT.top], 16 + 20 + 16 + 20 + 16
             mov eax, [window_width]
-            sub eax, 16
-            mov [rect + RECT.right], eax
-            mov eax, [window_height]
-            sub eax, 16 + 20 + 16
-            mov [rect + RECT.bottom], eax
+            sub eax, 16 + 16
+            mov ecx, [window_height]
+            sub ecx, 16 + 20 + 16 + 20 + 16 + 16 + 20 + 16
+            invoke GdipFillRectangleI, [graphics], [brush], 16, 16 + 20 + 16 + 20 + 16, _ax, _cx
 
-            invoke FillRect, [hdc_buffer], addr rect, [brush]
-
-            invoke DeleteObject, [brush]
+            invoke GdipDeleteBrush, [brush]
 
             ; Draw blue squares
-            invoke CreateSolidBrush, 0x00ff0000
-            mov [brush], _ax
+            invoke GdipCreateSolidFill, 0xdd1155ff, addr brush
 
             mov dword [index], 0
             mov ecx, [index]
             while ecx, '!=', BLUE_SQUARES_COUNT
                 mov _si, [window_data]
                 imul edi, ecx, Square_size
-                lea edi, [_si + WindowData.blue_squares + _di]
+                lea _di, [_si + WindowData.blue_squares + _di]
 
-                mov eax, [_di + Square.rect + Rect.x]
-                mov [rect + RECT.left], eax
-                mov eax, [_di + Square.rect + Rect.y]
-                mov [rect + RECT.top], eax
-                mov eax, [_di + Square.rect + Rect.x]
-                add eax, [_di + Square.rect + Rect.width]
-                mov [rect + RECT.right], eax
-                mov eax, [_di + Square.rect + Rect.y]
-                add eax, [_di + Square.rect + Rect.height]
-                mov [rect + RECT.bottom], eax
-
-                invoke FillRect, [hdc_buffer], addr rect, [brush]
+                invoke GdipFillRectangleI, [graphics], [brush], [_di + Square.rect + Rect.x], [_di + Square.rect + Rect.y], \
+                    [_di + Square.rect + Rect.width], [_di + Square.rect + Rect.height]
 
                 inc dword [index]
                 mov ecx, [index]
             end_while
 
-            invoke DeleteObject, [brush]
+            invoke GdipDeleteBrush, [brush]
 
             ; Draw red square
-            invoke CreateSolidBrush, 0x000000ff
-            mov [brush], _ax
+            invoke GdipCreateSolidFill, 0xddee3322, addr brush
 
             mov _si, [window_data]
-            mov eax, [_si + WindowData.red_square + Square.rect + Rect.x]
-            mov [rect + RECT.left], eax
-            mov eax, [_si + WindowData.red_square + Square.rect + Rect.y]
-            mov [rect + RECT.top], eax
-            mov eax, [_si + WindowData.red_square + Square.rect + Rect.x]
-            add eax, [_si + WindowData.red_square + Square.rect + Rect.width]
-            mov [rect + RECT.right], eax
-            mov eax, [_si + WindowData.red_square + Square.rect + Rect.y]
-            add eax, [_si + WindowData.red_square + Square.rect + Rect.height]
-            mov [rect + RECT.bottom], eax
+            invoke GdipFillRectangleI, [graphics], [brush], [_si + WindowData.red_square + Square.rect + Rect.x], [_si + WindowData.red_square + Square.rect + Rect.y], \
+                    [_si + WindowData.red_square + Square.rect + Rect.width], [_si + WindowData.red_square + Square.rect + Rect.height]
 
-            invoke FillRect, [hdc_buffer], addr rect, [brush]
+            invoke GdipDeleteBrush, [brush]
 
-            invoke DeleteObject, [brush]
+            ; Delete GDI+ graphics object
+            invoke GdipDeleteGraphics, [graphics]
 
             ; Draw bassiebas bitmap
             invoke CreateCompatibleDC, [hdc_buffer]
@@ -756,6 +720,8 @@ code_section
     ; Main entry point
     entrypoint
         local initCommonControlsEx, INITCOMMONCONTROLSEX_size, \
+            gdiplusToken, DWORD_size, \
+            gdiplusStartupInput, GdiplusStartupInput_size, \
             window_class, WNDCLASSEX_size, \
             hwnd, POINTER_size, \
             message, MSG_size
@@ -764,6 +730,13 @@ code_section
         mov dword [initCommonControlsEx + INITCOMMONCONTROLSEX.dwSize], INITCOMMONCONTROLSEX_size
         mov dword [initCommonControlsEx + INITCOMMONCONTROLSEX.dwICC], ICC_WIN95_CLASSES
         invoke InitCommonControlsEx, addr initCommonControlsEx
+
+        ; Startup GDI+
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.GdiplusVersion], 1
+        mov pointer [gdiplusStartupInput + GdiplusStartupInput.DebugEventCallback], NULL
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressBackgroundThread], FALSE
+        mov dword [gdiplusStartupInput + GdiplusStartupInput.SuppressExternalCodecs], FALSE
+        invoke GdiplusStartup, addr gdiplusToken, addr gdiplusStartupInput, NULL
 
         ; Register the window class
         mov dword [window_class + WNDCLASSEX.cbSize], WNDCLASSEX_size
@@ -818,6 +791,9 @@ code_section
             invoke DispatchMessageA, addr message
         end_loop
 
+        ; Shutdown GDI+
+        invoke GdiplusShutdown, [gdiplusToken]
+
         invoke ExitProcess, [message + MSG.wParam]
 
         end_local
@@ -845,6 +821,7 @@ data_section
     import_table
         library comctl_table, "COMCTL32.DLL", \
             gdi_table, "GDI32.DLL", \
+            gdiplus_table, "gdiplus.dll", \
             kernel_table, "KERNEL32.DLL", \
             shell_table, "SHELL32.DLL", \
             user_table, "USER32.DLL"
@@ -865,6 +842,17 @@ data_section
             SetTextAlign, "SetTextAlign", \
             SetTextColor, "SetTextColor", \
             TextOutA, "TextOutA"
+
+        import gdiplus_table, \
+            GdipCreateFromHDC, "GdipCreateFromHDC", \
+            GdipCreateSolidFill, "GdipCreateSolidFill", \
+            GdipDeleteBrush, "GdipDeleteBrush", \
+            GdipDeleteGraphics, "GdipDeleteGraphics", \
+            GdipFillRectangleI, "GdipFillRectangleI", \
+            GdipGraphicsClear, "GdipGraphicsClear", \
+            GdipSetSmoothingMode, "GdipSetSmoothingMode", \
+            GdiplusShutdown, "GdiplusShutdown", \
+            GdiplusStartup, "GdiplusStartup"
 
         import kernel_table, \
             ExitProcess, "ExitProcess", \
