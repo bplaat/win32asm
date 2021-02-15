@@ -327,7 +327,7 @@ code_section
             while ecx, "!=", BLUE_SQUARES_COUNT
                 mov _si, [window_data]
                 imul edi, ecx, Square_size
-                lea edi, [_si + WindowData.blue_squares + _di]
+                lea _di, [_si + WindowData.blue_squares + _di]
 
                 ; Check speed increase
                 mov eax, [is_leveled]
@@ -585,11 +585,11 @@ code_section
             ; Draw border
             invoke GdipCreateSolidFill, 0x22ffffff, addr brush
 
-            mov eax, [window_width]
-            sub eax, 16 + 16
-            mov ecx, [window_height]
-            sub ecx, 16 + 20 + 16 + 20 + 16 + 16 + 20 + 16
-            invoke GdipFillRectangleI, [graphics], [brush], 16, 16 + 20 + 16 + 20 + 16, _ax, _cx
+            mov esi, [window_width]
+            sub esi, 16 + 16
+            mov edi, [window_height]
+            sub edi, 16 + 20 + 16 + 20 + 16 + 16 + 20 + 16
+            invoke GdipFillRectangleI, [graphics], [brush], 16, 16 + 20 + 16 + 20 + 16, _si, _di
 
             invoke GdipDeleteBrush, [brush]
 
@@ -598,7 +598,7 @@ code_section
 
             mov dword [index], 0
             mov ecx, [index]
-            while ecx, '!=', BLUE_SQUARES_COUNT
+            while ecx, "!=", BLUE_SQUARES_COUNT
                 mov _si, [window_data]
                 imul edi, ecx, Square_size
                 lea _di, [_si + WindowData.blue_squares + _di]
