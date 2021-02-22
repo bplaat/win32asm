@@ -136,9 +136,9 @@ code_section
 
         .wm_getminmaxinfo:
             ; Set window min size
-            mov _ax, [lParam]
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
+            mov _di, [lParam]
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.x], 320
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.y], 240
 
             return 0
 
@@ -188,8 +188,8 @@ code_section
             invoke GdipSetTextRenderingHint, [graphics], TextRenderingHintClearTypeGridFit
 
             ; Clear screen with window background color
-            mov _di, [window_data]
-            invoke GdipGraphicsClear, [graphics], [_di + WindowData.background_color]
+            mov _si, [window_data]
+            invoke GdipGraphicsClear, [graphics], [_si + WindowData.background_color]
 
             ; Create pen object
             mov eax, 3

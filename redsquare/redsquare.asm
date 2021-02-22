@@ -508,8 +508,8 @@ code_section
             mov [window_data], _ax
 
             ; Stop dragging
-            mov _si, [window_data]
-            mov dword [_si + WindowData.is_dragging], FALSE
+            mov _di, [window_data]
+            mov dword [_di + WindowData.is_dragging], FALSE
 
             ; Check footer click
             mov eax, [lParam]

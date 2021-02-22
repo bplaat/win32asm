@@ -141,9 +141,9 @@ code_section
 
         .wm_getminmaxinfo:
             ; Set window min size
-            mov _ax, [lParam]
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
+            mov _di, [lParam]
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.x], 320
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.y], 240
 
             return 0
 
@@ -176,8 +176,8 @@ code_section
             invoke SelectObject, [hdc_buffer], [bitmap_buffer]
 
             ; Draw background color
-            mov _di, [window_data]
-            invoke CreateSolidBrush, [_di + WindowData.background_color]
+            mov _si, [window_data]
+            invoke CreateSolidBrush, [_si + WindowData.background_color]
             mov [brush], _ax
 
             mov dword [rect + RECT.left], 0
@@ -206,14 +206,11 @@ code_section
             invoke SetTextAlign, [hdc_buffer], TA_CENTER
 
             fcall strlen, window_title
-
             mov esi, [window_width]
             shr esi, 1
-
             mov edi, [window_height]
             sub edi, [font_size]
             shr edi, 1
-
             invoke TextOutA, [hdc_buffer], _si, _di, window_title, _ax
 
             invoke DeleteObject, [font]

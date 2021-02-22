@@ -253,9 +253,9 @@ code_section
 
         .wm_getminmaxinfo:
             ; Set window min size
-            mov _ax, [lParam]
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
+            mov _di, [lParam]
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.x], 320
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.y], 240
 
             return 0
 

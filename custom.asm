@@ -342,8 +342,10 @@ code_section
     function window_add_widget, window_data, widget
         mov _di, [window_data]
         mov ecx, [_di + WindowData.widgets_size]
+
         mov _ax, [widget]
         mov [_di + WindowData.widgets + _cx * POINTER_size], _ax
+
         inc ecx
         mov [_di + WindowData.widgets_size], ecx
         return
@@ -499,9 +501,9 @@ code_section
 
         .wm_getminmaxinfo:
             ; Set window min size
-            mov _ax, [lParam]
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.x], 320
-            mov dword [_ax + MINMAXINFO.ptMinTrackSize + POINT.y], 240
+            mov _di, [lParam]
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.x], 320
+            mov dword [_di + MINMAXINFO.ptMinTrackSize + POINT.y], 240
 
             return 0
 
@@ -532,8 +534,8 @@ code_section
             invoke SelectObject, [hdc_buffer], [bitmap_buffer]
 
             ; Draw background color
-            mov _di, [window_data]
-            invoke CreateSolidBrush, [_di + WindowData.background_color]
+            mov _si, [window_data]
+            invoke CreateSolidBrush, [_si + WindowData.background_color]
             mov [brush], _ax
 
             mov dword [rect + RECT.left], 0

@@ -28,8 +28,8 @@ code_section
         invoke ReadConsoleA, [console_in], addr name_buffer, name_buffer_size, addr name_bytes_read, NULL
 
         ; Cut trailing CRLF enter characters
-        mov eax, [name_bytes_read]
-        mov byte [name_buffer + _ax - 2], 0
+        mov ecx, [name_bytes_read]
+        mov byte [name_buffer + _cx - 2], 0
 
         ; Check if name is empty if so replace with a question mark
         mov al, [name_buffer]
