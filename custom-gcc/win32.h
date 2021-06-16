@@ -176,6 +176,8 @@ extern void * __stdcall GetWindowLongA(HWND hWnd, int32_t nIndex);
 
 #define TRANSPARENT 1
 
+#define TA_LEFT 0
+#define TA_RIGHT 2
 #define TA_CENTER 6
 
 #define SRCCOPY 0x00CC0020

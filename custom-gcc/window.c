@@ -45,8 +45,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_GETMINMAXINFO) {
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        minMaxInfo->ptMinTrackSize.x = 320;
-        minMaxInfo->ptMinTrackSize.y = 240;
+        minMaxInfo->ptMinTrackSize.x = 640;
+        minMaxInfo->ptMinTrackSize.y = 480;
         return 0;
     }
 
@@ -72,16 +72,46 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         FillRect(hdc_buffer, &rect, brush);
         DeleteObject(brush);
 
-        // Draw centered text
-        uint32_t font_size = window_width / 16;
-        HFONT font =  CreateFontA(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Georgia");
-        SelectObject(hdc_buffer, font);
+        // Setup text drawing
+        uint32_t padding = window_width / 32;
         SetBkMode(hdc_buffer,TRANSPARENT);
         SetTextColor(hdc_buffer, 0x00ffffff);
         SetTextAlign(hdc_buffer, TA_CENTER);
+
+        // Draw header text
+        HFONT header_font =  CreateFontA(window_width / 24, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Consolas");
+        SelectObject(hdc_buffer, header_font);
+        char *header = "Battle of Teripa";
+        TextOutA(hdc_buffer, window_width / 2, padding, header, strlen(header));
+        DeleteObject(header_font);
+
+        // Draw version text
+        HFONT version_font =  CreateFontA(window_width / 32, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Tahoma");
+        SelectObject(hdc_buffer, version_font);
+        SetTextAlign(hdc_buffer, TA_RIGHT);
+        char *version = "v0.1.0";
+        TextOutA(hdc_buffer, window_width - padding, padding, version, strlen(version));
+        DeleteObject(version_font);
+
+        // Draw centered text
+        uint32_t font_size = window_width / 16;
+        HFONT font =  CreateFontA(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Comic Sans MS");
+        SelectObject(hdc_buffer, font);
+        SetTextAlign(hdc_buffer, TA_CENTER);
         TextOutA(hdc_buffer, window_width / 2, (window_height - font_size) / 2, window_title, strlen(window_title));
         DeleteObject(font);
+
+        // Draw footer text
+        uint32_t footer_font_size = window_width / 32;
+        HFONT footer_font =  CreateFontA(footer_font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Georgia");
+        SelectObject(hdc_buffer, footer_font);
+        char *footer = "Made by Bastiaan van der Plaat";
+        TextOutA(hdc_buffer, window_width / 2, window_height - footer_font_size - padding, footer, strlen(footer));
+        DeleteObject(footer_font);
 
         // Draw and delete back buffer
         BitBlt(hdc, 0, 0, window_width, window_height, hdc_buffer, 0, 0, SRCCOPY);
