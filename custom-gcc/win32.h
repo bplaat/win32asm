@@ -5,16 +5,18 @@
 #include <stdbool.h>
 
 // Types & Macros
-#define HMODULE void *
-#define HINSTANCE void *
-#define HWND void *
-#define HICON void *
-#define HCURSOR void *
-#define HBRUSH void *
-#define HMENU void *
-#define HDC void *
-#define HBITMAP void *
-#define HGDIOBJ void *
+#define HANDLE void *
+#define HMODULE HANDLE
+#define HINSTANCE HANDLE
+#define HWND HANDLE
+#define HICON HANDLE
+#define HCURSOR HANDLE
+#define HMENU HANDLE
+#define HDC HANDLE
+#define HBRUSH HANDLE
+#define HBITMAP HANDLE
+#define HFONT HANDLE
+#define HGDIOBJ HANDLE
 #define WPARAM void *
 #define LPARAM void *
 
@@ -26,9 +28,24 @@
 
 // Kernel32
 #define EXIT_SUCCESS 0
-extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
 
+typedef struct {
+    uint16_t wYear;
+    uint16_t wMonth;
+    uint16_t wDayOfWeek;
+    uint16_t wDay;
+    uint16_t wHour;
+    uint16_t wMinute;
+    uint16_t wSecond;
+    uint16_t wMilliseconds;
+} SYSTEMTIME;
+
+extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
 extern HMODULE __stdcall GetModuleHandleA(char *lpModuleName);
+extern HANDLE __stdcall GetProcessHeap(void);
+extern void * __stdcall HeapAlloc(HANDLE hHeap, uint32_t dwFlags, size_t dwBytes);
+extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
+extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 
 // User32
 #define HWND_DESKTOP 0
@@ -61,6 +78,8 @@ extern HMODULE __stdcall GetModuleHandleA(char *lpModuleName);
 #define SM_CYSCREEN 1
 
 #define SWP_NOZORDER 0x0004
+
+#define GWLP_USERDATA -21
 
 typedef struct {
     uint32_t cbSize;
@@ -136,8 +155,29 @@ extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, i
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
+extern void * __stdcall SetWindowLongA(HWND hWnd, int32_t nIndex, void *dwNewLong);
+extern void * __stdcall GetWindowLongA(HWND hWnd, int32_t nIndex);
 
 // Gdi32
+#define FW_NORMAL 400
+#define FW_BOLD 700
+
+#define ANSI_CHARSET 0
+
+#define OUT_DEFAULT_PRECIS 0
+
+#define CLIP_DEFAULT_PRECIS 0
+
+#define CLEARTYPE_QUALITY 5
+
+#define DEFAULT_PITCH 0
+
+#define FF_DONTCARE 0
+
+#define TRANSPARENT 1
+
+#define TA_CENTER 6
+
 #define SRCCOPY 0x00CC0020
 
 extern HDC __stdcall CreateCompatibleDC(HDC hdc);
@@ -148,5 +188,39 @@ extern bool __stdcall DeleteObject(HGDIOBJ ho);
 extern bool __stdcall DeleteDC(HDC hdc);
 extern bool __stdcall BitBlt(HDC hdc, int32_t x, int32_t y, int32_t cx, int32_t cy,
     HDC hdcSrc, int32_t x1, int32_t y1, uint32_t rop);
+extern HFONT __stdcall CreateFontA(int32_t cHeight, int32_t cWidth, int32_t cEscapement, int32_t cOrientation, int32_t cWeight, uint32_t bItalic, uint32_t bUnderline, uint32_t bStrikeOut, uint32_t iCharSet, uint32_t iOutPrecision, uint32_t iClipPrecision, uint32_t iQuality, uint32_t iPitchAndFamily, char *pszFaceName);
+extern int32_t __stdcall SetBkMode(HDC hdc, int32_t mode);
+extern uint32_t __stdcall SetTextColor(HDC hdc, uint32_t color);
+extern uint32_t __stdcall SetTextAlign(HDC hdc, uint32_t align);
+extern bool __stdcall TextOutA(HDC hdc, int32_t x, int32_t y, char *lpString, int32_t c);
+
+// Helpers
+#ifdef WIN32_USE_STDLIB_HELPERS
+    void *malloc(size_t size) {
+        return HeapAlloc(GetProcessHeap(), 0, size);
+    }
+
+    void free(void *ptr) {
+        HeapFree(GetProcessHeap(), 0, ptr);
+    }
+
+    uint32_t rand_seed;
+
+    void srand(uint32_t seed) {
+        rand_seed = seed;
+    }
+
+    uint32_t rand(void) {
+        return rand_seed = rand_seed * 1103515245 + 12345;
+    }
+#endif
+
+#ifdef WIN32_USE_STRING_HELPERS
+    size_t strlen(char *string) {
+        char *begin = string;
+        while (*string != '\0') string++;
+        return string - begin;
+    }
+#endif
 
 #endif

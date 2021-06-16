@@ -4,34 +4,42 @@ import sys
 import re
 
 libraries = {
-    'KERNEL32.DLL': ['GetModuleHandleA', 'ExitProcess'],
+    'KERNEL32.DLL': [
+        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapFree', 'GetLocalTime'
+    ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'TranslateMessage', 'DispatchMessageA', 'GetClientRect',
-        'GetSystemMetrics', 'SetWindowPos', 'BeginPaint', 'EndPaint', 'FillRect'
+        'GetSystemMetrics', 'SetWindowPos', 'BeginPaint', 'EndPaint', 'FillRect', 'SetWindowLongA', 'GetWindowLongA'
     ],
-    'GDI32.DLL': ['CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject', 'DeleteObject', 'DeleteDC', 'BitBlt']
+    'GDI32.DLL': [
+        'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject', 'DeleteObject',
+        'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
+    ]
 }
 
 with open(sys.argv[1], 'r') as file:
     output = file.read()
+    output = output.replace('\n\t', '\n    ')
+    output = output.replace('\t', ' ')
 
     output = re.sub(r'\s*\.file.*\n', '\n', output)
     output = re.sub(r'\s*\.intel_syntax.*\n', '\n', output)
     output = re.sub(r'\s*\.ident.*\n', '\n', output)
 
-    output = re.sub(r'\s*\.align (.*)\n', '\nalign \\1, db 0\n', output)
-    output = re.sub(r'\:\n\t.long\t(.+)\n', ' dd \\1\n', output)
+    output = re.sub(r'\s*\.align (.*)\n', '\n    align \\1, db 0\n', output)
+    output = re.sub(r'\s*\.space (.*)\n', '\n    times \\1 db 0\n', output)
+    output = re.sub(r'\:\n    .long (.+)\n', ' dd \\1\n', output)
     output = output.replace('.ascii', 'db')
     output = output.replace(' PTR ', ' ')
     output = output.replace(' OFFSET FLAT:', ' ')
     output = output.replace('\\0"', '", 0')
-    output = output.replace('shr\teax\n', 'shr eax, 1\n')
-    output = output.replace('shr\tebx\n', 'shr ebx, 1\n')
-    output = output.replace('shr\tecx\n', 'shr ecx, 1\n')
-    output = output.replace('shr\tedx\n', 'shr edx, 1\n')
-    output = output.replace('shr\tesi\n', 'shr esi, 1\n')
-    output = output.replace('shr\tedi\n', 'shr edi, 1\n')
+    output = output.replace('shr eax\n', 'shr eax, 1\n')
+    output = output.replace('shr ebx\n', 'shr ebx, 1\n')
+    output = output.replace('shr ecx\n', 'shr ecx, 1\n')
+    output = output.replace('shr edx\n', 'shr edx, 1\n')
+    output = output.replace('shr esi\n', 'shr esi, 1\n')
+    output = output.replace('shr edi\n', 'shr edi, 1\n')
 
     data = ''
     text = ''
@@ -43,13 +51,17 @@ with open(sys.argv[1], 'r') as file:
         strippedLine = line.strip()
         if strippedLine == '.text':
             isText = True
-        elif strippedLine == '.data' or strippedLine.startswith('.section .rdata'):
+        elif (
+            strippedLine == '.data' or
+            strippedLine == '.bss' or
+            strippedLine.startswith('.section .rdata')
+        ):
             isText = False
         elif strippedLine.startswith('.globl'):
-            name = strippedLine.split('\t')[1]
+            name = strippedLine.split(' ')[1]
             symbols.append(name)
         elif strippedLine.startswith('.def'):
-            name = strippedLine.split(';')[0].split('\t')[1]
+            name = strippedLine.split(';')[0].split(' ')[1]
             if not (name in symbols):
                 imports.append(name)
         else:
@@ -58,15 +70,14 @@ with open(sys.argv[1], 'r') as file:
             else:
                 data += line + '\n'
 
-    for symbol in symbols:
+    for symbol in sorted(symbols, key=len, reverse=True):
         text = text.replace('DWORD ' + symbol, 'DWORD [' + symbol + ']')
 
     tables = {}
     for name in imports:
         realName = name[1:].split('@')[0]
-
-        text = text.replace('\tjmp\t' + name + '\n', '\tjmp\t[' + name + ']\n')
-        text = text.replace('\tcall\t' + name + '\n', '\tcall\t[' + name + ']\n')
+        text = text.replace('jmp ' + name + '\n', 'jmp [' + name + ']\n')
+        text = text.replace('call ' + name + '\n', 'call [' + name + ']\n')
 
         found = False
         for library, funcs in libraries.items():
