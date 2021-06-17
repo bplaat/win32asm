@@ -44,6 +44,7 @@ extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
 extern HMODULE __stdcall GetModuleHandleA(char *lpModuleName);
 extern HANDLE __stdcall GetProcessHeap(void);
 extern void * __stdcall HeapAlloc(HANDLE hHeap, uint32_t dwFlags, size_t dwBytes);
+extern void * __stdcall HeapReAlloc(HANDLE hHeap, uint32_t dwFlags, void *lpMem, size_t dwBytes);
 extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
 extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 
@@ -182,6 +183,8 @@ extern void * __stdcall GetWindowLongA(HWND hWnd, int32_t nIndex);
 
 #define SRCCOPY 0x00CC0020
 
+#define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16))
+
 extern HDC __stdcall CreateCompatibleDC(HDC hdc);
 extern HBITMAP __stdcall CreateCompatibleBitmap(HDC hdc, int32_t cx, int32_t cy);
 extern HBRUSH __stdcall CreateSolidBrush(uint32_t color);
@@ -200,6 +203,10 @@ extern bool __stdcall TextOutA(HDC hdc, int32_t x, int32_t y, char *lpString, in
 #ifdef WIN32_USE_STDLIB_HELPERS
     void *malloc(size_t size) {
         return HeapAlloc(GetProcessHeap(), 0, size);
+    }
+
+    void *realloc(void *ptr, size_t size) {
+        return HeapReAlloc(GetProcessHeap(), 0, ptr, size);
     }
 
     void free(void *ptr) {
@@ -222,6 +229,17 @@ extern bool __stdcall TextOutA(HDC hdc, int32_t x, int32_t y, char *lpString, in
         char *begin = string;
         while (*string != '\0') string++;
         return string - begin;
+    }
+
+    char *strdup(char *string) {
+        char *new_string_begin = malloc(strlen(string) + 1);
+        char *new_string = new_string_begin;
+        while (*string != '\0') {
+            *new_string = *string;
+            string++;
+            new_string++;
+        }
+        return new_string_begin;
     }
 #endif
 

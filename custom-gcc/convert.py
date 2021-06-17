@@ -5,7 +5,7 @@ import re
 
 libraries = {
     'KERNEL32.DLL': [
-        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapFree', 'GetLocalTime'
+        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime'
     ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'RegisterClassExA',
@@ -27,11 +27,12 @@ with open(sys.argv[1], 'r') as file:
     output = re.sub(r'\s*\.intel_syntax.*\n', '\n', output)
     output = re.sub(r'\s*\.ident.*\n', '\n', output)
 
-    output = re.sub(r'\s*\.align (.*)\n', '\n    align \\1, db 0\n', output)
-    output = re.sub(r'\s*\.space (.*)\n', '\n    times \\1 db 0\n', output)
-    output = re.sub(r'\:\n    .long (.+)\n', ' dd \\1\n', output)
+    output = re.sub(r'\s*\.align (.+)\n', '\n    align \\1, db 0\n', output)
+    output = re.sub(r'\s*\.space (.+)\n', '\n    times \\1 db 0\n', output)
+    output = re.sub(r'\:\n    \.long (.+)\n', ' dd \\1\n', output)
     output = output.replace('.ascii', 'db')
     output = output.replace(' PTR ', ' ')
+    output = re.sub(r' \[DWORD \[(.+)\]\]\n', ' DWORD [\\1]\n', output)
     output = output.replace(' OFFSET FLAT:', ' ')
     output = output.replace('\\0"', '", 0')
     output = output.replace('shr eax\n', 'shr eax, 1\n')
