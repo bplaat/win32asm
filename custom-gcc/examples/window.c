@@ -21,7 +21,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_CREATE) {
         // Create window data
         WindowData *window_data = malloc(sizeof(WindowData));
-        SetWindowLongA(hwnd, GWLP_USERDATA, window_data);
+        SetWindowLongPtrA(hwnd, GWLP_USERDATA, window_data);
 
         // Generate random seed by time and
         SYSTEMTIME time;
@@ -62,7 +62,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_PAINT) {
-        WindowData *window_data = GetWindowLongA(hwnd, GWLP_USERDATA);
+        WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
         PAINTSTRUCT paint_struct;
         HDC hdc = BeginPaint(hwnd, &paint_struct);
@@ -130,7 +130,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_DESTROY) {
         // Free window data
-        free(GetWindowLongA(hwnd, GWLP_USERDATA));
+        free(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
 
         // Close process
         PostQuitMessage(0);

@@ -156,8 +156,16 @@ extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, i
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
-extern void * __stdcall SetWindowLongA(HWND hWnd, int32_t nIndex, void *dwNewLong);
-extern void * __stdcall GetWindowLongA(HWND hWnd, int32_t nIndex);
+
+#ifdef WIN64
+    extern void * __stdcall SetWindowLongPtrA(HWND hWnd, int32_t nIndex, void *dwNewLong);
+    extern void * __stdcall GetWindowLongPtrA(HWND hWnd, int32_t nIndex);
+#else
+    extern void * __stdcall SetWindowLongA(HWND hWnd, int32_t nIndex, void *dwNewLong);
+    #define SetWindowLongPtrA(hWnd, nIndex, dwNewLong) (SetWindowLongA((hWnd), (nIndex), (dwNewLong)))
+    extern void * __stdcall GetWindowLongA(HWND hWnd, int32_t nIndex);
+    #define GetWindowLongPtrA(hWnd, nIndex) (GetWindowLongA((hWnd), (nIndex)))
+#endif
 
 // Gdi32
 #define FW_NORMAL 400

@@ -13,13 +13,18 @@ libraries = {
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'TranslateMessage', 'DispatchMessageA', 'GetClientRect',
-        'GetSystemMetrics', 'SetWindowPos', 'BeginPaint', 'EndPaint', 'FillRect', 'SetWindowLongA', 'GetWindowLongA'
+        'GetSystemMetrics', 'SetWindowPos', 'BeginPaint', 'EndPaint', 'FillRect'
     ],
     'GDI32.DLL': [
         'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject', 'DeleteObject',
         'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
     ]
 }
+
+if arch == 'x64':
+    libraries['USER32.DLL'].extend(['SetWindowLongPtrA', 'GetWindowLongPtrA'])
+else:
+    libraries['USER32.DLL'].extend(['SetWindowLongA', 'GetWindowLongA'])
 
 registers = ['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'ebp', 'esp']
 if arch == 'x64':
