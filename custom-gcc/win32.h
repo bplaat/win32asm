@@ -64,7 +64,12 @@ extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 
 #define CW_USEDEFAULT 0x80000000
 
+#define WS_CHILD 0x040000000
+#define WS_VISIBLE 0x010000000
+#define WS_BORDER 000800000h
 #define WS_OVERLAPPEDWINDOW 0x00CF0000
+#define WS_THICKFRAME 0x000040000
+#define WS_MAXIMIZEBOX 0x000010000
 
 #define SW_SHOWDEFAULT 10
 
@@ -74,6 +79,8 @@ extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 #define WM_PAINT 0x000F
 #define WM_ERASEBKGND 0x0014
 #define WM_GETMINMAXINFO 0x0024
+#define WM_SETFONT 0x0030
+#define WM_COMMAND 0x0111
 
 #define SM_CXSCREEN 0
 #define SM_CYSCREEN 1
@@ -152,6 +159,9 @@ extern int32_t __stdcall DispatchMessageA(const MSG *lpMsg);
 extern bool __stdcall GetClientRect(HWND hWnd, RECT *lpRect);
 extern int32_t __stdcall GetSystemMetrics(int32_t nIndex);
 extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, int32_t Y, int32_t cx, int32_t cy, uint32_t uFlags);
+extern int32_t __stdcall SendMessageA(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
+extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM lParam);
+extern bool __stdcall DestroyWindow(HWND hWnd);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -168,6 +178,8 @@ extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 #endif
 
 // Gdi32
+#define DEFAULT_GUI_FONT 17
+
 #define FW_NORMAL 400
 #define FW_BOLD 700
 
@@ -193,6 +205,7 @@ extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 
 #define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16))
 
+extern HGDIOBJ __stdcall GetStockObject(int32_t i);
 extern HDC __stdcall CreateCompatibleDC(HDC hdc);
 extern HBITMAP __stdcall CreateCompatibleBitmap(HDC hdc, int32_t cx, int32_t cy);
 extern HBRUSH __stdcall CreateSolidBrush(uint32_t color);

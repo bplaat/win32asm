@@ -13,11 +13,11 @@ libraries = {
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'TranslateMessage', 'DispatchMessageA', 'GetClientRect',
-        'GetSystemMetrics', 'SetWindowPos', 'BeginPaint', 'EndPaint', 'FillRect'
+        'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'DestroyWindow', 'BeginPaint', 'EndPaint', 'FillRect'
     ],
     'GDI32.DLL': [
-        'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject', 'DeleteObject',
-        'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
+        'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
+        'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
     ]
 }
 
