@@ -20,8 +20,8 @@
 #define WPARAM void *
 #define LPARAM void *
 
-#define LOWORD(a) ((uint32_t)(a) & 0xffff)
-#define HIWORD(a) ((uint32_t)(a) >> 16)
+#define LOWORD(a) ((uint32_t)(uintptr_t)(a) & 0xffff)
+#define HIWORD(a) ((uint32_t)(uintptr_t)(a) >> 16)
 
 #define TRUE 1
 #define FALSE 0

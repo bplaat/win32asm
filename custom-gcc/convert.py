@@ -3,6 +3,9 @@
 import sys
 import re
 
+arch = sys.argv[1]
+dp = arch == 'x64' and 'dq' or 'dd'
+
 libraries = {
     'KERNEL32.DLL': [
         'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime'
@@ -18,7 +21,15 @@ libraries = {
     ]
 }
 
-with open(sys.argv[1], 'r') as file:
+registers = ['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'ebp', 'esp']
+if arch == 'x64':
+    registers.extend([
+        'rax', 'rbx', 'rcx', 'rdx', 'rsi', 'rdi', 'rbp', 'rsp',
+        'r8', 'r8d', 'r9', 'r9d', 'r10', 'r10d', 'r11', 'r11d',
+        'r12', 'r12d', 'r13', 'r13d', 'r14', 'r14d', 'r15', 'r15d'
+    ])
+
+with open(sys.argv[2], 'r') as file:
     output = file.read()
     output = output.replace('\n\t', '\n    ')
     output = output.replace('\t', ' ')
@@ -32,15 +43,21 @@ with open(sys.argv[1], 'r') as file:
     output = re.sub(r'\:\n    \.long (.+)\n', ' dd \\1\n', output)
     output = output.replace('.ascii', 'db')
     output = output.replace(' PTR ', ' ')
-    output = re.sub(r' \[DWORD \[(.+)\]\]\n', ' DWORD [\\1]\n', output)
+    output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
     output = output.replace(' OFFSET FLAT:', ' ')
     output = output.replace('\\0"', '", 0')
-    output = output.replace('shr eax\n', 'shr eax, 1\n')
-    output = output.replace('shr ebx\n', 'shr ebx, 1\n')
-    output = output.replace('shr ecx\n', 'shr ecx, 1\n')
-    output = output.replace('shr edx\n', 'shr edx, 1\n')
-    output = output.replace('shr esi\n', 'shr esi, 1\n')
-    output = output.replace('shr edi\n', 'shr edi, 1\n')
+
+    if arch == 'x64':
+        output = re.sub(r'\s*\.seh_.*\n', '\n', output)
+        output = re.sub(r'\:\n    \.quad (.+)\n', ' dq \\1\n', output)
+        output = re.sub(r'\.LC([0-9]+)', 'LC\\1', output)
+        output = re.sub(r' \[QWORD (.+)\]\n', ' QWORD \\1\n', output)
+        output = output.replace('movabs r', 'mov r')
+        output = re.sub(r'([a-zA-Z_][a-zA-Z0-9_]*)\[rip\]', '[rel \\1]', output)
+
+    for register in registers:
+        output = output.replace('shl ' + register + '\n', 'shl ' + register + ', 1\n')
+        output = output.replace('shr ' + register + '\n', 'shr ' + register + ', 1\n')
 
     data = ''
     text = ''
@@ -74,13 +91,19 @@ with open(sys.argv[1], 'r') as file:
     for symbol in sorted(symbols, key=len, reverse=True):
         text = text.replace('DWORD ' + symbol, 'DWORD [' + symbol + ']')
 
+    def symbolRealName(name):
+        if arch == 'x86':
+            return name[1:].split('@')[0]
+        else:
+            return name
+
     tables = {}
     for name in imports:
-        realName = name[1:].split('@')[0]
         text = text.replace('jmp ' + name + '\n', 'jmp [' + name + ']\n')
         text = text.replace('call ' + name + '\n', 'call [' + name + ']\n')
 
         found = False
+        realName = symbolRealName(name)
         for library, funcs in libraries.items():
             for func in funcs:
                 if func == realName:
@@ -99,7 +122,7 @@ with open(sys.argv[1], 'r') as file:
 
     importTable = ''
     for table in tables:
-        importTable += '    dd 0, 0, 0, RVA(_%s), RVA(%s)\n' % (table, table)
+        importTable += '    dd 0, 0, 0, _%s - _base, %s - _base\n' % (table, table)
     importTable += '    dd 0, 0, 0, 0, 0\n'
     for table in tables:
         importTable += '    _%s db \'%s\', 0\n' % (table, table)
@@ -108,18 +131,17 @@ with open(sys.argv[1], 'r') as file:
         funcs = sorted(funcs)
         importTable += '\n%s:\n' % (table)
         for func in funcs:
-            importTable += '    %s dd RVA(_%s)\n' % (func, func)
-        importTable += '    dd 0\n'
+            importTable += '    %s %s _%s - _base\n' % (func, dp, func)
+        importTable += '    %s 0\n' % (dp)
         for func in funcs:
-            realName = func[1:].split('@')[0]
-            importTable += '    _%s db 0, 0, \'%s\', 0\n' % (func, realName)
+            importTable += '    _%s db 0, 0, \'%s\', 0\n' % (func, symbolRealName(func))
 
-    with open (sys.argv[2], 'w') as outFile:
-        outFile.write("""[bits 32]
-%%define _base 0x400000
-%%define _alignment 0x200
+    with open (sys.argv[3], 'w') as outFile:
+        outFile.write("""[bits %d]
+
+_base equ 0x400000
+_alignment equ 0x200
 [org _base]
-%%define RVA(_address) (_address - _base)
 
 _header:
     ; MS-DOS Header
@@ -135,7 +157,7 @@ _header:
     db 0x6D, 0x6F, 0x64, 0x65, 0x2E, 0x0D, 0x0D, 0x0A, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
     db "PE", 0, 0                 ; Signature
-    dw 0x014C                     ; Machine
+    dw %s                         ; Machine
     dw _sections_count            ; NumberOfSections
     dd __?POSIX_TIME?__           ; TimeDateStamp
     dd 0                          ; PointerToSymbolTable
@@ -145,18 +167,18 @@ _header:
 
     ; Standard COFF Fields
 _optional_header:
-    dw 0x010B                     ; Magic
+    dw %s                         ; Magic
     db 0                          ; MajorLinkerVersion
     db 0                          ; MinorLinkerVersion
     dd _text_section_aligned_size ; SizeOfCode
     dd _data_section_aligned_size ; SizeOfInitializedData
     dd 0                          ; SizeOfUninitializedData
-    dd RVA(__start)               ; AddressOfEntryPoint
-    dd RVA(_text_section)         ; BaseOfCode
-    dd RVA(_data_section)         ; BaseOfData
+    dd %s - _base                 ; AddressOfEntryPoint
+    dd _text_section - _base      ; BaseOfCode
+    %s
 
     ; Windows-Specific Fields
-    dd _base                      ; ImageBase
+    %s _base                      ; ImageBase
     dd _alignment                 ; SectionAlignment
     dd _alignment                 ; FileAlignment
     dw 4                          ; MajorOperatingSystemVersion
@@ -171,16 +193,16 @@ _optional_header:
     dd 0                          ; CheckSum
     dw 2                          ; Subsystem
     dw 0                          ; DllCharacteristics
-    dd 0x100000                   ; SizeOfStackReserve
-    dd 0x1000                     ; SizeOfStackCommit
-    dd 0x100000                   ; SizeOfHeapReserve
-    dd 0x1000                     ; SizeOfHeapCommit
+    %s 0x100000                   ; SizeOfStackReserve
+    %s 0x1000                     ; SizeOfStackCommit
+    %s 0x100000                   ; SizeOfHeapReserve
+    %s 0x1000                     ; SizeOfHeapCommit
     dd 0                          ; LoaderFlags
     dd 16                         ; NumberOfRvaAndSizes
 
     ; Data Directories
     dd 0, 0
-    dd RVA(_import_table), _import_table_size
+    dd _import_table - _base, _import_table_size
     times 14 dd 0, 0
 
     _optional_header_size equ $ - _optional_header
@@ -190,9 +212,9 @@ _sections:
     ; Text Section
     db ".text", 0, 0, 0           ; Name
     dd _text_section_size         ; VirtualSize
-    dd RVA(_text_section)         ; VirtualAddress
+    dd _text_section - _base      ; VirtualAddress
     dd _text_section_aligned_size ; SizeOfRawData
-    dd RVA(_text_section)         ; PointerToRawData
+    dd _text_section - _base      ; PointerToRawData
     dd 0                          ; PointerToRelocations
     dd 0                          ; PointerToLinenumbers
     dw 0                          ; NumberOfRelocations
@@ -202,9 +224,9 @@ _sections:
     ; Data Section
     db ".data", 0, 0, 0           ; Name
     dd _data_section_size         ; VirtualSize
-    dd RVA(_data_section)         ; VirtualAddress
+    dd _data_section - _base      ; VirtualAddress
     dd _data_section_aligned_size ; SizeOfRawData
-    dd RVA(_data_section)         ; PointerToRawData
+    dd _data_section - _base      ; PointerToRawData
     dd 0                          ; PointerToRelocations
     dd 0                          ; PointerToLinenumbers
     dw 0                          ; NumberOfRelocations
@@ -230,4 +252,12 @@ _import_table_size equ $ - _import_table
 _data_section_size equ $ - _data_section
     align _alignment, db 0
 _data_section_aligned_size equ $ - _data_section
-""" % (text, data, importTable))
+""" % (
+    arch == 'x64' and 64 or 32,
+    (arch == 'x64' and '0x8664' or '0x014C'),
+    (arch == 'x64' and '0x020B' or '0x010B'),
+    (arch == 'x64' and '_start' or '__start'),
+    (arch != 'x64' and 'dd _data_section - _base ; BaseOfData' or ''),
+    dp, dp, dp, dp, dp,
+    text, data, importTable)
+)

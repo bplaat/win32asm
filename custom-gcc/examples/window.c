@@ -3,7 +3,13 @@
 #include "win32.h"
 
 char *window_class_name = "window-test";
-char *window_title = "This is a test window (32-bit)";
+
+#ifdef WIN64
+    char *window_title = "This is a test window (64-bit)";
+#else
+    char *window_title = "This is a test window (32-bit)";
+#endif
+
 uint32_t window_width = 800;
 uint32_t window_height = 600;
 
@@ -156,5 +162,5 @@ void _start(void) {
         TranslateMessage(&message);
         DispatchMessageA(&message);
     }
-    ExitProcess((int32_t)message.wParam);
+    ExitProcess((int32_t)(uintptr_t)message.wParam);
 }

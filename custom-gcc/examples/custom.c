@@ -316,5 +316,5 @@ void _start(void) {
         TranslateMessage(&message);
         DispatchMessageA(&message);
     }
-    ExitProcess((int32_t)message.wParam);
+    ExitProcess((int32_t)(uintptr_t)message.wParam);
 }
