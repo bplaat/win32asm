@@ -71,6 +71,8 @@ extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 #define WS_THICKFRAME 0x000040000
 #define WS_MAXIMIZEBOX 0x000010000
 
+#define SW_HIDE 0
+#define SW_SHOW 5
 #define SW_SHOWDEFAULT 10
 
 #define WM_CREATE 0x0001
@@ -166,6 +168,7 @@ extern bool __stdcall DestroyWindow(HWND hWnd);
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
+extern bool __stdcall InvalidateRect(HWND hWnd, const RECT *lpRect, bool bErase);
 
 #ifdef WIN64
     extern void * __stdcall SetWindowLongPtrA(HWND hWnd, int32_t nIndex, void *dwNewLong);
@@ -219,6 +222,23 @@ extern int32_t __stdcall SetBkMode(HDC hdc, int32_t mode);
 extern uint32_t __stdcall SetTextColor(HDC hdc, uint32_t color);
 extern uint32_t __stdcall SetTextAlign(HDC hdc, uint32_t align);
 extern bool __stdcall TextOutA(HDC hdc, int32_t x, int32_t y, char *lpString, int32_t c);
+
+// Gdiplus
+typedef struct GdiplusStartupInput {
+    uint32_t GdiplusVersion;
+    void *DebugEventCallback;
+    bool SuppressBackgroundThread;
+    bool SuppressExternalCodecs;
+    void (*GdiplusStartupInput)(void *debugEventCallback, bool suppressBackgroundThread, bool suppressExternalCodecs);
+} GdiplusStartupInput;
+
+typedef struct GpGraphics {} GpGraphics;
+
+extern uint32_t __stdcall GdiplusStartup(uint32_t *token, const GdiplusStartupInput *input, void *output);
+extern void __stdcall GdiplusShutdown(uint32_t *token);
+extern uint32_t __stdcall GdipCreateFromHDC(HDC hdc, GpGraphics **graphics);
+extern uint32_t __stdcall GdipGraphicsClear(GpGraphics *graphics, uint32_t color);
+extern uint32_t __stdcall GdipDeleteGraphics(GpGraphics *graphics);
 
 // Helpers
 #ifdef WIN32_USE_STDLIB_HELPERS
