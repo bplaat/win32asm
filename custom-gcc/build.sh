@@ -9,3 +9,5 @@ nasm -DWIN64 -f bin $1-x64.asm -o $1-x64.exe
 if [[ $2 != "keep" ]]; then
     rm $1-x86.s $1-x86.asm $1-x64.s $1-x64.asm
 fi
+
+$1-x64.exe

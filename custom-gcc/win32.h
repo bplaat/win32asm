@@ -47,6 +47,7 @@ extern void * __stdcall HeapAlloc(HANDLE hHeap, uint32_t dwFlags, size_t dwBytes
 extern void * __stdcall HeapReAlloc(HANDLE hHeap, uint32_t dwFlags, void *lpMem, size_t dwBytes);
 extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
 extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
+extern void __stdcall Sleep(uint32_t dwMilliseconds);
 
 // User32
 #define HWND_DESKTOP 0
@@ -70,6 +71,7 @@ extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 #define WS_OVERLAPPEDWINDOW 0x00CF0000
 #define WS_THICKFRAME 0x000040000
 #define WS_MAXIMIZEBOX 0x000010000
+#define WS_CLIPCHILDREN 0x02000000
 
 #define SW_HIDE 0
 #define SW_SHOW 5
@@ -79,10 +81,14 @@ extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 #define WM_DESTROY 0x0002
 #define WM_SIZE 0x0005
 #define WM_PAINT 0x000F
+#define WM_QUIT 0x0012
 #define WM_ERASEBKGND 0x0014
 #define WM_GETMINMAXINFO 0x0024
 #define WM_SETFONT 0x0030
 #define WM_COMMAND 0x0111
+#define WM_TIMER 0x0113
+
+#define PM_REMOVE 0x0001
 
 #define SM_CXSCREEN 0
 #define SM_CYSCREEN 1
@@ -120,12 +126,12 @@ typedef struct {
 
 typedef struct {
     HWND hWnd;
-    uint32_t   message;
+    uint32_t message;
     WPARAM wParam;
     LPARAM lParam;
-    uint32_t  time;
+    uint32_t time;
     POINT pt;
-    uint32_t  lPrivate;
+    uint32_t lPrivate;
 } MSG;
 
 typedef struct {
@@ -156,6 +162,7 @@ extern HWND __stdcall CreateWindowExA(uint32_t dwExStyle, char *lpClassName, cha
 extern bool __stdcall ShowWindow(HWND hWnd, int32_t nCmdShow);
 extern bool __stdcall UpdateWindow(HWND hWnd);
 extern bool __stdcall GetMessageA(MSG *lpMsg, HWND hWnd, uint32_t wMsgFilterMin, uint32_t wMsgFilterMax);
+extern bool __stdcall PeekMessageA(MSG *lpMsg, HWND hWnd, uint32_t wMsgFilterMin, uint32_t wMsgFilterMax, uint32_t wRemoveMsg);
 extern bool __stdcall TranslateMessage(const MSG *lpMsg);
 extern int32_t __stdcall DispatchMessageA(const MSG *lpMsg);
 extern bool __stdcall GetClientRect(HWND hWnd, RECT *lpRect);
@@ -164,6 +171,8 @@ extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, i
 extern int32_t __stdcall SendMessageA(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
 extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM lParam);
 extern bool __stdcall DestroyWindow(HWND hWnd);
+extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uElapse,void *lpTimerFunc);
+extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -233,12 +242,29 @@ typedef struct GdiplusStartupInput {
 } GdiplusStartupInput;
 
 typedef struct GpGraphics {} GpGraphics;
+typedef struct GpSolidFill {} GpSolidFill;
+typedef struct GpBrush {} GpBrush;
+
+typedef enum SmoothingMode {
+  SmoothingModeInvalid,
+  SmoothingModeDefault,
+  SmoothingModeHighSpeed,
+  SmoothingModeHighQuality,
+  SmoothingModeNone,
+  SmoothingModeAntiAlias,
+  SmoothingModeAntiAlias8x4,
+  SmoothingModeAntiAlias8x8
+} SmoothingMode;
 
 extern uint32_t __stdcall GdiplusStartup(uint32_t *token, const GdiplusStartupInput *input, void *output);
 extern void __stdcall GdiplusShutdown(uint32_t *token);
 extern uint32_t __stdcall GdipCreateFromHDC(HDC hdc, GpGraphics **graphics);
+extern uint32_t __stdcall GdipSetSmoothingMode(GpGraphics *graphics, SmoothingMode smoothingMode);
 extern uint32_t __stdcall GdipGraphicsClear(GpGraphics *graphics, uint32_t color);
 extern uint32_t __stdcall GdipDeleteGraphics(GpGraphics *graphics);
+extern uint32_t __stdcall GdipFillRectangleI(GpGraphics *graphics, GpBrush *brush, int32_t x, int32_t y, int32_t width, int32_t height);
+extern uint32_t __stdcall GdipCreateSolidFill(uint32_t color, GpSolidFill **brush);
+extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
 
 // Helpers
 #ifdef WIN32_USE_STDLIB_HELPERS

@@ -4,47 +4,65 @@
 
 char *window_class_name = "redsquare";
 char *window_title = "RedSquare";
-char *font_name = "Consolas";
+char *font_name = "Georgia";
 char *button_class = "BUTTON";
 uint32_t window_width = 800;
 uint32_t window_height = 600;
 
-#define PLAY_BUTTON_ID 1
-#define EXIT_BUTTON_ID 2
+#define TIMER_ID 1
+
+#define MENU_PLAY_BUTTON_ID 1
+#define MENU_HELP_BUTTON_ID 2
+#define MENU_EXIT_BUTTON_ID 3
+
+#define HELP_BACK_BUTTON_ID 4
 
 typedef enum Page {
     PAGE_MENU,
-    PAGE_GAME
+    PAGE_GAME,
+    PAGE_HELP
 } Page;
+
+typedef struct Square {
+    int32_t x;
+    int32_t y;
+    int32_t width;
+    int32_t height;
+    int32_t vx;
+    int32_t vy;
+} Square;
 
 typedef struct {
     Page page;
     uint32_t background_color;
-    HWND play_button;
-    HWND exit_button;
-    HFONT gui_font;
+    HFONT button_font;
+    HWND menu_play_button;
+    HWND menu_help_button;
+    HWND menu_exit_button;
+    HWND help_back_button;
+    Square blue_squares[4];
 } WindowData;
 
 void __stdcall ChangePage(HWND hwnd, Page page) {
     WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
     window_data->page = page;
 
-    if (page == PAGE_MENU) {
-        ShowWindow(window_data->play_button, SW_SHOW);
-        ShowWindow(window_data->exit_button, SW_SHOW);
-    } else {
-        ShowWindow(window_data->play_button, SW_HIDE);
-        ShowWindow(window_data->exit_button, SW_HIDE);
-    }
+    int32_t menu_visible = page == PAGE_MENU ? SW_SHOW : SW_HIDE;
+    ShowWindow(window_data->menu_play_button, menu_visible);
+    ShowWindow(window_data->menu_help_button, menu_visible);
+    ShowWindow(window_data->menu_exit_button, menu_visible);
 
-    InvalidateRect(hwnd, NULL, FALSE);
+    int32_t help_visible = page == PAGE_HELP ? SW_SHOW : SW_HIDE;
+    ShowWindow(window_data->help_back_button, help_visible);
+
+    InvalidateRect(hwnd, NULL, TRUE);
 }
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_CREATE) {
         // Create window data
         WindowData *window_data = malloc(sizeof(WindowData));
-        window_data->gui_font = NULL;
+        window_data->button_font = NULL;
         SetWindowLongPtrA(hwnd, GWLP_USERDATA, window_data);
 
         // Generate random seed by time and
@@ -63,10 +81,45 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - new_width) / 2, (GetSystemMetrics(SM_CYSCREEN) - new_height) / 2, new_width, new_height, SWP_NOZORDER);
 
         // Menu page widgets
-        window_data->play_button = CreateWindowExA(0, button_class, "Play", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)PLAY_BUTTON_ID, NULL, NULL);
-        window_data->exit_button = CreateWindowExA(0, button_class, "Exit", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)EXIT_BUTTON_ID, NULL, NULL);
+        window_data->menu_play_button = CreateWindowExA(0, button_class, "Play", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_PLAY_BUTTON_ID, NULL, NULL);
+        window_data->menu_help_button = CreateWindowExA(0, button_class, "Help", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_HELP_BUTTON_ID, NULL, NULL);
+        window_data->menu_exit_button = CreateWindowExA(0, button_class, "Exit", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_EXIT_BUTTON_ID, NULL, NULL);
+
+        // Help page widgets
+        window_data->help_back_button = CreateWindowExA(0, button_class, "Back", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)HELP_BACK_BUTTON_ID, NULL, NULL);
+
+        // Blue squares
+        window_data->blue_squares[0].width = 100;
+        window_data->blue_squares[0].height = 100;
+        window_data->blue_squares[0].x = 0;
+        window_data->blue_squares[0].y = 0;
+        window_data->blue_squares[0].vx = 2;
+        window_data->blue_squares[0].vy = 2;
+
+        window_data->blue_squares[1].width = 100;
+        window_data->blue_squares[1].height = 150;
+        window_data->blue_squares[1].x = window_width - window_data->blue_squares[1].width;
+        window_data->blue_squares[1].y = 0;
+        window_data->blue_squares[1].vx = -2;
+        window_data->blue_squares[1].vy = 2;
+
+        window_data->blue_squares[2].width = 150;
+        window_data->blue_squares[2].height = 100;
+        window_data->blue_squares[2].x = 0;
+        window_data->blue_squares[2].y = window_height - window_data->blue_squares[2].height;
+        window_data->blue_squares[2].vx = 2;
+        window_data->blue_squares[2].vy = -2;
+
+        window_data->blue_squares[3].width = 150;
+        window_data->blue_squares[3].height = 150;
+        window_data->blue_squares[3].x = window_width - window_data->blue_squares[3].width;
+        window_data->blue_squares[3].y = window_height - window_data->blue_squares[3].height;
+        window_data->blue_squares[3].vx = -2;
+        window_data->blue_squares[3].vy = -2;
 
         ChangePage(hwnd, PAGE_MENU);
+
+        SetTimer(hwnd, TIMER_ID, 10, NULL);
         return 0;
     }
 
@@ -77,35 +130,50 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window_width = LOWORD(lParam);
         window_height = HIWORD(lParam);
 
-        // Menu page widgets
-        if (window_data->page == PAGE_MENU) {
-            if (window_data->gui_font != NULL) {
-                DeleteObject(window_data->gui_font);
-            }
-            window_data->gui_font = CreateFontA(window_width / 24, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
-            SendMessageA(window_data->play_button, WM_SETFONT, window_data->gui_font, (void *)TRUE);
-            SendMessageA(window_data->exit_button, WM_SETFONT, window_data->gui_font, (void *)TRUE);
+        // Fonts
+        if (window_data->button_font != NULL) DeleteObject(window_data->button_font);
+        window_data->button_font = CreateFontA(window_width / 24, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+        SendMessageA(window_data->menu_play_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->menu_help_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->menu_exit_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->help_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
 
-            uint32_t padding = window_height / 24;
-            uint32_t y = (window_height - (window_height / 16 + padding + window_height / 5 + padding + window_height / 5 + padding)) / 2;
-            y += window_height / 16 + padding;
-            SetWindowPos(window_data->play_button, NULL, window_width / 4, y, window_width / 2, window_height / 5, SWP_NOZORDER);
-            y += window_height / 5 + padding;
-            SetWindowPos(window_data->exit_button, NULL, window_width / 4, y, window_width / 2, window_height / 5, SWP_NOZORDER);
-        }
+        // Menu page widgets
+        uint32_t padding = window_height / 24;
+        uint32_t y = (window_height - (window_height / 16 + padding + (window_height / 6 + padding) * 3)) / 2;
+        y += window_height / 16 + padding;
+        SetWindowPos(window_data->menu_play_button, NULL, window_width / 4, y, window_width / 2, window_height / 6, SWP_NOZORDER);
+        y += window_height / 6 + padding;
+        SetWindowPos(window_data->menu_help_button, NULL, window_width / 4, y, window_width / 2, window_height / 6, SWP_NOZORDER);
+        y += window_height / 6 + padding;
+        SetWindowPos(window_data->menu_exit_button, NULL, window_width / 4, y, window_width / 2, window_height / 6, SWP_NOZORDER);
+
+        // Help page widgets
+        y = (window_height - (window_height / 16 + padding + (window_height / 6 + padding) * 2)) / 2;
+        y += window_height / 16 + padding;
+        y += window_height / 6 + padding;
+        SetWindowPos(window_data->help_back_button, NULL, window_width / 4, y, window_width / 2, window_height / 6, SWP_NOZORDER);
         return 0;
     }
 
     if (msg == WM_COMMAND) {
-        uint32_t id = LOWORD(wParam);
+        uint16_t id = LOWORD(wParam);
 
-        if (id == PLAY_BUTTON_ID) {
+        // Menu widgets
+        if (id == MENU_PLAY_BUTTON_ID) {
             ChangePage(hwnd, PAGE_GAME);
         }
-
-        if (id == EXIT_BUTTON_ID) {
+        if (id == MENU_HELP_BUTTON_ID) {
+            ChangePage(hwnd, PAGE_HELP);
+        }
+        if (id == MENU_EXIT_BUTTON_ID) {
             DestroyWindow(hwnd);
+        }
+
+        // Help widgets
+        if (id == HELP_BACK_BUTTON_ID) {
+            ChangePage(hwnd, PAGE_MENU);
         }
     }
 
@@ -115,6 +183,29 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         minMaxInfo->ptMinTrackSize.x = 320;
         minMaxInfo->ptMinTrackSize.y = 240;
         return 0;
+    }
+
+    if (msg == WM_TIMER) {
+        WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+        if ((uintptr_t)wParam == TIMER_ID) {
+            if (window_data->page == PAGE_MENU || window_data->page == PAGE_HELP) {
+                for (uint32_t i = 0; i < 4; i++) {
+                    Square *square = &window_data->blue_squares[i];
+                    square->x += square->vx;
+                    square->y += square->vy;
+
+                    if (square->x < 0 || square->x + square->width > window_width) {
+                        square->vx = -square->vx;
+                    }
+                    if (square->y < 0 || square->y + square->height > window_height) {
+                        square->vy = -square->vy;
+                    }
+                }
+
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+        }
     }
 
     if (msg == WM_ERASEBKGND) {
@@ -136,6 +227,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Create graphics object
         GpGraphics *graphics;
         GdipCreateFromHDC(hdc_buffer, &graphics);
+        GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
 
         // Draw background color
         GdipGraphicsClear(graphics, window_data->background_color);
@@ -145,6 +237,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SetBkMode(hdc_buffer,TRANSPARENT);
         SetTextColor(hdc_buffer, 0x00ffffff);
 
+        // Draw menu & help page
+        if (window_data->page == PAGE_MENU || window_data->page == PAGE_HELP) {
+            // Draw blue squares
+            GpBrush *brush;
+            GdipCreateSolidFill(0xaa0000ff, (GpSolidFill **)&brush);
+            for (uint32_t i = 0; i < 4; i++) {
+                Square *square = &window_data->blue_squares[i];
+                GdipFillRectangleI(graphics, brush, square->x, square->y, square->width, square->height);
+            }
+            GdipDeleteBrush(brush);
+        }
+
         // Draw menu page
         if (window_data->page == PAGE_MENU) {
             // Draw version text
@@ -152,7 +256,11 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, version_font);
             SetTextAlign(hdc_buffer, TA_RIGHT);
-            char *version = "v0.1.0";
+            #ifdef WIN64
+                char *version = "v0.1.0 (x64)";
+            #else
+                char *version = "v0.1.0 (x86)";
+            #endif
             TextOutA(hdc_buffer, window_width - padding, padding, version, strlen(version));
             DeleteObject(version_font);
 
@@ -162,7 +270,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
             char *header = window_title;
-            uint32_t y = (window_height - (window_height / 16 + padding + window_height / 5 + padding + window_height / 5 + padding)) / 2;
+            uint32_t y = (window_height - (window_height / 16 + padding + (window_height / 6 + padding) * 3)) / 2;
             TextOutA(hdc_buffer, window_width / 2, y, header, strlen(header));
             DeleteObject(title_font);
 
@@ -188,6 +296,19 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             DeleteObject(status_font);
         }
 
+        // Page help
+        if (window_data->page == PAGE_HELP) {
+            // Draw title text
+            HFONT title_font =  CreateFontA(window_width / 16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+            SelectObject(hdc_buffer, title_font);
+            SetTextAlign(hdc_buffer, TA_CENTER);
+            char *header = "Help";
+            uint32_t y = (window_height - (window_height / 16 + padding + (window_height / 6 + padding) * 3)) / 2;
+            TextOutA(hdc_buffer, window_width / 2, y, header, strlen(header));
+            DeleteObject(title_font);
+        }
+
         // Delete GDI+ graphics object
         GdipDeleteGraphics(graphics);
 
@@ -203,7 +324,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_DESTROY) {
         // Free window data
         WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
-        DeleteObject(window_data->gui_font);
+        DeleteObject(window_data->button_font);
         free(window_data);
 
         // Close process
@@ -234,7 +355,7 @@ void _start(void) {
     RegisterClassExA(&wc);
 
     HWND hwnd = CreateWindowExA(0, window_class_name, window_title,
-        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
         window_width, window_height, NULL, NULL, wc.hInstance, NULL);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
