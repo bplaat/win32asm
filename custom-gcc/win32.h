@@ -97,6 +97,12 @@ extern void __stdcall Sleep(uint32_t dwMilliseconds);
 
 #define GWLP_USERDATA -21
 
+#define IMAGE_BITMAP 0
+#define IMAGE_ICON 1
+
+#define LR_DEFAULTCOLOR 0x00000000
+#define LR_LOADFROMFILE 0x00000010
+
 typedef struct {
     uint32_t cbSize;
     uint32_t style;
@@ -156,6 +162,8 @@ extern void __stdcall PostQuitMessage(int32_t nExitCode);
 extern int32_t __stdcall DefWindowProcA(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
 extern HICON __stdcall LoadIconA(HINSTANCE hInstance, char *lpIconName);
 extern HCURSOR __stdcall LoadCursorA(HINSTANCE hInstance, char *lpCursorName);
+extern HBITMAP __stdcall LoadBitmapA(HINSTANCE hInstance, char *lpIconName);
+extern HANDLE __stdcall LoadImageA(HINSTANCE hInst, char *name, uint32_t type, int32_t cx, int32_t cy, uint32_t fuLoad);
 extern void __stdcall RegisterClassExA(const WNDCLASSEXA *unnamedParam1);
 extern HWND __stdcall CreateWindowExA(uint32_t dwExStyle, char *lpClassName, char *lpWindowName, uint32_t dwStyle,
     int32_t X, int32_t Y, int32_t nWidth, int32_t nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPARAM lpParam);

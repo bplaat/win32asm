@@ -11,7 +11,7 @@ libraries = {
         'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep'
     ],
     'USER32.DLL': [
-        'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'RegisterClassExA',
+        'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'PeekMessageA', 'TranslateMessage', 'DispatchMessageA',
         'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'DestroyWindow',
         'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect'

@@ -37,8 +37,8 @@ typedef struct Square {
 } Square;
 
 typedef struct {
+    HBITMAP background_image;
     Page page;
-    uint32_t background_color;
     HFONT button_font;
     HWND menu_play_button;
     HWND menu_help_button;
@@ -74,8 +74,11 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         GetLocalTime(&time);
         srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
 
-        // Generate random background color
-        window_data->background_color = (rand() & 0x007f7f7f) | 0xff000000;
+        window_data->background_image = LoadImageA(NULL, "paper.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_DEFAULTCOLOR);
+        if (window_data->background_image == NULL) {
+            MessageBoxA(HWND_DESKTOP, "Can't load paper.bmp", "Image Load Error!", MB_OK);
+            ExitProcess(1);
+        }
 
         // Center window
         RECT window_rect;
@@ -214,7 +217,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_ERASEBKGND) {
-        // Draw no background
         return TRUE;
     }
 
@@ -229,18 +231,27 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window_width, window_height);
         SelectObject(hdc_buffer, bitmap_buffer);
 
+        // Draw background image
+        HDC hdc_bitmap_buffer = CreateCompatibleDC(hdc_buffer);
+        SelectObject(hdc_bitmap_buffer, window_data->background_image);
+        uint32_t cols = window_width / 256 + 1;
+        uint32_t rows = window_height / 256 + 1;
+        for (int32_t y = 0; y <= rows; y ++) {
+            for (int32_t x = 0; x <= cols; x ++) {
+                BitBlt(hdc_buffer, (window_width / 2) + (x - cols / 2 - 1) * 256, (window_height / 2) + (y - rows / 2 - 1) * 256, window_width, window_height, hdc_bitmap_buffer, 0, 0, SRCCOPY);
+            }
+        }
+        DeleteDC(hdc_bitmap_buffer);
+
         // Create graphics object
         GpGraphics *graphics;
         GdipCreateFromHDC(hdc_buffer, &graphics);
         GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
 
-        // Draw background color
-        GdipGraphicsClear(graphics, window_data->background_color);
-
         // Setup text drawing
         float padding = 16 * vw;
         SetBkMode(hdc_buffer,TRANSPARENT);
-        SetTextColor(hdc_buffer, 0x00ffffff);
+        SetTextColor(hdc_buffer, 0x00111111);
 
         // Draw menu & help page
         if (window_data->page == PAGE_MENU || window_data->page == PAGE_HELP) {
@@ -324,6 +335,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_DESTROY) {
         // Free window data
         WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+        DeleteObject(window_data->background_image);
         DeleteObject(window_data->button_font);
         free(window_data);
 
