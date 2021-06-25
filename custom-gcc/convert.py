@@ -22,7 +22,7 @@ libraries = {
     ],
     'gdiplus.dll': [
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
-        'GdipFillRectangleI', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode'
+        'GdipFillRectangle', 'GdipFillRectangleI', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode'
     ]
 }
 
@@ -52,10 +52,16 @@ with open(sys.argv[2], 'r') as file:
     output = re.sub(r'\s*\.space (.+)\n', '\n    times \\1 db 0\n', output)
     output = re.sub(r'\:\n    \.long (.+)\n', ' dd \\1\n', output)
     output = output.replace('.ascii', 'db')
+    output = output.replace('.long', 'dd')
     output = output.replace(' PTR ', ' ')
     output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
     output = output.replace(' OFFSET FLAT:', ' ')
     output = output.replace('\\0"', '", 0')
+
+    output = re.sub(r'DWORD LC(.+)\n', 'DWORD [LC\\1]\n', output)
+    output = re.sub(r'st\((\d+)\)', 'st\\1', output)
+    output = output.replace('st,', 'st0,')
+    output = output.replace('st\n', 'st0\n')
 
     if arch == 'x64':
         output = re.sub(r'\s*\.seh_.*\n', '\n', output)
@@ -64,6 +70,7 @@ with open(sys.argv[2], 'r') as file:
         output = re.sub(r' \[QWORD (.+)\]\n', ' QWORD \\1\n', output)
         output = output.replace('movabs r', 'mov r')
         output = re.sub(r'([a-zA-Z_][a-zA-Z0-9_]*)\[rip\]', '[rel \\1]', output)
+        output = output.replace(' XMMWORD ', ' OWORD ')
 
     for register in registers:
         output = output.replace('shl ' + register + '\n', 'shl ' + register + ', 1\n')

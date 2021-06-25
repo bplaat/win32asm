@@ -262,6 +262,7 @@ extern uint32_t __stdcall GdipCreateFromHDC(HDC hdc, GpGraphics **graphics);
 extern uint32_t __stdcall GdipSetSmoothingMode(GpGraphics *graphics, SmoothingMode smoothingMode);
 extern uint32_t __stdcall GdipGraphicsClear(GpGraphics *graphics, uint32_t color);
 extern uint32_t __stdcall GdipDeleteGraphics(GpGraphics *graphics);
+extern uint32_t __stdcall GdipFillRectangle(GpGraphics *graphics, GpBrush *brush, float x, float y, float width, float height);
 extern uint32_t __stdcall GdipFillRectangleI(GpGraphics *graphics, GpBrush *brush, int32_t x, int32_t y, int32_t width, int32_t height);
 extern uint32_t __stdcall GdipCreateSolidFill(uint32_t color, GpSolidFill **brush);
 extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
