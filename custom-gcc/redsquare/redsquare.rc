@@ -11,7 +11,7 @@ APP_ICON_ID ICON "icon.ico"
 PAPER_BITMAP_ID BITMAP "paper.bmp"
 
 // Sounds
-DEAD_WAVE_ID WAVE "dead.wav"
+GAMEOVER_WAVE_ID WAVE "gameover.wav"
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO

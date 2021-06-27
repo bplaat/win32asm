@@ -16,7 +16,7 @@
 #define PAPER_BITMAP_ID 1
 
 // Sounds
-#define DEAD_WAVE_ID 1
+#define GAMEOVER_WAVE_ID 1
 
 // Manifest
 #define MANIFEST_ID 1

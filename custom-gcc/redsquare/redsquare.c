@@ -367,7 +367,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
                 if (window_data->page == PAGE_GAME && is_gameover) {
                     ChangePage(hwnd, PAGE_GAMEOVER);
-                    PlaySoundA((char *)DEAD_WAVE_ID, GetModuleHandleA(NULL), SND_RESOURCE | SND_ASYNC);
+
+                    PlaySoundA((char *)GAMEOVER_WAVE_ID, GetModuleHandleA(NULL), SND_RESOURCE | SND_ASYNC);
+                    // PlaySoundA("gameover.wav", NULL, SND_ASYNC);
                 }
 
                 InvalidateRect(hwnd, NULL, TRUE);
