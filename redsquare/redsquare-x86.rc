@@ -5,7 +5,7 @@
 1 ICON "icon.ico"
 
 // Bitmap
-1 BITMAP "bassiebas.bmp"
+1 BITMAP "paper.bmp"
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO

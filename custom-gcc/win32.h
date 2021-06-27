@@ -20,6 +20,9 @@
 #define WPARAM void *
 #define LPARAM void *
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 #define LOWORD(a) ((uint32_t)(uintptr_t)(a) & 0xffff)
 #define HIWORD(a) ((uint32_t)(uintptr_t)(a) >> 16)
 
@@ -48,6 +51,7 @@ extern void * __stdcall HeapReAlloc(HANDLE hHeap, uint32_t dwFlags, void *lpMem,
 extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
 extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 extern void __stdcall Sleep(uint32_t dwMilliseconds);
+extern uint32_t __stdcall GetLastError(void);
 
 // User32
 #define HWND_DESKTOP 0
@@ -74,6 +78,7 @@ extern void __stdcall Sleep(uint32_t dwMilliseconds);
 #define WS_CLIPCHILDREN 0x02000000
 
 #define SW_HIDE 0
+#define SW_SHOWNORMAL 1
 #define SW_SHOW 5
 #define SW_SHOWDEFAULT 10
 
@@ -87,14 +92,20 @@ extern void __stdcall Sleep(uint32_t dwMilliseconds);
 #define WM_SETFONT 0x0030
 #define WM_COMMAND 0x0111
 #define WM_TIMER 0x0113
+#define WM_MOUSEMOVE 0x0200
+#define WM_LBUTTONDOWN 0x0201
+#define WM_LBUTTONUP 0x0202
 
 #define PM_REMOVE 0x0001
 
 #define SM_CXSCREEN 0
 #define SM_CYSCREEN 1
+#define SM_CXSMICON 49
+#define SM_CYSMICON 50
 
 #define SWP_NOZORDER 0x0004
 
+#define GWL_HINSTANCE -6
 #define GWLP_USERDATA -21
 
 #define IMAGE_BITMAP 0
@@ -102,6 +113,9 @@ extern void __stdcall Sleep(uint32_t dwMilliseconds);
 
 #define LR_DEFAULTCOLOR 0x00000000
 #define LR_LOADFROMFILE 0x00000010
+#define LR_DEFAULTSIZE 0x00000040
+#define LR_CREATEDIBSECTION 0x00002000
+#define LR_SHARED 0x00008000
 
 typedef struct {
     uint32_t cbSize;
@@ -181,6 +195,8 @@ extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM
 extern bool __stdcall DestroyWindow(HWND hWnd);
 extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uElapse,void *lpTimerFunc);
 extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
+extern bool __stdcall MessageBeep(uint32_t uType);
+extern int32_t wsprintfA(char *, char *, ...);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -253,27 +269,21 @@ typedef struct GpGraphics {} GpGraphics;
 typedef struct GpSolidFill {} GpSolidFill;
 typedef struct GpBrush {} GpBrush;
 
-typedef enum SmoothingMode {
-  SmoothingModeInvalid,
-  SmoothingModeDefault,
-  SmoothingModeHighSpeed,
-  SmoothingModeHighQuality,
-  SmoothingModeNone,
-  SmoothingModeAntiAlias,
-  SmoothingModeAntiAlias8x4,
-  SmoothingModeAntiAlias8x8
-} SmoothingMode;
+#define SmoothingModeAntiAlias 5
 
 extern uint32_t __stdcall GdiplusStartup(uint32_t *token, const GdiplusStartupInput *input, void *output);
 extern void __stdcall GdiplusShutdown(uint32_t *token);
 extern uint32_t __stdcall GdipCreateFromHDC(HDC hdc, GpGraphics **graphics);
-extern uint32_t __stdcall GdipSetSmoothingMode(GpGraphics *graphics, SmoothingMode smoothingMode);
+extern uint32_t __stdcall GdipSetSmoothingMode(GpGraphics *graphics, int32_t smoothingMode);
 extern uint32_t __stdcall GdipGraphicsClear(GpGraphics *graphics, uint32_t color);
 extern uint32_t __stdcall GdipDeleteGraphics(GpGraphics *graphics);
 extern uint32_t __stdcall GdipFillRectangle(GpGraphics *graphics, GpBrush *brush, float x, float y, float width, float height);
 extern uint32_t __stdcall GdipFillRectangleI(GpGraphics *graphics, GpBrush *brush, int32_t x, int32_t y, int32_t width, int32_t height);
 extern uint32_t __stdcall GdipCreateSolidFill(uint32_t color, GpSolidFill **brush);
 extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
+
+// Shell32
+extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpFile, char *lpParameters, char *lpDirectory, int32_t nShowCmd);
 
 // Helpers
 #ifdef WIN32_USE_STDLIB_HELPERS
@@ -318,5 +328,21 @@ extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
         return new_string_begin;
     }
 #endif
+
+// Comctl
+typedef struct {
+    uint32_t dwSize;
+    uint32_t dwICC;
+} INITCOMMONCONTROLSEX;
+
+#define ICC_WIN95_CLASSES 0x000000FF;
+
+extern bool __stdcall InitCommonControlsEx(const INITCOMMONCONTROLSEX *picce);
+
+// Winmm
+#define SND_ASYNC 0x00000001
+#define SND_RESOURCE 0x00040004
+
+extern bool __stdcall PlaySoundA(char *pszSound, HMODULE hmod, uint32_t fdwSound);
 
 #endif

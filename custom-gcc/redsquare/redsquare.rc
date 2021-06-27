@@ -1,0 +1,48 @@
+#include "redsquare.h"
+#include <winver.h>
+
+// Manifest
+MANIFEST_ID MANIFEST "redsquare.manifest"
+
+// Icons
+APP_ICON_ID ICON "icon.ico"
+
+// Bitmaps
+PAPER_BITMAP_ID BITMAP "paper.bmp"
+
+// Sounds
+DEAD_WAVE_ID WAVE "dead.wav"
+
+// Version Information
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, 0, 0
+PRODUCTVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, 0, 0
+FILEFLAGSMASK 0
+FILEFLAGS 0
+FILEOS VOS__WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+{
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904B0"
+        {
+            VALUE "CompanyName", "PlaatSoft"
+            VALUE "FileDescription", "RedSquare"
+            VALUE "FileVersion", STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) ".0.0"
+            VALUE "InternalName", "RedSquare"
+            VALUE "LegalCopyright", "Copyright (c) 2021 PlaatSoft"
+            #ifdef WIN64
+                VALUE "OriginalFilename", "redsquare-x64.exe"
+            #else
+                VALUE "OriginalFilename", "redsquare-x86.exe"
+            #endif
+            VALUE "ProductName", "RedSquare"
+            VALUE "ProductVersion", STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) ".0.0"
+        }
+    }
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x409, 0x04B0
+    }
+}

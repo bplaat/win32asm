@@ -6,7 +6,7 @@
 
 %include "../libwindows.inc"
 
-header HEADER_GUI, HEADER_HAS_RESOURCES
+header HEADER_GUI
 
 code_section
     ; ### Some stdlib like Win32 wrappers ###
@@ -223,8 +223,8 @@ code_section
             fcall srand, _ax
 
             ; Load bitmap
-            mov _si, [lParam]
-            invoke LoadImageA, [_si + POINTER_size], BASSIEBAS_BITMAP_ID, IMAGE_BITMAP, 0, 0,  LR_DEFAULTSIZE | LR_DEFAULTCOLOR
+            invoke GetModuleHandleA, NULL
+            invoke LoadBitmapA, _ax, BASSIEBAS_BITMAP_ID
 
             ; Bitmap will not load on Windows 10 😭
             ; cmp _ax, NULL
@@ -879,6 +879,7 @@ data_section
             GetWindowLongPtrA, GetWindowLongPtrAString, \
             KillTimer, "KillTimer", \
             InvalidateRect, "InvalidateRect", \
+            LoadBitmapA, "LoadBitmapA", \
             LoadCursorA, "LoadCursorA", \
             LoadImageA, "LoadImageA", \
             MessageBoxA, "MessageBoxA", \
@@ -894,49 +895,49 @@ data_section
     end_import_table
 end_data_section
 
-resources_section
-    directory RT_BITMAP, bitmaps, \
-        RT_VERSION, versions, \
-        RT_MANIFEST, manifests
+; resources_section
+;     directory RT_BITMAP, bitmaps, \
+;         RT_VERSION, versions, \
+;         RT_MANIFEST, manifests
 
-    resource bitmaps, \
-        BASSIEBAS_BITMAP_ID, LANG_NEUTRAL, bassiebas_bitmap
+;     resource bitmaps, \
+;         BASSIEBAS_BITMAP_ID, LANG_NEUTRAL, bassiebas_bitmap
 
-    resource versions, \
-        1, LANG_ENGLISH + SUBLANG_ENGLISH_US, version
+;     resource versions, \
+;         1, LANG_ENGLISH + SUBLANG_ENGLISH_US, version
 
-    resource manifests, \
-        1, LANG_NEUTRAL, app_manifest
+;     resource manifests, \
+;         1, LANG_NEUTRAL, app_manifest
 
-    bitmap bassiebas_bitmap, "bassiebas.bmp"
+;     bitmap bassiebas_bitmap, "paper.bmp"
 
-    %ifdef WIN64
-        versioninfo version, \
-            0x0001000000000000, 0x0001000000000000, \
-            VOS__WINDOWS32, VFT_APP, VFT2_UNKNOWN, \
-            LANG_ENGLISH + SUBLANG_ENGLISH_US, \
-            CompanyName, "PlaatSoft", \
-            FileDescription, "RedSquare", \
-            FileVersion, "1.0.0.0", \
-            InternalName, "RedSquare", \
-            LegalCopyright, "Copyright (C) 2021 PlaatSoft", \
-            OriginalFilename, "redsquare-x64.exe", \
-            ProductName, "RedSquare", \
-            ProductVersion, "1.0.0.0"
-    %else
-        versioninfo version, \
-            0x0001000000000000, 0x0001000000000000, \
-            VOS__WINDOWS32, VFT_APP, VFT2_UNKNOWN, \
-            LANG_ENGLISH + SUBLANG_ENGLISH_US, \
-            CompanyName, "PlaatSoft", \
-            FileDescription, "RedSquare", \
-            FileVersion, "1.0.0.0", \
-            InternalName, "RedSquare", \
-            LegalCopyright, "Copyright (C) 2021 PlaatSoft", \
-            OriginalFilename, "redsquare-x86.exe", \
-            ProductName, "RedSquare", \
-            ProductVersion, "1.0.0.0"
-    %endif
+;     %ifdef WIN64
+;         versioninfo version, \
+;             0x0001000000000000, 0x0001000000000000, \
+;             VOS__WINDOWS32, VFT_APP, VFT2_UNKNOWN, \
+;             LANG_ENGLISH + SUBLANG_ENGLISH_US, \
+;             CompanyName, "PlaatSoft", \
+;             FileDescription, "RedSquare", \
+;             FileVersion, "1.0.0.0", \
+;             InternalName, "RedSquare", \
+;             LegalCopyright, "Copyright (C) 2021 PlaatSoft", \
+;             OriginalFilename, "redsquare-x64.exe", \
+;             ProductName, "RedSquare", \
+;             ProductVersion, "1.0.0.0"
+;     %else
+;         versioninfo version, \
+;             0x0001000000000000, 0x0001000000000000, \
+;             VOS__WINDOWS32, VFT_APP, VFT2_UNKNOWN, \
+;             LANG_ENGLISH + SUBLANG_ENGLISH_US, \
+;             CompanyName, "PlaatSoft", \
+;             FileDescription, "RedSquare", \
+;             FileVersion, "1.0.0.0", \
+;             InternalName, "RedSquare", \
+;             LegalCopyright, "Copyright (C) 2021 PlaatSoft", \
+;             OriginalFilename, "redsquare-x86.exe", \
+;             ProductName, "RedSquare", \
+;             ProductVersion, "1.0.0.0"
+;     %endif
 
-    manifest app_manifest, "redsquare.manifest"
-end_resources_section
+;     manifest app_manifest, "redsquare.manifest"
+; end_resources_section

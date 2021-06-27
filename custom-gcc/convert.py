@@ -8,17 +8,26 @@ dp = arch == 'x64' and 'dq' or 'dd'
 
 libraries = {
     'KERNEL32.DLL': [
-        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep'
+        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep', 'GetLastError'
     ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'PeekMessageA', 'TranslateMessage', 'DispatchMessageA',
         'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'DestroyWindow',
-        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect'
+        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'wsprintfA'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
         'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
+    ],
+    'SHELL32.DLL': [
+        'ShellExecuteA'
+    ],
+    'COMCTL32.DLL': [
+        'InitCommonControlsEx'
+    ],
+    'WINMM.DLL': [
+        'PlaySoundA'
     ],
     'gdiplus.dll': [
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
@@ -50,9 +59,9 @@ with open(sys.argv[2], 'r') as file:
 
     output = re.sub(r'\s*\.align (.+)\n', '\n    align \\1, db 0\n', output)
     output = re.sub(r'\s*\.space (.+)\n', '\n    times \\1 db 0\n', output)
-    output = re.sub(r'\:\n    \.long (.+)\n', ' dd \\1\n', output)
     output = output.replace('.ascii', 'db')
     output = output.replace('.long', 'dd')
+    output = output.replace('.quad', 'dq')
     output = output.replace(' PTR ', ' ')
     output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
     output = output.replace(' OFFSET FLAT:', ' ')
@@ -65,7 +74,6 @@ with open(sys.argv[2], 'r') as file:
 
     if arch == 'x64':
         output = re.sub(r'\s*\.seh_.*\n', '\n', output)
-        output = re.sub(r'\:\n    \.quad (.+)\n', ' dq \\1\n', output)
         output = re.sub(r'\.LC([0-9]+)', 'LC\\1', output)
         output = re.sub(r' \[QWORD (.+)\]\n', ' QWORD \\1\n', output)
         output = output.replace('movabs r', 'mov r')
@@ -152,6 +160,8 @@ with open(sys.argv[2], 'r') as file:
         importTable += '    %s 0\n' % (dp)
         for func in funcs:
             importTable += '    _%s db 0, 0, \'%s\', 0\n' % (func, symbolRealName(func))
+
+    text = text.replace('][0+', '+')
 
     with open (sys.argv[3], 'w') as outFile:
         outFile.write("""[bits %d]
