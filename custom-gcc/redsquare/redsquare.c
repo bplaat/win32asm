@@ -50,9 +50,19 @@ typedef struct Square {
 #define SETTINGS_SIGNATURE 0x56415352
 #define SETTINGS_NAME_SIZE 32
 
+typedef union SettingsVersion {
+    struct {
+        uint16_t major;
+        uint16_t minor;
+        uint16_t patch;
+        uint16_t zero;
+    } fields;
+    uint64_t bits;
+} SettingsVersion;
+
 typedef struct SettingsHeader {
     uint32_t signature;
-    uint32_t version;
+    SettingsVersion version;
     uint32_t name_address;
     uint32_t language_address;
     uint32_t highscores_address;
@@ -113,7 +123,11 @@ void __stdcall LoadSettings(HWND hwnd) {
         uint32_t bytes_read;
         ReadFile(settings_file, &settings_header, sizeof(SettingsHeader), &bytes_read, NULL);
 
-        if (settings_header.signature == SETTINGS_SIGNATURE) {
+        SettingsVersion version = { APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, 0 };
+        if (
+            settings_header.signature == SETTINGS_SIGNATURE &&
+            settings_header.version.bits <= version.bits
+        ) {
             // Read name
             SetFilePointer(settings_file, settings_header.name_address, 0, FILE_BEGIN);
             ReadFile(settings_file, &window_data->name, SETTINGS_NAME_SIZE, &bytes_read, NULL);
@@ -151,6 +165,10 @@ void __stdcall SaveSettings(HWND hwnd) {
     // Write settings file header
     SettingsHeader settings_header;
     settings_header.signature = SETTINGS_SIGNATURE;
+    settings_header.version.fields.major = APP_VERSION_MAJOR;
+    settings_header.version.fields.minor = APP_VERSION_MINOR;
+    settings_header.version.fields.patch = APP_VERSION_PATCH;
+    settings_header.version.fields.zero = 0;
     settings_header.name_address = sizeof(SettingsHeader);
     settings_header.language_address = settings_header.name_address + SETTINGS_NAME_SIZE;
     settings_header.highscores_address = settings_header.language_address + sizeof(uint32_t);
@@ -738,9 +756,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc_buffer, text_font);
             SetTextAlign(hdc_buffer, TA_RIGHT);
             #ifdef WIN64
-                char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) " (x64)";
+                char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x64)";
             #else
-                char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) " (x86)";
+                char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x86)";
             #endif
             TextOutA(hdc_buffer, window_width - padding, padding, version_text, lstrlenA(version_text));
 

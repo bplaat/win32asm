@@ -70,8 +70,8 @@ briljant bezig!"
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, 0, 0
-PRODUCTVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, 0, 0
+FILEVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, 0
+PRODUCTVERSION APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, 0
 FILEFLAGSMASK 0
 FILEFLAGS 0
 FILEOS VOS__WINDOWS32
@@ -84,7 +84,7 @@ FILESUBTYPE VFT2_UNKNOWN
         {
             VALUE "CompanyName", "PlaatSoft"
             VALUE "FileDescription", "RedSquare"
-            VALUE "FileVersion", STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) ".0.0"
+            VALUE "FileVersion", STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) ".0"
             VALUE "InternalName", "RedSquare"
             VALUE "LegalCopyright", "Copyright (c) 2021 PlaatSoft"
             #ifdef WIN64
@@ -93,7 +93,7 @@ FILESUBTYPE VFT2_UNKNOWN
                 VALUE "OriginalFilename", "redsquare-x86.exe"
             #endif
             VALUE "ProductName", "RedSquare"
-            VALUE "ProductVersion", STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) ".0.0"
+            VALUE "ProductVersion", STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) ".0"
         }
     }
     BLOCK "VarFileInfo"
