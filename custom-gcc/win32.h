@@ -381,6 +381,9 @@ extern bool __stdcall InitCommonControlsEx(const INITCOMMONCONTROLSEX *picce);
 
 extern bool __stdcall PlaySoundA(char *pszSound, HMODULE hmod, uint32_t fdwSound);
 
+// Advapi
+extern bool __stdcall GetUserNameA(char *lpBuffer, uint32_t *pcbBuffer);
+
 // Msvcrt
 extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cdecl *compare )(const void *, const void *));
 

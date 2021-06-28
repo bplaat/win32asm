@@ -394,7 +394,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Load settings
         for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) window_data->name[i] = '\0';
-        lstrcpyA(window_data->name, "Anonymous");
+        uint32_t size = SETTINGS_NAME_SIZE;
+        GetUserNameA(window_data->name, &size);
+
         window_data->language = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
         window_data->highscores = NULL;
         window_data->highscores_size = 0;

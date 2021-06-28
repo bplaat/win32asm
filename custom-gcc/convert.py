@@ -29,6 +29,9 @@ libraries = {
     'COMCTL32.DLL': [
         'InitCommonControlsEx'
     ],
+    'ADVAPI32.DLL': [
+        'GetUserNameA'
+    ],
     'WINMM.DLL': [
         'PlaySoundA'
     ],
