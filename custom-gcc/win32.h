@@ -316,6 +316,7 @@ extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
 
 // Shell32
 #define CSIDL_COMMON_APPDATA 0x0023
+#define CSIDL_LOCAL_APPDATA 0x001C
 
 extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpFile, char *lpParameters, char *lpDirectory, int32_t nShowCmd);
 extern int32_t __stdcall SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, uint32_t dwFlags, char *pszPath);

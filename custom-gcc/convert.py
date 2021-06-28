@@ -71,6 +71,7 @@ with open(sys.argv[2], 'r') as file:
     output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
     output = output.replace(' OFFSET FLAT:', ' ')
     output = output.replace('\\0"', '", 0')
+    output = output.replace('\\\\', '\\')
 
     output = re.sub(r'DWORD LC(.+)\n', 'DWORD [LC\\1]\n', output)
     output = re.sub(r'st\((\d+)\)', 'st\\1', output)

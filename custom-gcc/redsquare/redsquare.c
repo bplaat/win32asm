@@ -107,7 +107,7 @@ void __stdcall LoadSettings(HWND hwnd) {
     WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
     char settings_path[MAX_PATH];
-    SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, settings_path);
+    SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, settings_path);
     lstrcatA(settings_path, "\\redsquare-settings.bin");
 
     HANDLE settings_file = CreateFileA(settings_path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -143,7 +143,7 @@ void __stdcall SaveSettings(HWND hwnd) {
     WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
     char settings_path[MAX_PATH];
-    SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, settings_path);
+    SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, settings_path);
     lstrcatA(settings_path, "\\redsquare-settings.bin");
 
     HANDLE settings_file = CreateFileA(settings_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -280,13 +280,20 @@ void __stdcall ChangePage(HWND hwnd, Page page) {
 
     if (page == PAGE_HIGHSCORES) {
         SendMessageA(window_data->highscores_list, LVM_DELETEALLITEMS, NULL, NULL);
-        for (uint32_t i = 0; i < window_data->highscores_size; i++) {
-            HighScore *highscore = &window_data->highscores[i];
-            char item_buffer[64];
-            wsprintfA(item_buffer, "%s: %d", highscore->name, highscore->score);
+        if (window_data->highscores_size > 0) {
+            for (uint32_t i = 0; i < window_data->highscores_size; i++) {
+                HighScore *highscore = &window_data->highscores[i];
+                char item_buffer[64];
+                wsprintfA(item_buffer, "%s: %d", highscore->name, highscore->score);
+                LVITEMA item = {0};
+                item.mask = LVIF_TEXT;
+                item.pszText = item_buffer;
+                SendMessageA(window_data->highscores_list, LVM_INSERTITEMA, NULL, &item);
+            }
+        } else {
             LVITEMA item = {0};
             item.mask = LVIF_TEXT;
-            item.pszText = item_buffer;
+            item.pszText = "No high scores found!";
             SendMessageA(window_data->highscores_list, LVM_INSERTITEMA, NULL, &item);
         }
     }
@@ -421,10 +428,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SetWindowPos(window_data->help_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
 
         // Settings page widgets
-        y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + 24 * vx + padding + 52 * vx)) / 2;
-        y += 48 * vx + padding + 24 * vx + padding / 2;
+        y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + 52 * vx)) / 2;
+        y += 48 * vx + padding + 24 * vx + padding / 2 + 8 * vx;
         SetWindowPos(window_data->settings_name_edit, NULL, window_width / 4, y, window_width / 2, 24 * vx, SWP_NOZORDER);
-        y += 24 * vx + padding;
+        y += (24 + 8) * vx + padding;
         SetWindowPos(window_data->settings_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
         return 0;
     }
@@ -799,7 +806,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
-            float y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + 24 * vx + padding + 52 * vx)) / 2;
+            float y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + 52 * vx)) / 2;
             TextOutA(hdc_buffer, window_width / 2, y, settings_text, lstrlenA(settings_text));
             y += 48 * vx + padding;
             DeleteObject(title_font);
@@ -810,7 +817,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc_buffer, text_font);
             char *name_label = "Name:";
             TextOutA(hdc_buffer, window_width / 2, y, name_label, lstrlenA(name_label));
+            y += 24 * vx + padding / 2;
             DeleteObject(text_font);
+
+            // Draw name edit larger rect
+            GpBrush *brush;
+            GdipCreateSolidFill(0xffffffff, (GpSolidFill **)&brush);
+            GdipFillRectangle(graphics, brush, window_width / 4, y, window_width / 2, (8 + 24 + 8) * vx);
+            GdipDeleteBrush(brush);
         }
 
         // Delete GDI+ graphics object
