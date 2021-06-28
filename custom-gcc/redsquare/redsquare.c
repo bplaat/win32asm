@@ -13,9 +13,13 @@
 #define HIGHSCORES_BACK_BUTTON_ID 7
 #define HELP_BACK_BUTTON_ID 8
 #define SETINGS_LANGUAGE_SELECT_ID 9
-#define SETTINGS_BACK_BUTTON_ID 10
+#define SETINGS_THEME_SELECT_ID 10
+#define SETTINGS_BACK_BUTTON_ID 11
 
 #define FPS 100
+
+#define THEME_LIGHT 0
+#define THEME_DARK 1
 
 char *window_class_name = "redsquare";
 char *window_title = "RedSquare";
@@ -65,6 +69,7 @@ typedef struct SettingsHeader {
     SettingsVersion version;
     uint32_t name_address;
     uint32_t language_address;
+    uint32_t theme_address;
     uint32_t highscores_address;
 } SettingsHeader;
 
@@ -74,7 +79,8 @@ typedef struct HighScore {
 } HighScore;
 
 typedef struct {
-    HBITMAP background_image;
+    HBITMAP paper_bitmap;
+    HBITMAP paper_dark_bitmap;
     Page page;
     HFONT button_font;
     HFONT list_font;
@@ -89,10 +95,12 @@ typedef struct {
     HWND help_back_button;
     HWND settings_name_edit;
     HWND settings_language_select;
+    HWND settings_theme_select;
     HWND settings_back_button;
 
     char name[SETTINGS_NAME_SIZE];
     uint32_t language;
+    uint32_t theme;
     HighScore *highscores;
     uint32_t highscores_size;
 
@@ -104,9 +112,23 @@ typedef struct {
     Square blue_squares[4];
 } WindowData;
 
+bool __stdcall IsVistaOrHigher(void) {
+    OSVERSIONINFOA osver = {0};
+    osver.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
+    GetVersionExA(&osver);
+    return osver.dwMajorVersion >= 6;
+}
+
+typedef uint32_t (__stdcall *_SetThreadUILanguage)(uint32_t LangId);
+
 void __stdcall SetLanguage(uint32_t language) {
-    SetThreadLocale(language);
-    SetThreadUILanguage(language);
+    if (IsVistaOrHigher()) {
+        HMODULE kernel32 = LoadLibraryA("kernel32.dll");
+        _SetThreadUILanguage SetThreadUILanguage = GetProcAddress(kernel32, "SetThreadUILanguage");
+        SetThreadUILanguage(language);
+    } else {
+        SetThreadLocale(language);
+    }
 }
 
 void __stdcall LoadSettings(HWND hwnd) {
@@ -135,6 +157,10 @@ void __stdcall LoadSettings(HWND hwnd) {
             // Read language
             SetFilePointer(settings_file, settings_header.language_address, 0, FILE_BEGIN);
             ReadFile(settings_file, &window_data->language, sizeof(uint32_t), &bytes_read, NULL);
+
+            // Read theme
+            SetFilePointer(settings_file, settings_header.theme_address, 0, FILE_BEGIN);
+            ReadFile(settings_file, &window_data->theme, sizeof(uint32_t), &bytes_read, NULL);
 
             // Read highscores
             SetFilePointer(settings_file, settings_header.highscores_address, 0, FILE_BEGIN);
@@ -171,7 +197,8 @@ void __stdcall SaveSettings(HWND hwnd) {
     settings_header.version.fields.zero = 0;
     settings_header.name_address = sizeof(SettingsHeader);
     settings_header.language_address = settings_header.name_address + SETTINGS_NAME_SIZE;
-    settings_header.highscores_address = settings_header.language_address + sizeof(uint32_t);
+    settings_header.theme_address = settings_header.language_address + sizeof(uint32_t);
+    settings_header.highscores_address = settings_header.theme_address + sizeof(uint32_t);
     uint32_t bytes_written;
     WriteFile(settings_file, &settings_header, sizeof(SettingsHeader), &bytes_written, NULL);
 
@@ -180,6 +207,9 @@ void __stdcall SaveSettings(HWND hwnd) {
 
     // Write language
     WriteFile(settings_file, &window_data->language, sizeof(uint32_t), &bytes_written, NULL);
+
+    // Write theme
+    WriteFile(settings_file, &window_data->theme, sizeof(uint32_t), &bytes_written, NULL);
 
     // Write high scores
     WriteFile(settings_file, &window_data->highscores_size, sizeof(uint32_t), &bytes_written, NULL);
@@ -262,6 +292,18 @@ void __stdcall UpdateControlsTexts(HWND hwnd) {
     SetWindowTextA(window_data->highscores_back_button, string_buffer);
     SetWindowTextA(window_data->help_back_button, string_buffer);
     SetWindowTextA(window_data->settings_back_button, string_buffer);
+
+    SendMessageA(window_data->settings_theme_select, CB_RESETCONTENT, NULL, NULL);
+    LoadStringA(instance, SETTINGS_THEME_LIGHT_STRING_ID, string_buffer, sizeof(string_buffer));
+    SendMessageA(window_data->settings_theme_select, CB_ADDSTRING, NULL, string_buffer);
+    LoadStringA(instance, SETTINGS_THEME_DARK_STRING_ID, string_buffer, sizeof(string_buffer));
+    SendMessageA(window_data->settings_theme_select, CB_ADDSTRING, NULL, string_buffer);
+    if (window_data->theme == THEME_LIGHT) {
+        SendMessageA(window_data->settings_theme_select, CB_SETCURSEL, (WPARAM)0, NULL);
+    }
+    if (window_data->theme == THEME_DARK) {
+        SendMessageA(window_data->settings_theme_select, CB_SETCURSEL, (WPARAM)1, NULL);
+    }
 }
 
 void __stdcall ChangePage(HWND hwnd, Page page) {
@@ -289,6 +331,7 @@ void __stdcall ChangePage(HWND hwnd, Page page) {
     int32_t settings_visible = page == PAGE_SETTINGS ? SW_SHOW : SW_HIDE;
     ShowWindow(window_data->settings_name_edit, settings_visible);
     ShowWindow(window_data->settings_language_select, settings_visible);
+    ShowWindow(window_data->settings_theme_select, settings_visible);
     ShowWindow(window_data->settings_back_button, settings_visible);
 
     if (page == PAGE_GAME) {
@@ -374,8 +417,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SetWindowLongPtrA(hwnd, GWLP_USERDATA, window_data);
 
         // Load background image resource
-        window_data->background_image = LoadImageA(instance, (char *)PAPER_BITMAP_ID, IMAGE_BITMAP, 256, 256, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION);
-        // window_data->background_image = LoadImageA(instance, "paper.bmp", IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_LOADFROMFILE);
+        window_data->paper_bitmap = LoadImageA(instance, (char *)PAPER_BITMAP_ID, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION);
+        // window_data->paper_bitmap = LoadImageA(instance, "paper.bmp", IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_LOADFROMFILE);
+        window_data->paper_dark_bitmap = LoadImageA(instance, (char *)PAPER_DARK_BITMAP_ID, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION);
+        // window_data->paper_dark_bitmap = LoadImageA(instance, "paper-dark.bmp", IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_LOADFROMFILE);
 
         // Center window
         RECT window_rect;
@@ -408,14 +453,15 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SendMessageA(window_data->settings_language_select, CB_ADDSTRING, NULL, "English");
         SendMessageA(window_data->settings_language_select, CB_ADDSTRING, NULL, "Nederlands");
         SendMessageA(window_data->settings_language_select, CB_SETCURSEL, (void *)0, NULL);
+        window_data->settings_theme_select = CreateWindowExA(0, "ComboBox", NULL, WS_CHILD | CBS_DROPDOWNLIST | CBS_HASSTRINGS, 0, 0, 0, 0, hwnd, (HMENU)SETINGS_THEME_SELECT_ID, NULL, NULL);
         window_data->settings_back_button = CreateWindowExA(0, button_class, NULL, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)SETTINGS_BACK_BUTTON_ID, NULL, NULL);
 
         // Load settings
         for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) window_data->name[i] = '\0';
         uint32_t size = SETTINGS_NAME_SIZE;
         GetUserNameA(window_data->name, &size);
-
         window_data->language = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+        window_data->theme = THEME_LIGHT;
         window_data->highscores = NULL;
         window_data->highscores_size = 0;
         LoadSettings(hwnd);
@@ -454,6 +500,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SendMessageA(window_data->help_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->settings_name_edit, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->settings_language_select, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->settings_theme_select, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->settings_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
 
         if (window_data->list_font != NULL) DeleteObject(window_data->list_font);
@@ -492,11 +539,13 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SetWindowPos(window_data->help_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
 
         // Settings page widgets
-        y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + 24 * vx + padding / 2 + 32 * vx + padding + 52 * vx)) / 2;
+        y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + (24 * vx + padding / 2 + 32 * vx + padding) * 2 + 52 * vx)) / 2;
         y += 48 * vx + padding + 24 * vx + padding / 2 + 8 * vx;
         SetWindowPos(window_data->settings_name_edit, NULL, window_width / 4, y, window_width / 2, 24 * vx, SWP_NOZORDER);
         y += (24 + 8) * vx + padding + 24 * vx + padding / 2;
         SetWindowPos(window_data->settings_language_select, NULL, window_width / 4, y, window_width / 2, 32 * vx, SWP_NOZORDER);
+        y += 32 * vx + padding + 24 * vx + padding / 2;
+        SetWindowPos(window_data->settings_theme_select, NULL, window_width / 4, y, window_width / 2, 32 * vx, SWP_NOZORDER);
         y += 32 * vx + padding;
         SetWindowPos(window_data->settings_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
         return 0;
@@ -547,6 +596,16 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             if (old_language != window_data->language) {
                 SetLanguage(window_data->language);
                 UpdateControlsTexts(hwnd);
+                SaveSettings(hwnd);
+            }
+        }
+
+        if (id == SETINGS_THEME_SELECT_ID && notification == CBN_SELCHANGE) {
+            uint32_t old_theme = window_data->theme;
+            int32_t selected = SendMessageA(window_data->settings_theme_select, CB_GETCURSEL, NULL, NULL);
+            if (selected == 0) window_data->theme = THEME_LIGHT;
+            if (selected == 1) window_data->theme = THEME_DARK;
+            if (old_theme != window_data->theme) {
                 SaveSettings(hwnd);
             }
         }
@@ -691,9 +750,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SelectObject(hdc_buffer, bitmap_buffer);
 
         // Draw background image
-        if (window_data->background_image != NULL) {
+        if (window_data->paper_bitmap != NULL) {
             HDC hdc_bitmap_buffer = CreateCompatibleDC(hdc_buffer);
-            SelectObject(hdc_bitmap_buffer, window_data->background_image);
+            SelectObject(hdc_bitmap_buffer, window_data->theme == THEME_DARK ? window_data->paper_dark_bitmap : window_data->paper_bitmap);
             uint32_t cols = window_width / 256 + 1;
             uint32_t rows = window_height / 256 + 1;
             for (int32_t y = 0; y <= rows; y ++) {
@@ -709,18 +768,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         GdipCreateFromHDC(hdc_buffer, &graphics);
         GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
 
-        if (window_data->background_image == NULL) {
-            GdipGraphicsClear(graphics, 0xffffffff);
+        if (window_data->paper_bitmap == NULL) {
+            GdipGraphicsClear(graphics, window_data->theme == THEME_DARK ? 0xff222222 : 0xffffffff);
         }
 
         // Setup text drawing
         SetBkMode(hdc_buffer, TRANSPARENT);
-        SetTextColor(hdc_buffer, 0x00111111);
+        SetTextColor(hdc_buffer, window_data->theme == THEME_DARK ? 0x00ffffff : 0x00111111);
 
         // Draw border
         if (window_data->page == PAGE_GAME || window_data->page == PAGE_GAMEOVER) {
             GpBrush *brush;
-            GdipCreateSolidFill(0x33000000, (GpSolidFill **)&brush);
+            GdipCreateSolidFill(window_data->theme == THEME_DARK ? 0x33ffffff : 0x33000000, (GpSolidFill **)&brush);
             GdipFillRectangle(graphics, brush, padding, padding + 20 * vx + padding, window_width - padding - padding, window_height - padding - 20 * vx - padding - padding);
             GdipDeleteBrush(brush);
         }
@@ -812,7 +871,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         if (window_data->page == PAGE_GAMEOVER) {
             // Draw overlay
             GpBrush *brush;
-            GdipCreateSolidFill(0x88ffffff, (GpSolidFill **)&brush);
+            GdipCreateSolidFill(window_data->theme == THEME_DARK ? 0x88000000 : 0x88ffffff, (GpSolidFill **)&brush);
             GdipFillRectangleI(graphics, brush, 0, 0, window_width, window_height);
             GdipDeleteBrush(brush);
 
@@ -910,7 +969,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
-            float y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + 24 * vx + padding / 2 + 32 * vx + padding + 52 * vx)) / 2;
+            float y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + (24 * vx + padding / 2 + 32 * vx + padding) * 2 + 52 * vx)) / 2;
             char string_buffer[64];
             LoadStringA(instance, MENU_SETTINGS_BUTTON_ID, string_buffer, sizeof(string_buffer));
             TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
@@ -935,6 +994,11 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             // Draw language label
             LoadStringA(instance, SETTINGS_LANGUAGE_STRING_ID, string_buffer, sizeof(string_buffer));
             TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            y += 24 * vx + padding / 2 + 32 * vx + padding;
+
+            // Draw theme label
+            LoadStringA(instance, SETTINGS_THEME_STRING_ID, string_buffer, sizeof(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
             DeleteObject(text_font);
         }
 
@@ -952,7 +1016,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_DESTROY) {
         // Free window data
-        DeleteObject(window_data->background_image);
+        DeleteObject(window_data->paper_bitmap);
+        DeleteObject(window_data->paper_dark_bitmap);
         DeleteObject(window_data->button_font);
         DeleteObject(window_data->list_font);
         free(window_data);

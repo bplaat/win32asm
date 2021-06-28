@@ -67,6 +67,15 @@ typedef struct {
     uint16_t wMilliseconds;
 } SYSTEMTIME;
 
+typedef struct {
+    uint32_t dwOSVersionInfoSize;
+    uint32_t dwMajorVersion;
+    uint32_t dwMinorVersion;
+    uint32_t dwBuildNumber;
+    uint32_t dwPlatformId;
+    char szCSDVersion[128];
+} OSVERSIONINFOA;
+
 extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
 extern HMODULE __stdcall GetModuleHandleA(char *lpModuleName);
 extern HANDLE __stdcall GetProcessHeap(void);
@@ -86,6 +95,9 @@ extern bool __stdcall ReadFile(HANDLE hFile, void *lpBuffer, uint32_t nNumberOfB
 extern bool __stdcall WriteFile(HANDLE hFile, const void *lpBuffer, uint32_t nNumberOfBytesToWrite, uint32_t *lpNumberOfBytesWritten, void *lpOverlapped);
 extern uint32_t __stdcall SetFilePointer(HANDLE hFile, uint32_t lDistanceToMove, uint32_t *lpDistanceToMoveHigh, uint32_t dwMoveMethod);
 extern bool __stdcall CloseHandle(HANDLE hObject);
+extern bool __stdcall GetVersionExA(OSVERSIONINFOA *lpVersionInformation);
+extern HMODULE __stdcall LoadLibraryA(char *lpLibFileName);
+extern void * __stdcall GetProcAddress(HMODULE hModule, char *lpProcName);
 
 // User32
 #define HWND_DESKTOP 0
@@ -341,6 +353,7 @@ extern int32_t __stdcall SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, u
 
 #define CB_ADDSTRING 0x0143
 #define CB_GETCURSEL 0x0147
+#define CB_RESETCONTENT 0x014B
 #define CB_SETCURSEL 0x014E
 
 #define CBS_DROPDOWNLIST 0x0003

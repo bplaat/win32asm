@@ -13,6 +13,7 @@ APP_ICON_ID ICON "icon.ico"
 
 // Bitmaps
 PAPER_BITMAP_ID BITMAP "paper.bmp"
+PAPER_DARK_BITMAP_ID BITMAP "paper-dark.bmp"
 
 // Sounds
 GAMEOVER_WAVE_ID WAVE "gameover.wav"
@@ -40,6 +41,9 @@ If you make it to 60 seconds, you are\n\
 doing brilliantly!"
     SETTINGS_NAME_STRING_ID, "Name:"
     SETTINGS_LANGUAGE_STRING_ID, "Language:"
+    SETTINGS_THEME_STRING_ID, "Theme:"
+    SETTINGS_THEME_LIGHT_STRING_ID, "Light"
+    SETTINGS_THEME_DARK_STRING_ID, "Dark"
 }
 
 // Dutch strings
@@ -65,6 +69,9 @@ vierkanten. Als je de 60 seconden haalt, ben je\n\
 briljant bezig!"
     SETTINGS_NAME_STRING_ID, "Naam:"
     SETTINGS_LANGUAGE_STRING_ID, "Taal:"
+    SETTINGS_THEME_STRING_ID, "Thema:"
+    SETTINGS_THEME_LIGHT_STRING_ID, "Licht"
+    SETTINGS_THEME_DARK_STRING_ID, "Donker"
 }
 
 

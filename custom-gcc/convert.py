@@ -11,7 +11,8 @@ libraries = {
         'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
         'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep',
         'GetLastError', 'lstrlenA', 'lstrcpyA', 'lstrcatA',
-        'CreateFileA', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle'
+        'CreateFileA', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle',
+        'GetVersionExA', 'LoadLibraryA', 'GetProcAddress'
     ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
@@ -89,6 +90,7 @@ with open(sys.argv[2], 'r') as file:
         output = output.replace('movabs r', 'mov r')
         output = re.sub(r'([a-zA-Z_][a-zA-Z0-9_]*)\[rip\]', '[rel \\1]', output)
         output = output.replace(' XMMWORD ', ' OWORD ')
+        output = output.replace('rex.W ', ' ')
 
     for register in registers:
         output = output.replace('shl ' + register + '\n', 'shl ' + register + ', 1\n')
