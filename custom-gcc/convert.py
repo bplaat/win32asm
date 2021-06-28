@@ -8,15 +8,16 @@ dp = arch == 'x64' and 'dq' or 'dd'
 
 libraries = {
     'KERNEL32.DLL': [
-        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree',
-        'GetLocalTime', 'Sleep', 'GetLastError', 'lstrlenA', 'lstrcpyA', 'lstrcatA',
+        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
+        'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep',
+        'GetLastError', 'lstrlenA', 'lstrcpyA', 'lstrcatA',
         'CreateFileA', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle'
     ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'PeekMessageA', 'TranslateMessage', 'DispatchMessageA',
         'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'SetWindowTextA', 'GetWindowTextA', 'DestroyWindow',
-        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'wsprintfA'
+        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'LoadStringA', 'wsprintfA'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',

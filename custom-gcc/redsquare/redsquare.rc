@@ -1,5 +1,9 @@
 #include "redsquare.h"
 #include <winver.h>
+#define LANG_ENGLISH 0x09
+#define SUBLANG_ENGLISH_US 0x01
+#define LANG_DUTCH 0x13
+#define SUBLANG_DUTCH 0x01
 
 // Manifest
 MANIFEST_ID MANIFEST "redsquare.manifest"
@@ -12,6 +16,57 @@ PAPER_BITMAP_ID BITMAP "paper.bmp"
 
 // Sounds
 GAMEOVER_WAVE_ID WAVE "gameover.wav"
+
+// English Strings
+STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+{
+    MENU_PLAY_STRING_ID, "Play"
+    MENU_HIGHSCORES_STRING_ID, "High Scores"
+    MENU_HELP_STRING_ID, "Help"
+    MENU_SETTINGS_STRING_ID, "Settings"
+    MENU_EXIT_STRING_ID, "Exit"
+    MENU_FOOTER_STRING_ID, "Made by Bastiaan van der Plaat"
+    GAME_SCORE_STRING_ID, "Score: %d"
+    GAME_TIME_STRIND_ID, "Time: %d:%02d"
+    GAME_LEVEL_STRING_ID, "Level: %d"
+    GAMEOVER_TITLE_STRING_ID, "Game Over"
+    BACK_STRING_ID, "Back"
+    HIGHSCORES_EMPTY_STRING_ID, "No high scores found!"
+    HELP_TEXT_STRING_ID, "RedSquare is an classic 2D action game.\n\
+Click and hold the red square.\n\
+Now move so that you neither touch the wall\n\
+nor get hit by any of the blue squares.\n\
+If you make it to 60 seconds, you are\n\
+doing brilliantly!"
+    SETTINGS_NAME_STRING_ID, "Name:"
+    SETTINGS_LANGUAGE_STRING_ID, "Language:"
+}
+
+// Dutch strings
+STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
+{
+    MENU_PLAY_STRING_ID, "Spelen"
+    MENU_HIGHSCORES_STRING_ID, "Hoogste Scores"
+    MENU_HELP_STRING_ID, "Help"
+    MENU_SETTINGS_STRING_ID, "Instellingen"
+    MENU_EXIT_STRING_ID, "Afsluiten"
+    MENU_FOOTER_STRING_ID, "Gemaakt door Bastiaan van der Plaat"
+    GAME_SCORE_STRING_ID, "Score: %d"
+    GAME_TIME_STRIND_ID, "Tijd: %d:%02d"
+    GAME_LEVEL_STRING_ID, "Level: %d"
+    GAMEOVER_TITLE_STRING_ID, "Game Over"
+    BACK_STRING_ID, "Terug"
+    HIGHSCORES_EMPTY_STRING_ID, "Er zijn geen hoogste scores gevonden!"
+    HELP_TEXT_STRING_ID, "RedSquare is een klassiek 2D-actiespel.\n\
+Klik en houd het rode vierkantje vast.\n\
+Beweeg nu zodat je de muur niet aanraakt\n\
+noch geraakt worden door een van de blauwe\n\
+vierkanten. Als je de 60 seconden haalt, ben je\n\
+briljant bezig!"
+    SETTINGS_NAME_STRING_ID, "Naam:"
+    SETTINGS_LANGUAGE_STRING_ID, "Taal:"
+}
+
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO

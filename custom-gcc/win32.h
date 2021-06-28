@@ -26,6 +26,8 @@
 #define LOWORD(a) ((uint32_t)(uintptr_t)(a) & 0xffff)
 #define HIWORD(a) ((uint32_t)(uintptr_t)(a) >> 16)
 
+#define MAKELANGID(p, s) ((((uint16_t)(s)) << 10) | (uint16_t)(p))
+
 #define TRUE 1
 #define FALSE 0
 
@@ -49,6 +51,11 @@
 #define FILE_CURRENT 1
 #define FILE_END 2
 
+#define LANG_ENGLISH 0x09
+#define SUBLANG_ENGLISH_US 0x01
+#define LANG_DUTCH 0x13
+#define SUBLANG_DUTCH 0x01
+
 typedef struct {
     uint16_t wYear;
     uint16_t wMonth;
@@ -63,6 +70,8 @@ typedef struct {
 extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
 extern HMODULE __stdcall GetModuleHandleA(char *lpModuleName);
 extern HANDLE __stdcall GetProcessHeap(void);
+extern bool __stdcall SetThreadLocale(uint32_t Locale);
+extern uint32_t __stdcall SetThreadUILanguage(uint32_t LangId);
 extern void * __stdcall HeapAlloc(HANDLE hHeap, uint32_t dwFlags, size_t dwBytes);
 extern void * __stdcall HeapReAlloc(HANDLE hHeap, uint32_t dwFlags, void *lpMem, size_t dwBytes);
 extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
@@ -228,6 +237,7 @@ extern bool __stdcall DestroyWindow(HWND hWnd);
 extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uElapse,void *lpTimerFunc);
 extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
 extern bool __stdcall MessageBeep(uint32_t uType);
+extern int32_t __stdcall LoadStringA(HINSTANCE hInstance, uint32_t uID, char *lpBuffer, int32_t cchBufferMax);
 extern int32_t __cdecl wsprintfA(char *, char *, ...);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -327,8 +337,16 @@ extern int32_t __stdcall SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, u
 #define LVM_DELETEALLITEMS LVM_FIRST + 9
 
 #define LVS_LIST 0x0003
-
 #define LVIF_TEXT 0x0001
+
+#define CB_ADDSTRING 0x0143
+#define CB_GETCURSEL 0x0147
+#define CB_SETCURSEL 0x014E
+
+#define CBS_DROPDOWNLIST 0x0003
+#define CBS_HASSTRINGS 0x0200
+
+#define CBN_SELCHANGE 0x0001
 
 typedef struct {
     uint32_t dwSize;
