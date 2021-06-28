@@ -400,25 +400,29 @@ extern bool __stdcall GetUserNameA(char *lpBuffer, uint32_t *pcbBuffer);
 // Msvcrt
 extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cdecl *compare )(const void *, const void *));
 
-// Helper functions
-#ifdef WIN32_ALLOC_FUNCTIONS
+// Stdlib functions
+#if defined(WIN32_MALLOC) || defined(USE_STRDUP)
     void *malloc(size_t size) {
         return HeapAlloc(GetProcessHeap(), 0, size);
     }
+#endif
 
+#ifdef WIN32_REALLOC
     void *realloc(void *ptr, size_t size) {
         return HeapReAlloc(GetProcessHeap(), 0, ptr, size);
     }
+#endif
 
+#ifdef WIN32_FREE
     void free(void *ptr) {
         HeapFree(GetProcessHeap(), 0, ptr);
     }
 #endif
 
-#ifdef WIN32_RAND_FUNCTIONS
+#ifdef WIN32_RAND
     uint32_t rand_seed;
 
-    void srand(uint32_t seed) {
+    inline void srand(uint32_t seed) {
         rand_seed = seed;
     }
 
@@ -427,16 +431,36 @@ extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cd
     }
 #endif
 
-#ifdef WIN32_STRING_FUNCTIONS
+#if defined(WIN32_STRLEN) || defined(USE_STRDUP)
+    size_t strlen(char *string) {
+        char *start = string;
+        while (*string++ != '\0');
+        return string - start;
+    }
+#endif
+
+#if defined(WIN32_STRCPY) || defined(USE_STRDUP)
+    char *strcpy(char *dest, char *src) {
+        char *start = dest;
+        while ((*dest++ = *src++) != '\0');
+        return start;
+    }
+#endif
+
+#ifdef WIN32_STRCAT
+    char *strcat(char *dest, char *src) {
+        char *start = dest;
+        while (*dest++ != '\0');
+        dest--;
+        while ((*dest++ = *src++) != '\0');
+        *dest = '\0';
+        return start;
+    }
+#endif
+
+#ifdef WIN32_STRDUP
     char *strdup(char *string) {
-        char *new_string_begin = malloc(lstrlenA(string) + 1);
-        char *new_string = new_string_begin;
-        while (*string != '\0') {
-            *new_string = *string;
-            string++;
-            new_string++;
-        }
-        return new_string_begin;
+        return strcpy(malloc(strlen(string) + 1), string);
     }
 #endif
 

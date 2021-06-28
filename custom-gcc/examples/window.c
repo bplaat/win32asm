@@ -1,5 +1,7 @@
-#define WIN32_ALLOC_FUNCTIONS
-#define WIN32_RAND_FUNCTIONS
+#define WIN32_MALLOC
+#define WIN32_FREE
+#define WIN32_RAND
+#define WIN32_STRLEN
 #include "win32.h"
 
 char *window_class_name = "window-test";
@@ -89,7 +91,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Consolas");
         SelectObject(hdc_buffer, header_font);
         char *header = "Battle of Teripa";
-        TextOutA(hdc_buffer, window_width / 2, padding, header, lstrlenA(header));
+        TextOutA(hdc_buffer, window_width / 2, padding, header, strlen(header));
         DeleteObject(header_font);
 
         // Draw version text
@@ -98,7 +100,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SelectObject(hdc_buffer, version_font);
         SetTextAlign(hdc_buffer, TA_RIGHT);
         char *version = "v0.1.0";
-        TextOutA(hdc_buffer, window_width - padding, padding, version, lstrlenA(version));
+        TextOutA(hdc_buffer, window_width - padding, padding, version, strlen(version));
         DeleteObject(version_font);
 
         // Draw centered text
@@ -107,7 +109,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Comic Sans MS");
         SelectObject(hdc_buffer, font);
         SetTextAlign(hdc_buffer, TA_CENTER);
-        TextOutA(hdc_buffer, window_width / 2, (window_height - font_size) / 2, window_title, lstrlenA(window_title));
+        TextOutA(hdc_buffer, window_width / 2, (window_height - font_size) / 2, window_title, strlen(window_title));
         DeleteObject(font);
 
         // Draw footer text
@@ -116,7 +118,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Georgia");
         SelectObject(hdc_buffer, footer_font);
         char *footer = "Made by Bastiaan van der Plaat";
-        TextOutA(hdc_buffer, window_width / 2, window_height - footer_font_size - padding, footer, lstrlenA(footer));
+        TextOutA(hdc_buffer, window_width / 2, window_height - footer_font_size - padding, footer, strlen(footer));
         DeleteObject(footer_font);
 
         // Draw and delete back buffer

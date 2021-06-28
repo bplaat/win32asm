@@ -1,6 +1,8 @@
-#define WIN32_ALLOC_FUNCTIONS
-#define WIN32_RAND_FUNCTIONS
-#define WIN32_STRING_FUNCTIONS
+#define WIN32_MALLOC
+#define WIN32_REALLOC
+#define WIN32_FREE
+#define WIN32_RAND
+#define WIN32_STRLEN
 #include "win32.h"
 
 // Jan List

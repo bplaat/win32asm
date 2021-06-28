@@ -1,4 +1,9 @@
-#define WIN32_ALLOC_FUNCTIONS
+#define WIN32_MALLOC
+#define WIN32_REALLOC
+#define WIN32_FREE
+#define WIN32_STRLEN
+#define WIN32_STRCPY
+#define WIN32_STRCAT
 #include "win32.h"
 #include "redsquare.h"
 
@@ -136,7 +141,7 @@ void __stdcall LoadSettings(HWND hwnd) {
 
     char settings_path[MAX_PATH];
     SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, settings_path);
-    lstrcatA(settings_path, "\\redsquare-settings.bin");
+    strcat(settings_path, "\\redsquare-settings.bin");
 
     HANDLE settings_file = CreateFileA(settings_path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (settings_file != NULL) {
@@ -184,7 +189,7 @@ void __stdcall SaveSettings(HWND hwnd) {
 
     char settings_path[MAX_PATH];
     SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, settings_path);
-    lstrcatA(settings_path, "\\redsquare-settings.bin");
+    strcat(settings_path, "\\redsquare-settings.bin");
 
     HANDLE settings_file = CreateFileA(settings_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
@@ -346,7 +351,7 @@ void __stdcall ChangePage(HWND hwnd, Page page) {
         }
         HighScore *highscore = &window_data->highscores[window_data->highscores_size];
         for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) highscore->name[i] = '\0';
-        lstrcpyA(highscore->name, window_data->name);
+        strcpy(highscore->name, window_data->name);
         highscore->score = window_data->score;
         window_data->highscores_size++;
 
@@ -819,7 +824,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             #else
                 char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x86)";
             #endif
-            TextOutA(hdc_buffer, window_width - padding, padding, version_text, lstrlenA(version_text));
+            TextOutA(hdc_buffer, window_width - padding, padding, version_text, strlen(version_text));
 
             // Draw title text
             HFONT title_font = CreateFontA(48 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
@@ -827,7 +832,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
             float y = (window_height - (48 * vx + padding + (52 * vx + padding / 2) * 5)) / 2;
-            TextOutA(hdc_buffer, window_width / 2, y, window_title, lstrlenA(window_title));
+            TextOutA(hdc_buffer, window_width / 2, y, window_title, strlen(window_title));
             DeleteObject(title_font);
 
             // Draw footer text
@@ -835,7 +840,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SetTextAlign(hdc_buffer, TA_CENTER);
             char string_buffer[64];
             LoadStringA(instance, MENU_FOOTER_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, window_height - 24 * vx - padding, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, window_height - 24 * vx - padding, string_buffer, strlen(string_buffer));
             DeleteObject(text_font);
         }
 
@@ -851,18 +856,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             LoadStringA(instance, GAME_SCORE_STRING_ID, format_buffer, sizeof(format_buffer));
             wsprintfA(string_buffer, format_buffer, window_data->score);
             SetTextAlign(hdc_buffer, TA_LEFT);
-            TextOutA(hdc_buffer, padding, padding, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, padding, padding, string_buffer, strlen(string_buffer));
 
             LoadStringA(instance, GAME_TIME_STRIND_ID, format_buffer, sizeof(format_buffer));
             uint32_t seconds = window_data->time / FPS;
             wsprintfA(string_buffer, format_buffer, seconds / 60, seconds % 60);
             SetTextAlign(hdc_buffer, TA_CENTER);
-            TextOutA(hdc_buffer, window_width / 2, padding, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, padding, string_buffer, strlen(string_buffer));
 
             LoadStringA(instance, GAME_LEVEL_STRING_ID, format_buffer, sizeof(format_buffer));
             wsprintfA(string_buffer, format_buffer, window_data->level);
             SetTextAlign(hdc_buffer, TA_RIGHT);
-            TextOutA(hdc_buffer, window_width - padding, padding, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width - padding, padding, string_buffer, strlen(string_buffer));
 
             DeleteObject(stats_font);
         }
@@ -883,7 +888,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             float y = (window_height - (48 * vx + padding + (24 * vx + padding) * 3 + 52 * vx)) / 2;
             char string_buffer[64];
             LoadStringA(instance, GAMEOVER_TITLE_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 48 * vx + padding;
             DeleteObject(title_font);
 
@@ -895,18 +900,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             char format_buffer[64];
             LoadStringA(instance, GAME_SCORE_STRING_ID, format_buffer, sizeof(format_buffer));
             wsprintfA(string_buffer, format_buffer, window_data->score);
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 24 * vx + padding;
 
             LoadStringA(instance, GAME_TIME_STRIND_ID, format_buffer, sizeof(format_buffer));
             uint32_t seconds = window_data->time / FPS;
             wsprintfA(string_buffer, format_buffer, seconds / 60, seconds % 60);
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 24 * vx + padding;
 
             LoadStringA(instance, GAME_LEVEL_STRING_ID, format_buffer, sizeof(format_buffer));
             wsprintfA(string_buffer, format_buffer, window_data->level);
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
 
             DeleteObject(text_font);
         }
@@ -921,7 +926,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             float y = (window_height - (48 * vx + padding + 256 * vx + padding + 52 * vx)) / 2;
             char string_buffer[64];
             LoadStringA(instance, MENU_HIGHSCORES_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             DeleteObject(title_font);
         }
 
@@ -935,7 +940,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             float y = (window_height - (48 * vx + padding + (24 * vx + padding) * HELP_TEXT_LINES + 52 * vx)) / 2;
             char string_buffer[256];
             LoadStringA(instance, MENU_HELP_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 48 * vx + padding;
             DeleteObject(title_font);
 
@@ -951,7 +956,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                         current_string[j] = '\0';
                     }
                     if (current_string[j] == '\0') {
-                        TextOutA(hdc_buffer, window_width / 2, y, current_string, lstrlenA(current_string));
+                        TextOutA(hdc_buffer, window_width / 2, y, current_string, strlen(current_string));
                         current_string = &current_string[j + 1];
                         break;
                     }
@@ -972,7 +977,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             float y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + (8 + 24 + 8) * vx + padding + (24 * vx + padding / 2 + 32 * vx + padding) * 2 + 52 * vx)) / 2;
             char string_buffer[64];
             LoadStringA(instance, MENU_SETTINGS_BUTTON_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 48 * vx + padding;
             DeleteObject(title_font);
 
@@ -981,7 +986,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, text_font);
             LoadStringA(instance, SETTINGS_NAME_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 24 * vx + padding / 2;
 
             // Draw name edit larger rect
@@ -993,12 +998,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
             // Draw language label
             LoadStringA(instance, SETTINGS_LANGUAGE_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             y += 24 * vx + padding / 2 + 32 * vx + padding;
 
             // Draw theme label
             LoadStringA(instance, SETTINGS_THEME_STRING_ID, string_buffer, sizeof(string_buffer));
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
             DeleteObject(text_font);
         }
 
