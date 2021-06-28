@@ -32,6 +32,23 @@
 // Kernel32
 #define EXIT_SUCCESS 0
 
+#define GENERIC_WRITE 0x40000000
+#define GENERIC_READ 0x80000000
+
+#define CREATE_NEW 1
+#define CREATE_ALWAYS 2
+#define OPEN_EXISTING 3
+#define OPEN_ALWAYS 4
+#define TRUNCATE_EXISTING 5
+
+#define FILE_ATTRIBUTE_NORMAL 0x80
+
+#define MAX_PATH 260
+
+#define FILE_BEGIN 0
+#define FILE_CURRENT 1
+#define FILE_END 2
+
 typedef struct {
     uint16_t wYear;
     uint16_t wMonth;
@@ -52,6 +69,14 @@ extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
 extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 extern void __stdcall Sleep(uint32_t dwMilliseconds);
 extern uint32_t __stdcall GetLastError(void);
+extern int32_t __stdcall lstrlenA(char *lpString);
+extern char * __stdcall lstrcpyA(char *lpString1, const char *lpString2);
+extern char * __stdcall lstrcatA(char *lpString1, char *lpString2);
+extern HANDLE __stdcall CreateFileA(char *lpFileName, uint32_t dwDesiredAccess, uint32_t dwShareMode, void *lpSecurityAttributes, uint32_t dwCreationDisposition, uint32_t dwFlagsAndAttributes, HANDLE hTemplateFile);
+extern bool __stdcall ReadFile(HANDLE hFile, void *lpBuffer, uint32_t nNumberOfBytesToRead, uint32_t *lpNumberOfBytesRead, void *lpOverlapped);
+extern bool __stdcall WriteFile(HANDLE hFile, const void *lpBuffer, uint32_t nNumberOfBytesToWrite, uint32_t *lpNumberOfBytesWritten, void *lpOverlapped);
+extern uint32_t __stdcall SetFilePointer(HANDLE hFile, uint32_t lDistanceToMove, uint32_t *lpDistanceToMoveHigh, uint32_t dwMoveMethod);
+extern bool __stdcall CloseHandle(HANDLE hObject);
 
 // User32
 #define HWND_DESKTOP 0
@@ -71,7 +96,7 @@ extern uint32_t __stdcall GetLastError(void);
 
 #define WS_CHILD 0x040000000
 #define WS_VISIBLE 0x010000000
-#define WS_BORDER 000800000h
+#define WS_BORDER 0x000800000
 #define WS_OVERLAPPEDWINDOW 0x00CF0000
 #define WS_THICKFRAME 0x000040000
 #define WS_MAXIMIZEBOX 0x000010000
@@ -96,6 +121,8 @@ extern uint32_t __stdcall GetLastError(void);
 #define WM_LBUTTONDOWN 0x0201
 #define WM_LBUTTONUP 0x0202
 
+#define EM_SETLIMITTEXT 0x00C5
+
 #define PM_REMOVE 0x0001
 
 #define SM_CXSCREEN 0
@@ -116,6 +143,9 @@ extern uint32_t __stdcall GetLastError(void);
 #define LR_DEFAULTSIZE 0x00000040
 #define LR_CREATEDIBSECTION 0x00002000
 #define LR_SHARED 0x00008000
+
+#define ES_CENTER 0x0001
+#define ES_AUTOHSCROLL 0x0080
 
 typedef struct {
     uint32_t cbSize;
@@ -192,11 +222,13 @@ extern int32_t __stdcall GetSystemMetrics(int32_t nIndex);
 extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, int32_t Y, int32_t cx, int32_t cy, uint32_t uFlags);
 extern int32_t __stdcall SendMessageA(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
 extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM lParam);
+extern int32_t __stdcall GetWindowTextA(HWND hWnd, char *lpString, int32_t nMaxCount);
+extern bool __stdcall SetWindowTextA(HWND hWnd, char *lpString);
 extern bool __stdcall DestroyWindow(HWND hWnd);
 extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uElapse,void *lpTimerFunc);
 extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
 extern bool __stdcall MessageBeep(uint32_t uType);
-extern int32_t wsprintfA(char *, char *, ...);
+extern int32_t __cdecl wsprintfA(char *, char *, ...);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -283,10 +315,58 @@ extern uint32_t __stdcall GdipCreateSolidFill(uint32_t color, GpSolidFill **brus
 extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
 
 // Shell32
-extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpFile, char *lpParameters, char *lpDirectory, int32_t nShowCmd);
+#define CSIDL_COMMON_APPDATA 0x0023
 
-// Helpers
-#ifdef WIN32_USE_STDLIB_HELPERS
+extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpFile, char *lpParameters, char *lpDirectory, int32_t nShowCmd);
+extern int32_t __stdcall SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, uint32_t dwFlags, char *pszPath);
+
+// Comctl
+#define LVM_FIRST 0x1000
+#define LVM_INSERTITEMA LVM_FIRST + 7
+#define LVM_DELETEALLITEMS LVM_FIRST + 9
+
+#define LVS_LIST 0x0003
+
+#define LVIF_TEXT 0x0001
+
+typedef struct {
+    uint32_t dwSize;
+    uint32_t dwICC;
+} INITCOMMONCONTROLSEX;
+
+typedef struct {
+    uint32_t mask;
+    int32_t iItem;
+    int32_t SubItem;
+    uint32_t state;
+    uint32_t stateMask;
+    char *pszText;
+    int32_t cchTextMax;
+    int32_t iImage;
+    LPARAM lParam;
+    int32_t iIndent;
+    int32_t iGroupId;
+    uint32_t cColumns;
+    uint32_t *puColumns;
+    int32_t *piColFmt;
+    int32_t iGroup;
+} LVITEMA;
+
+#define ICC_WIN95_CLASSES 0x000000FF;
+
+extern bool __stdcall InitCommonControlsEx(const INITCOMMONCONTROLSEX *picce);
+
+// Winmm
+#define SND_ASYNC 0x00000001
+#define SND_RESOURCE 0x00040004
+
+extern bool __stdcall PlaySoundA(char *pszSound, HMODULE hmod, uint32_t fdwSound);
+
+// Msvcrt
+extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cdecl *compare )(const void *, const void *));
+
+// Helper functions
+#ifdef WIN32_ALLOC_FUNCTIONS
     void *malloc(size_t size) {
         return HeapAlloc(GetProcessHeap(), 0, size);
     }
@@ -298,7 +378,9 @@ extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpF
     void free(void *ptr) {
         HeapFree(GetProcessHeap(), 0, ptr);
     }
+#endif
 
+#ifdef WIN32_RAND_FUNCTIONS
     uint32_t rand_seed;
 
     void srand(uint32_t seed) {
@@ -310,15 +392,9 @@ extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpF
     }
 #endif
 
-#ifdef WIN32_USE_STRING_HELPERS
-    size_t strlen(char *string) {
-        char *begin = string;
-        while (*string != '\0') string++;
-        return string - begin;
-    }
-
+#ifdef WIN32_STRING_FUNCTIONS
     char *strdup(char *string) {
-        char *new_string_begin = malloc(strlen(string) + 1);
+        char *new_string_begin = malloc(lstrlenA(string) + 1);
         char *new_string = new_string_begin;
         while (*string != '\0') {
             *new_string = *string;
@@ -328,21 +404,5 @@ extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpF
         return new_string_begin;
     }
 #endif
-
-// Comctl
-typedef struct {
-    uint32_t dwSize;
-    uint32_t dwICC;
-} INITCOMMONCONTROLSEX;
-
-#define ICC_WIN95_CLASSES 0x000000FF;
-
-extern bool __stdcall InitCommonControlsEx(const INITCOMMONCONTROLSEX *picce);
-
-// Winmm
-#define SND_ASYNC 0x00000001
-#define SND_RESOURCE 0x00040004
-
-extern bool __stdcall PlaySoundA(char *pszSound, HMODULE hmod, uint32_t fdwSound);
 
 #endif

@@ -7,7 +7,7 @@
 
 // Version
 #define APP_VERSION_MAJOR 0
-#define APP_VERSION_MINOR 2
+#define APP_VERSION_MINOR 3
 
 // Icons
 #define APP_ICON_ID 1

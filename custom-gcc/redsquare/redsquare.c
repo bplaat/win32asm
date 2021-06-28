@@ -1,17 +1,18 @@
-#define WIN32_USE_STDLIB_HELPERS
-#define WIN32_USE_STRING_HELPERS
+#define WIN32_ALLOC_FUNCTIONS
 #include "win32.h"
 #include "redsquare.h"
 
 #define FRAME_TIMER_ID 1
 
 #define MENU_PLAY_BUTTON_ID 1
-#define MENU_HELP_BUTTON_ID 2
-#define MENU_EXIT_BUTTON_ID 3
-
-#define GAMEOVER_BACK_BUTTON_ID 4
-
-#define HELP_BACK_BUTTON_ID 5
+#define MENU_HIGHSCORES_BUTTON_ID 2
+#define MENU_HELP_BUTTON_ID 3
+#define MENU_SETTINGS_BUTTON_ID 4
+#define MENU_EXIT_BUTTON_ID 5
+#define GAMEOVER_BACK_BUTTON_ID 6
+#define HIGHSCORES_BACK_BUTTON_ID 7
+#define HELP_BACK_BUTTON_ID 8
+#define SETTINGS_BACK_BUTTON_ID 9
 
 #define FPS 100
 
@@ -19,6 +20,9 @@ char *window_class_name = "redsquare";
 char *window_title = "RedSquare";
 char *font_name = "Georgia";
 char *button_class = "BUTTON";
+char *highscores_text = "High Scores";
+char *help_text = "Help";
+char *settings_text = "Settings";
 char *back_text = "Back";
 char *score_format_text = "Score: %d";
 char *time_format_text = "Time: %d:%02d";
@@ -34,7 +38,7 @@ char *help_lines[] = {
 
 uint32_t window_width = 800;
 uint32_t window_height = 600;
-uint32_t min_window_width = 640;
+uint32_t min_window_width = 520;
 uint32_t min_window_height = 480;
 float vw, vh, vx, padding;
 
@@ -42,7 +46,9 @@ typedef enum Page {
     PAGE_MENU,
     PAGE_GAME,
     PAGE_GAMEOVER,
-    PAGE_HELP
+    PAGE_HIGHSCORES,
+    PAGE_HELP,
+    PAGE_SETTINGS,
 } Page;
 
 typedef struct Square {
@@ -54,15 +60,40 @@ typedef struct Square {
     float vy;
 } Square;
 
+#define SETTINGS_SIGNATURE 0x56415352
+#define SETTINGS_NAME_SIZE 32
+
+typedef struct SettingsHeader {
+    uint32_t signature;
+    uint32_t name_address;
+    uint32_t highscores_address;
+} SettingsHeader;
+
+typedef struct HighScore {
+    char name[SETTINGS_NAME_SIZE];
+    uint32_t score;
+} HighScore;
+
 typedef struct {
     HBITMAP background_image;
     Page page;
     HFONT button_font;
+    HFONT list_font;
     HWND menu_play_button;
+    HWND menu_highscores_button;
     HWND menu_help_button;
+    HWND menu_settings_button;
     HWND menu_exit_button;
     HWND gameover_back_button;
+    HWND highscores_list;
+    HWND highscores_back_button;
     HWND help_back_button;
+    HWND settings_name_edit;
+    HWND settings_back_button;
+
+    char name[SETTINGS_NAME_SIZE];
+    HighScore *highscores;
+    uint32_t highscores_size;
 
     uint32_t time;
     uint32_t level;
@@ -71,6 +102,71 @@ typedef struct {
     Square red_square;
     Square blue_squares[4];
 } WindowData;
+
+void __stdcall LoadSettings(HWND hwnd) {
+    WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    char settings_path[MAX_PATH];
+    SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, settings_path);
+    lstrcatA(settings_path, "\\redsquare-settings.bin");
+
+    HANDLE settings_file = CreateFileA(settings_path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (settings_file != NULL) {
+        // Read settings file header
+        SettingsHeader settings_header;
+        uint32_t bytes_read;
+        ReadFile(settings_file, &settings_header, sizeof(SettingsHeader), &bytes_read, NULL);
+
+        if (settings_header.signature == SETTINGS_SIGNATURE) {
+            // Read name
+            SetFilePointer(settings_file, settings_header.name_address, 0, FILE_BEGIN);
+            ReadFile(settings_file, &window_data->name, SETTINGS_NAME_SIZE, &bytes_read, NULL);
+
+            // Read highscores
+            SetFilePointer(settings_file, settings_header.highscores_address, 0, FILE_BEGIN);
+            ReadFile(settings_file, &window_data->highscores_size, sizeof(uint32_t), &bytes_read, NULL);
+            if (window_data->highscores_size > 0) {
+                window_data->highscores = malloc(window_data->highscores_size * sizeof(HighScore));
+                for (uint32_t i = 0; i < window_data->highscores_size; i++) {
+                    ReadFile(settings_file, &window_data->highscores[i], sizeof(HighScore), &bytes_read, NULL);
+                }
+            } else {
+                window_data->highscores = NULL;
+            }
+        }
+
+        CloseHandle(settings_file);
+    }
+}
+
+void __stdcall SaveSettings(HWND hwnd) {
+    WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    char settings_path[MAX_PATH];
+    SHGetFolderPathA(NULL, CSIDL_COMMON_APPDATA, NULL, 0, settings_path);
+    lstrcatA(settings_path, "\\redsquare-settings.bin");
+
+    HANDLE settings_file = CreateFileA(settings_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    // Write settings file header
+    SettingsHeader settings_header;
+    settings_header.signature = SETTINGS_SIGNATURE;
+    settings_header.name_address = sizeof(SettingsHeader);
+    settings_header.highscores_address = sizeof(SettingsHeader) + SETTINGS_NAME_SIZE;
+    uint32_t bytes_written;
+    WriteFile(settings_file, &settings_header, sizeof(SettingsHeader), &bytes_written, NULL);
+
+    // Write name
+    WriteFile(settings_file, &window_data->name, SETTINGS_NAME_SIZE, &bytes_written, NULL);
+
+    // Write high scores
+    WriteFile(settings_file, &window_data->highscores_size, sizeof(uint32_t), &bytes_written, NULL);
+    for (uint32_t i = 0; i < window_data->highscores_size; i++) {
+        WriteFile(settings_file, &window_data->highscores[i], sizeof(HighScore), &bytes_written, NULL);
+    }
+
+    CloseHandle(settings_file);
+}
 
 void __stdcall InitBlueSquares(HWND hwnd, float speed) {
     WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
@@ -120,20 +216,89 @@ void __stdcall StartGame(HWND hwnd) {
     InitBlueSquares(hwnd, 1);
 }
 
+int32_t __cdecl SortHighScores(const void *a, const void *b) {
+    return ((HighScore *)a)->score - ((HighScore *)b)->score;
+}
+
 void __stdcall ChangePage(HWND hwnd, Page page) {
     WindowData *window_data = GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    Page old_page = window_data->page;
     window_data->page = page;
 
     int32_t menu_visible = page == PAGE_MENU ? SW_SHOW : SW_HIDE;
     ShowWindow(window_data->menu_play_button, menu_visible);
+    ShowWindow(window_data->menu_highscores_button, menu_visible);
     ShowWindow(window_data->menu_help_button, menu_visible);
+    ShowWindow(window_data->menu_settings_button, menu_visible);
     ShowWindow(window_data->menu_exit_button, menu_visible);
 
     int32_t gameover_visible = page == PAGE_GAMEOVER ? SW_SHOW : SW_HIDE;
     ShowWindow(window_data->gameover_back_button, gameover_visible);
 
+    int32_t highscores_visible = page == PAGE_HIGHSCORES ? SW_SHOW : SW_HIDE;
+    ShowWindow(window_data->highscores_list, highscores_visible);
+    ShowWindow(window_data->highscores_back_button, highscores_visible);
+
     int32_t help_visible = page == PAGE_HELP ? SW_SHOW : SW_HIDE;
     ShowWindow(window_data->help_back_button, help_visible);
+
+    int32_t settings_visible = page == PAGE_SETTINGS ? SW_SHOW : SW_HIDE;
+    ShowWindow(window_data->settings_name_edit, settings_visible);
+    ShowWindow(window_data->settings_back_button, settings_visible);
+
+    if (page == PAGE_GAME) {
+        StartGame(hwnd);
+    }
+
+    if (page == PAGE_GAMEOVER) {
+        if (window_data->highscores == NULL) {
+            window_data->highscores = malloc(sizeof(HighScore));
+        } else {
+            window_data->highscores = realloc(window_data->highscores, (window_data->highscores_size + 1) * sizeof(HighScore));
+        }
+        HighScore *highscore = &window_data->highscores[window_data->highscores_size];
+        for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) highscore->name[i] = '\0';
+        lstrcpyA(highscore->name, window_data->name);
+        highscore->score = window_data->score;
+        window_data->highscores_size++;
+
+        qsort(window_data->highscores, window_data->highscores_size, sizeof(HighScore), SortHighScores);
+
+        SaveSettings(hwnd);
+
+        PlaySoundA((char *)GAMEOVER_WAVE_ID, GetModuleHandleA(NULL), SND_RESOURCE | SND_ASYNC);
+        // PlaySoundA("gameover.wav", NULL, SND_ASYNC);
+    }
+
+    if (old_page == PAGE_GAMEOVER) {
+        for (int32_t i = 0; i < 4; i++) {
+            Square *square = &window_data->blue_squares[i];
+            square->vx = square->vx > 0 ? 2 : -2;
+            square->vy = square->vy > 0 ? 2 : -2;
+        }
+    }
+
+    if (page == PAGE_HIGHSCORES) {
+        SendMessageA(window_data->highscores_list, LVM_DELETEALLITEMS, NULL, NULL);
+        for (uint32_t i = 0; i < window_data->highscores_size; i++) {
+            HighScore *highscore = &window_data->highscores[i];
+            char item_buffer[64];
+            wsprintfA(item_buffer, "%s: %d", highscore->name, highscore->score);
+            LVITEMA item = {0};
+            item.mask = LVIF_TEXT;
+            item.pszText = item_buffer;
+            SendMessageA(window_data->highscores_list, LVM_INSERTITEMA, NULL, &item);
+        }
+    }
+
+    if (page == PAGE_SETTINGS) {
+        SetWindowTextA(window_data->settings_name_edit, window_data->name);
+    }
+
+    if (old_page == PAGE_SETTINGS) {
+        GetWindowTextA(window_data->settings_name_edit, window_data->name, SETTINGS_NAME_SIZE);
+        SaveSettings(hwnd);
+    }
 
     InvalidateRect(hwnd, NULL, TRUE);
 }
@@ -147,20 +312,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window_data->button_font = NULL;
         SetWindowLongPtrA(hwnd, GWLP_USERDATA, window_data);
 
-        // Generate random seed by time and
-        SYSTEMTIME time;
-        GetLocalTime(&time);
-        srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
-
         // Load background image resource
         window_data->background_image = LoadImageA(GetModuleHandleA(NULL), (char *)PAPER_BITMAP_ID, IMAGE_BITMAP, 256, 256, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION);
         // window_data->background_image = LoadImageA(GetModuleHandleA(NULL), "paper.bmp", IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_LOADFROMFILE);
-        // if (window_data->background_image == NULL) {
-        //     char error_buffer[255];
-        //     wsprintfA(error_buffer, "Can't load paper.bmp from resources: %d", GetLastError());
-        //     MessageBoxA(HWND_DESKTOP, error_buffer, "Image Load Error!", MB_OK);
-        //     ExitProcess(1);
-        // }
 
         // Center window
         RECT window_rect;
@@ -171,18 +325,36 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Menu page widgets
         window_data->menu_play_button = CreateWindowExA(0, button_class, "Play", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_PLAY_BUTTON_ID, NULL, NULL);
-        window_data->menu_help_button = CreateWindowExA(0, button_class, "Help", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_HELP_BUTTON_ID, NULL, NULL);
+        window_data->menu_highscores_button = CreateWindowExA(0, button_class, highscores_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_HIGHSCORES_BUTTON_ID, NULL, NULL);
+        window_data->menu_help_button = CreateWindowExA(0, button_class, help_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_HELP_BUTTON_ID, NULL, NULL);
+        window_data->menu_settings_button = CreateWindowExA(0, button_class, settings_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_SETTINGS_BUTTON_ID, NULL, NULL);
         window_data->menu_exit_button = CreateWindowExA(0, button_class, "Exit", WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)MENU_EXIT_BUTTON_ID, NULL, NULL);
 
         // Gameover page widgets
         window_data->gameover_back_button = CreateWindowExA(0, button_class, back_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)GAMEOVER_BACK_BUTTON_ID, NULL, NULL);
 
+        // High scores page widgets
+        window_data->highscores_list = CreateWindowExA(0, "SysListView32", NULL, WS_CHILD | LVS_LIST, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
+        window_data->highscores_back_button = CreateWindowExA(0, button_class, back_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)HIGHSCORES_BACK_BUTTON_ID, NULL, NULL);
+
         // Help page widgets
         window_data->help_back_button = CreateWindowExA(0, button_class, back_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)HELP_BACK_BUTTON_ID, NULL, NULL);
 
+        // Settings page widgets
+        window_data->settings_name_edit = CreateWindowExA(0, "EDIT", NULL, WS_CHILD | ES_AUTOHSCROLL | ES_CENTER, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
+        SendMessageA(window_data->settings_name_edit, EM_SETLIMITTEXT, (WPARAM)(SETTINGS_NAME_SIZE - 1), 0);
+        window_data->settings_back_button = CreateWindowExA(0, button_class, back_text, WS_CHILD, 0, 0, 0, 0, hwnd, (HMENU)SETTINGS_BACK_BUTTON_ID, NULL, NULL);
+
+        // Load settings
+        for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) window_data->name[i] = '\0';
+        lstrcpyA(window_data->name, "Anonymous");
+        window_data->highscores = NULL;
+        window_data->highscores_size = 0;
+        LoadSettings(hwnd);
+
         // Go to menu page
-        ChangePage(hwnd, PAGE_MENU);
         InitBlueSquares(hwnd, 2);
+        ChangePage(hwnd, PAGE_MENU);
 
         // Start frame timer
         SetTimer(hwnd, FRAME_TIMER_ID, 1000 / FPS, NULL);
@@ -200,32 +372,60 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Fonts
         if (window_data->button_font != NULL) DeleteObject(window_data->button_font);
-        window_data->button_font = CreateFontA(32 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+        window_data->button_font = CreateFontA(24 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
         SendMessageA(window_data->menu_play_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->menu_highscores_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->menu_help_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->menu_settings_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->menu_exit_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->highscores_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->gameover_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->settings_name_edit, WM_SETFONT, window_data->button_font, (void *)TRUE);
+        SendMessageA(window_data->settings_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
         SendMessageA(window_data->help_back_button, WM_SETFONT, window_data->button_font, (void *)TRUE);
 
+        if (window_data->list_font != NULL) DeleteObject(window_data->list_font);
+        window_data->list_font = CreateFontA(16 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+        SendMessageA(window_data->highscores_list, WM_SETFONT, window_data->list_font, (void *)TRUE);
+
         // Menu page widgets
-        float y = (window_height - (48 * vx + padding + (72 * vx + padding) * 3)) / 2;
+        float y = (window_height - (48 * vx + padding + (52 * vx + padding / 2) * 5)) / 2;
         y += 48 * vx  + padding;
-        SetWindowPos(window_data->menu_play_button, NULL, window_width / 4, y, window_width / 2, 72 * vx, SWP_NOZORDER);
-        y += 72 * vx + padding;
-        SetWindowPos(window_data->menu_help_button, NULL, window_width / 4, y, window_width / 2, 72 * vx, SWP_NOZORDER);
-        y += 72 * vx + padding;
-        SetWindowPos(window_data->menu_exit_button, NULL, window_width / 4, y, window_width / 2, 72 * vx, SWP_NOZORDER);
+        SetWindowPos(window_data->menu_play_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
+        y += 52 * vx + padding / 2;
+        SetWindowPos(window_data->menu_highscores_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
+        y += 52 * vx + padding / 2;
+        SetWindowPos(window_data->menu_help_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
+        y += 52 * vx + padding / 2;
+        SetWindowPos(window_data->menu_settings_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
+        y += 52 * vx + padding / 2;
+        SetWindowPos(window_data->menu_exit_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
 
         // Gameover page widgets
-        y = (window_height - (48 * vx + padding + (24 * vx + padding) * 3 + 72 * vx)) / 2;
+        y = (window_height - (48 * vx + padding + (24 * vx + padding) * 3 + 52 * vx)) / 2;
         y += 48 * vx + padding + (24 * vx + padding) * 3;
-        SetWindowPos(window_data->gameover_back_button, NULL, window_width / 4, y, window_width / 2, 72 * vx, SWP_NOZORDER);
+        SetWindowPos(window_data->gameover_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
+
+        // High scores page widgets
+        y = (window_height - (48 * vx + padding + 256 * vx + padding + 52 * vx)) / 2;
+        y += 48 * vx + padding;
+        SetWindowPos(window_data->highscores_list, NULL, window_width / 4, y, window_width / 2, 256 * vx, SWP_NOZORDER);
+        y += 256 * vx + padding;
+        SetWindowPos(window_data->highscores_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
 
         // Help page widgets
-        y = (window_height - (48 * vx + padding + (24 * vx + padding) * (sizeof(help_lines) / sizeof(char *)) + 72 * vx)) / 2;
+        y = (window_height - (48 * vx + padding + (24 * vx + padding) * (sizeof(help_lines) / sizeof(char *)) + 52 * vx)) / 2;
         y += 48 * vx + padding + (24 * vx + padding) * (sizeof(help_lines) / sizeof(char *));
-        SetWindowPos(window_data->help_back_button, NULL, window_width / 4, y, window_width / 2, 72 * vx, SWP_NOZORDER);
+        SetWindowPos(window_data->help_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
+
+        // Settings page widgets
+        y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + 24 * vx + padding + 52 * vx)) / 2;
+        y += 48 * vx + padding + 24 * vx + padding / 2;
+        SetWindowPos(window_data->settings_name_edit, NULL, window_width / 4, y, window_width / 2, 24 * vx, SWP_NOZORDER);
+        y += 24 * vx + padding;
+        SetWindowPos(window_data->settings_back_button, NULL, window_width / 4, y, window_width / 2, 52 * vx, SWP_NOZORDER);
         return 0;
     }
 
@@ -235,10 +435,15 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Menu page widgets
         if (id == MENU_PLAY_BUTTON_ID) {
             ChangePage(hwnd, PAGE_GAME);
-            StartGame(hwnd);
+        }
+        if (id == MENU_HIGHSCORES_BUTTON_ID) {
+            ChangePage(hwnd, PAGE_HIGHSCORES);
         }
         if (id == MENU_HELP_BUTTON_ID) {
             ChangePage(hwnd, PAGE_HELP);
+        }
+        if (id == MENU_SETTINGS_BUTTON_ID) {
+            ChangePage(hwnd, PAGE_SETTINGS);
         }
         if (id == MENU_EXIT_BUTTON_ID) {
             DestroyWindow(hwnd);
@@ -247,11 +452,20 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Gameover page widgets
         if (id == GAMEOVER_BACK_BUTTON_ID) {
             ChangePage(hwnd, PAGE_MENU);
-            InitBlueSquares(hwnd, 2);
+        }
+
+        // High scores page widgets
+        if (id == HIGHSCORES_BACK_BUTTON_ID) {
+            ChangePage(hwnd, PAGE_MENU);
         }
 
         // Help page widgets
         if (id == HELP_BACK_BUTTON_ID) {
+            ChangePage(hwnd, PAGE_MENU);
+        }
+
+        // Settings page widgets
+        if (id == SETTINGS_BACK_BUTTON_ID) {
             ChangePage(hwnd, PAGE_MENU);
         }
     }
@@ -334,7 +548,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 }
             }
 
-            if (window_data->page == PAGE_MENU || window_data->page == PAGE_GAME || window_data->page == PAGE_HELP) {
+            if (
+                window_data->page == PAGE_MENU || window_data->page == PAGE_GAME || window_data->page == PAGE_HIGHSCORES ||
+                window_data->page == PAGE_HELP || window_data->page == PAGE_SETTINGS
+            ) {
                 Square *red_square = &window_data->red_square;
                 for (int32_t i = 0; i < 4; i++) {
                     Square *square = &window_data->blue_squares[i];
@@ -367,12 +584,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
                 if (window_data->page == PAGE_GAME && is_gameover) {
                     ChangePage(hwnd, PAGE_GAMEOVER);
-
-                    PlaySoundA((char *)GAMEOVER_WAVE_ID, GetModuleHandleA(NULL), SND_RESOURCE | SND_ASYNC);
-                    // PlaySoundA("gameover.wav", NULL, SND_ASYNC);
+                } else {
+                    InvalidateRect(hwnd, NULL, TRUE);
                 }
-
-                InvalidateRect(hwnd, NULL, TRUE);
             }
         }
     }
@@ -426,9 +640,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
 
         // Draw blue squares
-        if (window_data->page == PAGE_MENU || window_data->page == PAGE_GAME || window_data->page == PAGE_GAMEOVER || window_data->page == PAGE_HELP) {
+        if (
+            window_data->page == PAGE_MENU || window_data->page == PAGE_GAME || window_data->page == PAGE_GAMEOVER ||
+            window_data->page == PAGE_HIGHSCORES || window_data->page == PAGE_HELP || window_data->page == PAGE_SETTINGS
+        ) {
             GpBrush *brush;
-            GdipCreateSolidFill(0xaa0000ff, (GpSolidFill **)&brush);
+            GdipCreateSolidFill(window_data->page == PAGE_GAME || window_data->page == PAGE_GAMEOVER ? 0xaa0000ff : 0x550000ff, (GpSolidFill **)&brush);
             for (int32_t i = 0; i < 4; i++) {
                 Square *square = &window_data->blue_squares[i];
                 GdipFillRectangle(graphics, brush, square->x * vw, square->y * vh, square->width * vw, square->height * vh);
@@ -452,27 +669,27 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, text_font);
             SetTextAlign(hdc_buffer, TA_RIGHT);
-            #ifdef WIN64
-                char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) " (x64)";
+            #ifdef WIN52
+                char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) " (x52)";
             #else
                 char *version_text = "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) " (x86)";
             #endif
-            TextOutA(hdc_buffer, window_width - padding, padding, version_text, strlen(version_text));
+            TextOutA(hdc_buffer, window_width - padding, padding, version_text, lstrlenA(version_text));
 
             // Draw title text
             HFONT title_font = CreateFontA(48 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
-            float y = (window_height - (48 * vx + padding + (72 * vx + padding) * 3)) / 2;
-            TextOutA(hdc_buffer, window_width / 2, y, window_title, strlen(window_title));
+            float y = (window_height - (48 * vx + padding + (52 * vx + padding / 2) * 5)) / 2;
+            TextOutA(hdc_buffer, window_width / 2, y, window_title, lstrlenA(window_title));
             DeleteObject(title_font);
 
             // Draw footer text
             SelectObject(hdc_buffer, text_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
             char *footer_text = "Made by Bastiaan van der Plaat";
-            TextOutA(hdc_buffer, window_width / 2, window_height - 24 * vx - padding, footer_text, strlen(footer_text));
+            TextOutA(hdc_buffer, window_width / 2, window_height - 24 * vx - padding, footer_text, lstrlenA(footer_text));
             DeleteObject(text_font);
         }
 
@@ -483,19 +700,19 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, stats_font);
 
-            char string_buffer[64];
+            char string_buffer[52];
             wsprintfA(string_buffer, score_format_text, window_data->score);
             SetTextAlign(hdc_buffer, TA_LEFT);
-            TextOutA(hdc_buffer, padding, padding, string_buffer, strlen(string_buffer));
+            TextOutA(hdc_buffer, padding, padding, string_buffer, lstrlenA(string_buffer));
 
             uint32_t seconds = window_data->time / FPS;
             wsprintfA(string_buffer, time_format_text, seconds / 60, seconds % 60);
             SetTextAlign(hdc_buffer, TA_CENTER);
-            TextOutA(hdc_buffer, window_width / 2, padding, string_buffer, strlen(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, padding, string_buffer, lstrlenA(string_buffer));
 
             wsprintfA(string_buffer, level_format_text, window_data->level);
             SetTextAlign(hdc_buffer, TA_RIGHT);
-            TextOutA(hdc_buffer, window_width - padding, padding, string_buffer, strlen(string_buffer));
+            TextOutA(hdc_buffer, window_width - padding, padding, string_buffer, lstrlenA(string_buffer));
 
             DeleteObject(stats_font);
         }
@@ -514,8 +731,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
             char *title_text = "Game Over";
-            float y = (window_height - (48 * vx + padding + (24 * vx + padding) * 3 + 72 * vx)) / 2;
-            TextOutA(hdc_buffer, window_width / 2, y, title_text, strlen(title_text));
+            float y = (window_height - (48 * vx + padding + (24 * vx + padding) * 3 + 52 * vx)) / 2;
+            TextOutA(hdc_buffer, window_width / 2, y, title_text, lstrlenA(title_text));
             y += 48 * vx + padding;
             DeleteObject(title_font);
 
@@ -524,20 +741,32 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, text_font);
 
-            char string_buffer[64];
+            char string_buffer[52];
             wsprintfA(string_buffer, score_format_text, window_data->score);
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
             y += 24 * vx + padding;
 
             uint32_t seconds = window_data->time / FPS;
             wsprintfA(string_buffer, time_format_text, seconds / 60, seconds % 60);
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
             y += 24 * vx + padding;
 
             wsprintfA(string_buffer, level_format_text, window_data->level);
-            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, strlen(string_buffer));
+            TextOutA(hdc_buffer, window_width / 2, y, string_buffer, lstrlenA(string_buffer));
 
             DeleteObject(text_font);
+        }
+
+        // Page high scores
+        if (window_data->page == PAGE_HIGHSCORES) {
+            // Draw title text
+            HFONT title_font = CreateFontA(48 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+            SelectObject(hdc_buffer, title_font);
+            SetTextAlign(hdc_buffer, TA_CENTER);
+            float y = (window_height - (48 * vx + padding + 256 * vx + padding + 52 * vx)) / 2;
+            TextOutA(hdc_buffer, window_width / 2, y, highscores_text, lstrlenA(highscores_text));
+            DeleteObject(title_font);
         }
 
         // Page help
@@ -547,9 +776,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, title_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
-            char *title_text = "Help";
-            float y = (window_height - (48 * vx + padding + (24 * vx + padding) * (sizeof(help_lines) / sizeof(char *)) + 72 * vx)) / 2;
-            TextOutA(hdc_buffer, window_width / 2, y, title_text, strlen(title_text));
+            float y = (window_height - (48 * vx + padding + (24 * vx + padding) * (sizeof(help_lines) / sizeof(char *)) + 52 * vx)) / 2;
+            TextOutA(hdc_buffer, window_width / 2, y, help_text, lstrlenA(help_text));
             y += 48 * vx + padding;
             DeleteObject(title_font);
 
@@ -558,9 +786,30 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, text_font);
             for (int32_t i = 0; i < (sizeof(help_lines) / sizeof(char *)); i++) {
-                TextOutA(hdc_buffer, window_width / 2, y, help_lines[i], strlen(help_lines[i]));
+                TextOutA(hdc_buffer, window_width / 2, y, help_lines[i], lstrlenA(help_lines[i]));
                 y += 24 * vx + padding;
             }
+            DeleteObject(text_font);
+        }
+
+        // Page settings
+        if (window_data->page == PAGE_SETTINGS) {
+            // Draw title text
+            HFONT title_font = CreateFontA(48 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+            SelectObject(hdc_buffer, title_font);
+            SetTextAlign(hdc_buffer, TA_CENTER);
+            float y = (window_height - (48 * vx + padding + 24 * vx + padding / 2 + 24 * vx + padding + 52 * vx)) / 2;
+            TextOutA(hdc_buffer, window_width / 2, y, settings_text, lstrlenA(settings_text));
+            y += 48 * vx + padding;
+            DeleteObject(title_font);
+
+            // Draw name label
+            HFONT text_font = CreateFontA(24 * vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+            SelectObject(hdc_buffer, text_font);
+            char *name_label = "Name:";
+            TextOutA(hdc_buffer, window_width / 2, y, name_label, lstrlenA(name_label));
             DeleteObject(text_font);
         }
 
@@ -580,6 +829,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Free window data
         DeleteObject(window_data->background_image);
         DeleteObject(window_data->button_font);
+        DeleteObject(window_data->list_font);
         free(window_data);
 
         // Close process
@@ -592,7 +842,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
 void _start(void) {
     INITCOMMONCONTROLSEX icc;
-    icc.dwSize = sizeof(icc);
+    icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icc.dwICC = ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icc);
 

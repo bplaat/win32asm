@@ -8,12 +8,14 @@ dp = arch == 'x64' and 'dq' or 'dd'
 
 libraries = {
     'KERNEL32.DLL': [
-        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep', 'GetLastError'
+        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'HeapAlloc', 'HeapReAlloc', 'HeapFree',
+        'GetLocalTime', 'Sleep', 'GetLastError', 'lstrlenA', 'lstrcpyA', 'lstrcatA',
+        'CreateFileA', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle'
     ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'PeekMessageA', 'TranslateMessage', 'DispatchMessageA',
-        'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'DestroyWindow',
+        'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'SetWindowTextA', 'GetWindowTextA', 'DestroyWindow',
         'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'wsprintfA'
     ],
     'GDI32.DLL': [
@@ -21,7 +23,7 @@ libraries = {
         'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
     ],
     'SHELL32.DLL': [
-        'ShellExecuteA'
+        'ShellExecuteA', 'SHGetFolderPathA'
     ],
     'COMCTL32.DLL': [
         'InitCommonControlsEx'
@@ -32,6 +34,9 @@ libraries = {
     'gdiplus.dll': [
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
         'GdipFillRectangle', 'GdipFillRectangleI', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode'
+    ],
+    'msvcrt.dll': [
+        'qsort'
     ]
 }
 

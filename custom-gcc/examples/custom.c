@@ -1,5 +1,6 @@
-#define WIN32_USE_STDLIB_HELPERS
-#define WIN32_USE_STRING_HELPERS
+#define WIN32_ALLOC_FUNCTIONS
+#define WIN32_RAND_FUNCTIONS
+#define WIN32_STRING_FUNCTIONS
 #include "win32.h"
 
 // Jan List
@@ -265,7 +266,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SetTextAlign(hdc_buffer, TA_CENTER);
         SetBkMode(hdc_buffer,TRANSPARENT);
         SetTextColor(hdc_buffer, 0x00ffffff);
-        TextOutA(hdc_buffer, window_width / 2, (window_height - font_size) / 2, window_title, strlen(window_title));
+        TextOutA(hdc_buffer, window_width / 2, (window_height - font_size) / 2, window_title, lstrlenA(window_title));
         DeleteObject(font);
 
         // Draw jan widget
