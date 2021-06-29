@@ -922,11 +922,11 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         DeleteObject(window_data->paper_dark_bitmap);
         for (uint32_t i = 0; i < window_data->controls_size; i++) {
             Control *control = &window_data->controls[i];
-            if (control->type == CONTROL_TYPE_FONT) {
+            if (control->type == CONTROL_TYPE_FONT && window_data->controls_handles[i] != NULL) {
                 DeleteObject(window_data->controls_handles[i]);
             }
         }
-        free(window_data->controls);
+        free(window_data->controls_handles);
         free(window_data);
 
         // Close process
