@@ -17,6 +17,8 @@
 #define HBITMAP HANDLE
 #define HFONT HANDLE
 #define HGDIOBJ HANDLE
+#define HRSRC HANDLE
+#define HGLOBAL HANDLE
 #define WPARAM void *
 #define LPARAM void *
 
@@ -55,6 +57,8 @@
 #define SUBLANG_ENGLISH_US 0x01
 #define LANG_DUTCH 0x13
 #define SUBLANG_DUTCH 0x01
+
+#define RT_RCDATA 10
 
 typedef struct {
     uint16_t wYear;
@@ -98,6 +102,10 @@ extern bool __stdcall CloseHandle(HANDLE hObject);
 extern bool __stdcall GetVersionExA(OSVERSIONINFOA *lpVersionInformation);
 extern HMODULE __stdcall LoadLibraryA(char *lpLibFileName);
 extern void * __stdcall GetProcAddress(HMODULE hModule, char *lpProcName);
+extern HRSRC __stdcall FindResourceA(HMODULE hModule, char *lpName, char *lpType);
+extern uint32_t __stdcall SizeofResource(HMODULE hModule, HRSRC hResInfo);
+extern HGLOBAL __stdcall LoadResource(HMODULE hModule, HRSRC hResInfo);
+extern void * __stdcall LockResource(HGLOBAL hResData);
 
 // User32
 #define HWND_DESKTOP 0
@@ -165,7 +173,10 @@ extern void * __stdcall GetProcAddress(HMODULE hModule, char *lpProcName);
 #define LR_CREATEDIBSECTION 0x00002000
 #define LR_SHARED 0x00008000
 
+#define ES_LEFT 0x0000
 #define ES_CENTER 0x0001
+#define ES_RIGHT 0x0002
+#define ES_MULTILINE 0x0004
 #define ES_AUTOHSCROLL 0x0080
 
 typedef struct {
@@ -250,6 +261,8 @@ extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uEla
 extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
 extern bool __stdcall MessageBeep(uint32_t uType);
 extern int32_t __stdcall LoadStringA(HINSTANCE hInstance, uint32_t uID, char *lpBuffer, int32_t cchBufferMax);
+extern HWND __stdcall GetDlgItem(HWND hDlg, int32_t nIDDlgItem);
+extern int32_t __stdcall DrawTextA(HDC hdc, const char *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
 extern int32_t __cdecl wsprintfA(char *, char *, ...);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);

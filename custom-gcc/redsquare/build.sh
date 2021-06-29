@@ -1,3 +1,10 @@
+# Assets
+magick convert icon.png -define icon:auto-resize="16,32,48,256" icon.ico
+magick convert paper.jpg -colors 16 -define bmp:format=bmp3 paper.bmp
+magick convert paper-dark.jpg -colors 16 -define bmp:format=bmp3 paper-dark.bmp
+./header-convert.py redsquare.h redsquare.inc
+nasm -f bin layout.asm -o layout.bin
+
 # x86
 gcc -I .. -m32 -mno-sse -Os -nostdlib redsquare.c -o redsquare-x86.s -S -masm=intel &&
 ../convert.py x86 redsquare-x86.s redsquare-x86.asm &&
@@ -19,7 +26,7 @@ windres redsquare.rc -o redsquare-x64.res
 ResourceHacker -open redsquare-x64.exe -save redsquare-x64.exe -action addskip -res redsquare-x64.res -log NUL
 
 if [[ $1 != "keep" ]]; then
-    rm redsquare-x64.s redsquare-x64.asm redsquare-x64.res
+    rm redsquare-x64.s redsquare-x64.asm redsquare-x64.res redsquare.inc layout.bin
 fi
 
 ./redsquare-x64.exe

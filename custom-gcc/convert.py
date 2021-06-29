@@ -12,13 +12,13 @@ libraries = {
         'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep',
         'GetLastError', 'lstrlenA', 'lstrcpyA', 'lstrcatA',
         'CreateFileA', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle',
-        'GetVersionExA', 'LoadLibraryA', 'GetProcAddress'
+        'GetVersionExA', 'LoadLibraryA', 'GetProcAddress', 'FindResourceA', 'SizeofResource', 'LoadResource', 'LockResource'
     ],
     'USER32.DLL': [
         'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
         'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'PeekMessageA', 'TranslateMessage', 'DispatchMessageA',
         'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'SetWindowTextA', 'GetWindowTextA', 'DestroyWindow',
-        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'LoadStringA', 'wsprintfA'
+        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'LoadStringA', 'GetDlgItem', 'DrawTextA', 'wsprintfA'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',

@@ -1,9 +1,5 @@
 #include "redsquare.h"
 #include <winver.h>
-#define LANG_ENGLISH 0x09
-#define SUBLANG_ENGLISH_US 0x01
-#define LANG_DUTCH 0x13
-#define SUBLANG_DUTCH 0x01
 
 // Manifest
 MANIFEST_ID MANIFEST "redsquare.manifest"
@@ -18,6 +14,21 @@ PAPER_DARK_BITMAP_ID BITMAP "paper-dark.bmp"
 // Sounds
 GAMEOVER_WAVE_ID WAVE "gameover.wav"
 
+// Layouts
+MAIN_LAYOUT_ID RCDATA "layout.bin"
+
+// Neutral strings
+STRINGTABLE LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+{
+    FONT_STRING_ID, "Georgia"
+    #ifdef WIN64
+        MENU_VERSION_STRING_ID, "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x64)"
+    #else
+        MENU_VERSION_STRING_ID, "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x86)"
+    #endif
+    MENU_TITLE_STRING_ID, "RedSquare"
+}
+
 // English Strings
 STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 {
@@ -27,11 +38,13 @@ STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
     MENU_SETTINGS_STRING_ID, "Settings"
     MENU_EXIT_STRING_ID, "Exit"
     MENU_FOOTER_STRING_ID, "Made by Bastiaan van der Plaat"
+
     GAME_SCORE_STRING_ID, "Score: %d"
     GAME_TIME_STRIND_ID, "Time: %d:%02d"
     GAME_LEVEL_STRING_ID, "Level: %d"
     GAMEOVER_TITLE_STRING_ID, "Game Over"
     BACK_STRING_ID, "Back"
+
     HIGHSCORES_EMPTY_STRING_ID, "No high scores found!"
     HELP_TEXT_STRING_ID, "RedSquare is an classic 2D action game.\n\
 Click and hold the red square.\n\
@@ -55,11 +68,13 @@ STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
     MENU_SETTINGS_STRING_ID, "Instellingen"
     MENU_EXIT_STRING_ID, "Afsluiten"
     MENU_FOOTER_STRING_ID, "Gemaakt door Bastiaan van der Plaat"
+
     GAME_SCORE_STRING_ID, "Score: %d"
     GAME_TIME_STRIND_ID, "Tijd: %d:%02d"
     GAME_LEVEL_STRING_ID, "Level: %d"
     GAMEOVER_TITLE_STRING_ID, "Game Over"
     BACK_STRING_ID, "Terug"
+
     HIGHSCORES_EMPTY_STRING_ID, "Er zijn geen hoogste scores gevonden!"
     HELP_TEXT_STRING_ID, "RedSquare is een klassiek 2D-actiespel.\n\
 Klik en houd het rode vierkantje vast.\n\
@@ -73,7 +88,6 @@ briljant bezig!"
     SETTINGS_THEME_LIGHT_STRING_ID, "Licht"
     SETTINGS_THEME_DARK_STRING_ID, "Donker"
 }
-
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO
