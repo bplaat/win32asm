@@ -9,17 +9,18 @@
 
 #define FRAME_TIMER_ID 1
 
-#define FPS 100
+#define FPS 50
 
 #define THEME_LIGHT 0
 #define THEME_DARK 1
 
-char *window_claes_name = "redsquare";
+char *window_class_name = "redsquare";
+char *settings_file = "\\redsquare-settings.bin";
 
+#define VIEWPORT_WIDTH 640
+#define VIEWPORT_HEIGHT 480
 uint32_t window_width = 800;
 uint32_t window_height = 600;
-uint32_t min_window_width = 640;
-uint32_t min_window_height = 480;
 float vw, vh, vx;
 HINSTANCE instance;
 
@@ -122,7 +123,7 @@ void __stdcall LoadSettings(HWND hwnd) {
 
     char settings_path[MAX_PATH];
     SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, settings_path);
-    strcat(settings_path, "\\redsquare-settings.bin");
+    strcat(settings_path, settings_file);
 
     HANDLE settings_file = CreateFileA(settings_path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (settings_file != NULL) {
@@ -170,7 +171,7 @@ void __stdcall SaveSettings(HWND hwnd) {
 
     char settings_path[MAX_PATH];
     SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, settings_path);
-    strcat(settings_path, "\\redsquare-settings.bin");
+    strcat(settings_path, settings_file);
 
     HANDLE settings_file = CreateFileA(settings_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
@@ -218,7 +219,7 @@ void __stdcall InitBlueSquares(HWND hwnd, float speed) {
 
     window_data->blue_squares[1].width = 72;
     window_data->blue_squares[1].height = 96;
-    window_data->blue_squares[1].x = min_window_width - window_data->blue_squares[1].width;
+    window_data->blue_squares[1].x = VIEWPORT_WIDTH - window_data->blue_squares[1].width;
     window_data->blue_squares[1].y = 0;
     window_data->blue_squares[1].vx = -speed;
     window_data->blue_squares[1].vy = speed;
@@ -226,14 +227,14 @@ void __stdcall InitBlueSquares(HWND hwnd, float speed) {
     window_data->blue_squares[2].width = 96;
     window_data->blue_squares[2].height = 72;
     window_data->blue_squares[2].x = 0;
-    window_data->blue_squares[2].y = min_window_height - window_data->blue_squares[2].height;
+    window_data->blue_squares[2].y = VIEWPORT_HEIGHT - window_data->blue_squares[2].height;
     window_data->blue_squares[2].vx = speed;
     window_data->blue_squares[2].vy = -speed;
 
     window_data->blue_squares[3].width = 96;
     window_data->blue_squares[3].height = 96;
-    window_data->blue_squares[3].x = min_window_width - window_data->blue_squares[3].width;
-    window_data->blue_squares[3].y = min_window_height - window_data->blue_squares[3].height;
+    window_data->blue_squares[3].x = VIEWPORT_WIDTH - window_data->blue_squares[3].width;
+    window_data->blue_squares[3].y = VIEWPORT_HEIGHT - window_data->blue_squares[3].height;
     window_data->blue_squares[3].vx = -speed;
     window_data->blue_squares[3].vy = -speed;
 }
@@ -248,8 +249,8 @@ void __stdcall StartGame(HWND hwnd) {
     window_data->is_dragging = false;
     window_data->red_square.width = 48;
     window_data->red_square.height = 48;
-    window_data->red_square.x = (min_window_width - window_data->red_square.width) / 2;
-    window_data->red_square.y = (min_window_height - window_data->red_square.height) / 2;
+    window_data->red_square.x = (VIEWPORT_WIDTH - window_data->red_square.width) / 2;
+    window_data->red_square.y = (VIEWPORT_HEIGHT - window_data->red_square.height) / 2;
 
     InitBlueSquares(hwnd, 1);
 }
@@ -325,8 +326,8 @@ void __stdcall ChangePage(HWND hwnd, uint32_t page) {
     if (old_page == PAGE_GAMEOVER) {
         for (int32_t i = 0; i < 4; i++) {
             Square *square = &window_data->blue_squares[i];
-            square->vx = square->vx > 0 ? 2 : -2;
-            square->vy = square->vy > 0 ? 2 : -2;
+            square->vx = square->vx > 0 ? 4 : -4;
+            square->vy = square->vy > 0 ? 4 : -4;
         }
     }
 
@@ -402,7 +403,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window_data->controls_size = SizeofResource(instance, main_layout_resource) / sizeof(Control);
         window_data->controls_handles = malloc(window_data->controls_size * sizeof(HWND));
 
-        // Create layout widgets
+        // Create layout controls
         for (uint32_t i = 0; i < window_data->controls_size; i++) {
             window_data->controls_handles[i] = NULL;
             Control *control = &window_data->controls[i];
@@ -446,7 +447,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         LoadSettings(hwnd);
 
         // Go to menu page
-        InitBlueSquares(hwnd, 2);
+        InitBlueSquares(hwnd, 4);
         SetLanguage(window_data->language);
         UpdateControlsTexts(hwnd);
         ChangePage(hwnd, PAGE_MENU);
@@ -460,8 +461,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Save new window size
         window_width = LOWORD(lParam);
         window_height = HIWORD(lParam);
-        vw = (float)window_width / (float)min_window_width;
-        vh = (float)window_height / (float)min_window_height;
+        vw = (float)window_width / (float)VIEWPORT_WIDTH;
+        vh = (float)window_height / (float)VIEWPORT_HEIGHT;
         vx = MIN(vw, vh);
 
         // Resize font controls
@@ -625,7 +626,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             float x = LOWORD(lParam) / vw;
             float y = HIWORD(lParam) / vh;
 
-            if (y > 440 * vh) {
+            if (y > 440) {
                 ShellExecuteA(hwnd, "open", "https://bastiaan.ml/", NULL, NULL, SW_SHOWNORMAL);
             }
         }
@@ -638,8 +639,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_GETMINMAXINFO) {
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        minMaxInfo->ptMinTrackSize.x = min_window_width;
-        minMaxInfo->ptMinTrackSize.y = min_window_height;
+        minMaxInfo->ptMinTrackSize.x = VIEWPORT_WIDTH;
+        minMaxInfo->ptMinTrackSize.y = VIEWPORT_HEIGHT;
         return 0;
     }
 
@@ -660,8 +661,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 if (
                     red_square->x < 16 * vx ||
                     red_square->y < 16 * vx + 20 * vx + 16 * vx ||
-                    red_square->x + red_square->width > min_window_width - 16 * vx ||
-                    red_square->y + red_square->height > min_window_height - 16 * vx
+                    red_square->x + red_square->width > VIEWPORT_WIDTH - 16 * vx ||
+                    red_square->y + red_square->height > VIEWPORT_HEIGHT - 16 * vx
                 ) {
                     is_gameover = true;
                 }
@@ -677,10 +678,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                     square->x += square->vx;
                     square->y += square->vy;
 
-                    if (square->x < 0 || square->x + square->width > min_window_width) {
+                    if (square->x < 0 || square->x + square->width > VIEWPORT_WIDTH) {
                         square->vx = -square->vx;
                     }
-                    if (square->y < 0 || square->y + square->height > min_window_height) {
+                    if (square->y < 0 || square->y + square->height > VIEWPORT_HEIGHT) {
                         square->vy = -square->vy;
                     }
 
@@ -958,13 +959,13 @@ void _start(void) {
     wc.hInstance = instance;
     wc.hIcon = LoadImageA(wc.hInstance, (char *)APP_ICON_ID, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_DEFAULTCOLOR | LR_SHARED);
     wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
-    wc.lpszClassName = window_claes_name;
+    wc.lpszClassName = window_class_name;
     wc.hIconSm = LoadImageA(wc.hInstance, (char *)APP_ICON_ID, IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED);
     RegisterClassExA(&wc);
 
     char string_buffer[64];
     LoadStringA(instance, MENU_TITLE_STRING_ID, string_buffer, sizeof(string_buffer));
-    HWND hwnd = CreateWindowExA(0, window_claes_name, string_buffer,
+    HWND hwnd = CreateWindowExA(0, window_class_name, string_buffer,
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
         window_width, window_height, NULL, NULL, wc.hInstance, NULL);
     ShowWindow(hwnd, SW_SHOWDEFAULT);

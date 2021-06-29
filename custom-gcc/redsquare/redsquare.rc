@@ -80,8 +80,8 @@ STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
 Klik en houd het rode vierkantje vast.\n\
 Beweeg nu zodat je de muur niet aanraakt\n\
 noch geraakt worden door een van de blauwe\n\
-vierkanten. Als je de 60 seconden haalt, ben je\n\
-briljant bezig!"
+vierkanten. Als je de 60 seconden haalt,\n\
+ben je briljant bezig!"
     SETTINGS_NAME_STRING_ID, "Naam:"
     SETTINGS_LANGUAGE_STRING_ID, "Taal:"
     SETTINGS_THEME_STRING_ID, "Thema:"
