@@ -1,0 +1,7 @@
+<Box orientation="horizontal">
+    <Label text="Item 1" font_size="16dp" />
+    <Label text="Item 2" color="#ff0000" />
+    <Label text="Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!"
+        width="400" height="200" background_color="#00ff00" />
+    <Label text="Item 4" color="#0000ff" />
+</Box>

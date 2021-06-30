@@ -158,6 +158,8 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 #define SM_CXSMICON 49
 #define SM_CYSMICON 50
 
+#define SWP_NOSIZE 0x0001
+#define SWP_NOMOVE 0x0002
 #define SWP_NOZORDER 0x0004
 
 #define GWL_HINSTANCE -6
@@ -165,6 +167,9 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 
 #define IMAGE_BITMAP 0
 #define IMAGE_ICON 1
+
+#define DT_WORDBREAK 0x00000010
+#define DT_CALCRECT 0x00000400
 
 #define LR_DEFAULTCOLOR 0x00000000
 #define LR_LOADFROMFILE 0x00000010
@@ -259,6 +264,7 @@ extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
 extern bool __stdcall MessageBeep(uint32_t uType);
 extern int32_t __stdcall LoadStringW(HINSTANCE hInstance, uint32_t uID, wchar_t *lpBuffer, int32_t cchBufferMax);
 extern HWND __stdcall GetDlgItem(HWND hDlg, int32_t nIDDlgItem);
+extern HDC __stdcall GetDC(HWND hWnd);
 extern int32_t __stdcall DrawTextW(HDC hdc, const wchar_t *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
 extern int32_t __cdecl wsprintfW(wchar_t *, wchar_t *, ...);
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -408,7 +414,7 @@ extern bool __stdcall PlaySoundW(wchar_t *pszSound, HMODULE hmod, uint32_t fdwSo
 extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
 
 // Stdlib functions
-#ifdef WIN32_MALLOC
+#if defined(WIN32_MALLOC) || defined(WIN32_WCSDUP)
     void *malloc(size_t size) {
         return HeapAlloc(GetProcessHeap(), 0, size);
     }
@@ -438,7 +444,7 @@ extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
     }
 #endif
 
-#ifdef WIN32_WCSLEN
+#if defined(WIN32_WCSLEN) || defined(WIN32_WCSDUP)
     size_t wcslen(wchar_t *string) {
         wchar_t *start = string;
         while (*string++ != '\0');
@@ -446,7 +452,7 @@ extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
     }
 #endif
 
-#ifdef WIN32_WCSCPY
+#if defined(WIN32_WCSCPY) || defined(WIN32_WCSDUP)
     wchar_t *wcscpy(wchar_t *dest, wchar_t *src) {
         wchar_t *start = dest;
         while ((*dest++ = *src++) != '\0');
@@ -462,6 +468,15 @@ extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
         while ((*dest++ = *src++) != '\0');
         *dest = '\0';
         return start;
+    }
+#endif
+
+#ifdef WIN32_WCSDUP
+    wchar_t *wcsdup(wchar_t *src) {
+        wchar_t *dst = malloc((wcslen(src) + 1) * sizeof(wchar_t));
+        if (dst == NULL) return NULL;
+        wcscpy(dst, src);
+        return dst;
     }
 #endif
 
