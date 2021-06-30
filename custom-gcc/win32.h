@@ -77,11 +77,11 @@ typedef struct {
     uint32_t dwMinorVersion;
     uint32_t dwBuildNumber;
     uint32_t dwPlatformId;
-    char szCSDVersion[128];
-} OSVERSIONINFOA;
+    wchar_t szCSDVersion[128];
+} OSVERSIONINFOW;
 
 extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
-extern HMODULE __stdcall GetModuleHandleA(char *lpModuleName);
+extern HMODULE __stdcall GetModuleHandleW(wchar_t *lpModuleName);
 extern HANDLE __stdcall GetProcessHeap(void);
 extern bool __stdcall SetThreadLocale(uint32_t Locale);
 extern uint32_t __stdcall SetThreadUILanguage(uint32_t LangId);
@@ -91,18 +91,18 @@ extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
 extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 extern void __stdcall Sleep(uint32_t dwMilliseconds);
 extern uint32_t __stdcall GetLastError(void);
-extern int32_t __stdcall lstrlenA(char *lpString);
-extern char * __stdcall lstrcpyA(char *lpString1, const char *lpString2);
-extern char * __stdcall lstrcatA(char *lpString1, char *lpString2);
-extern HANDLE __stdcall CreateFileA(char *lpFileName, uint32_t dwDesiredAccess, uint32_t dwShareMode, void *lpSecurityAttributes, uint32_t dwCreationDisposition, uint32_t dwFlagsAndAttributes, HANDLE hTemplateFile);
+extern int32_t __stdcall lstrlenW(wchar_t *lpString);
+extern wchar_t * __stdcall lstrcpyW(wchar_t *lpString1, const wchar_t *lpString2);
+extern wchar_t * __stdcall lstrcatW(wchar_t *lpString1, wchar_t *lpString2);
+extern HANDLE __stdcall CreateFileW(wchar_t *lpFileName, uint32_t dwDesiredAccess, uint32_t dwShareMode, void *lpSecurityAttributes, uint32_t dwCreationDisposition, uint32_t dwFlagsAndAttributes, HANDLE hTemplateFile);
 extern bool __stdcall ReadFile(HANDLE hFile, void *lpBuffer, uint32_t nNumberOfBytesToRead, uint32_t *lpNumberOfBytesRead, void *lpOverlapped);
 extern bool __stdcall WriteFile(HANDLE hFile, const void *lpBuffer, uint32_t nNumberOfBytesToWrite, uint32_t *lpNumberOfBytesWritten, void *lpOverlapped);
 extern uint32_t __stdcall SetFilePointer(HANDLE hFile, uint32_t lDistanceToMove, uint32_t *lpDistanceToMoveHigh, uint32_t dwMoveMethod);
 extern bool __stdcall CloseHandle(HANDLE hObject);
-extern bool __stdcall GetVersionExA(OSVERSIONINFOA *lpVersionInformation);
-extern HMODULE __stdcall LoadLibraryA(char *lpLibFileName);
+extern bool __stdcall GetVersionExW(OSVERSIONINFOW *lpVersionInformation);
+extern HMODULE __stdcall LoadLibraryW(wchar_t *lpLibFileName);
 extern void * __stdcall GetProcAddress(HMODULE hModule, char *lpProcName);
-extern HRSRC __stdcall FindResourceA(HMODULE hModule, char *lpName, char *lpType);
+extern HRSRC __stdcall FindResourceW(HMODULE hModule, wchar_t *lpName, wchar_t *lpType);
 extern uint32_t __stdcall SizeofResource(HMODULE hModule, HRSRC hResInfo);
 extern HGLOBAL __stdcall LoadResource(HMODULE hModule, HRSRC hResInfo);
 extern void * __stdcall LockResource(HGLOBAL hResData);
@@ -139,6 +139,8 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 #define WM_CREATE 0x0001
 #define WM_DESTROY 0x0002
 #define WM_SIZE 0x0005
+#define WM_SETTEXT 0x000C
+#define WM_GETTEXT 0x000D
 #define WM_PAINT 0x000F
 #define WM_QUIT 0x0012
 #define WM_ERASEBKGND 0x0014
@@ -189,10 +191,10 @@ typedef struct {
     HICON hIcon;
     HCURSOR hCursor;
     HBRUSH hbrBackground;
-    char *lpszMenuName;
-    char *lpszClassName;
+    wchar_t *lpszMenuName;
+    wchar_t *lpszClassName;
     HICON hIconSm;
-} WNDCLASSEXA;
+} WNDCLASSEXW;
 
 typedef struct {
     uint32_t left;
@@ -233,37 +235,35 @@ typedef struct {
   uint8_t rgbReserved[32];
 } PAINTSTRUCT;
 
-extern int32_t __stdcall MessageBoxA(HWND hWnd, char *lpText, char *lpCaption, uint32_t uType);
+extern int32_t __stdcall MessageBoxW(HWND hWnd, wchar_t *lpText, wchar_t *lpCaption, uint32_t uType);
 extern void __stdcall PostQuitMessage(int32_t nExitCode);
-extern int32_t __stdcall DefWindowProcA(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
-extern HICON __stdcall LoadIconA(HINSTANCE hInstance, char *lpIconName);
-extern HCURSOR __stdcall LoadCursorA(HINSTANCE hInstance, char *lpCursorName);
-extern HBITMAP __stdcall LoadBitmapA(HINSTANCE hInstance, char *lpIconName);
-extern HANDLE __stdcall LoadImageA(HINSTANCE hInst, char *name, uint32_t type, int32_t cx, int32_t cy, uint32_t fuLoad);
-extern void __stdcall RegisterClassExA(const WNDCLASSEXA *unnamedParam1);
-extern HWND __stdcall CreateWindowExA(uint32_t dwExStyle, char *lpClassName, char *lpWindowName, uint32_t dwStyle,
+extern int32_t __stdcall DefWindowProcW(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
+extern HICON __stdcall LoadIconW(HINSTANCE hInstance, wchar_t *lpIconName);
+extern HCURSOR __stdcall LoadCursorW(HINSTANCE hInstance, wchar_t *lpCursorName);
+extern HBITMAP __stdcall LoadBitmapW(HINSTANCE hInstance, wchar_t *lpIconName);
+extern HANDLE __stdcall LoadImageW(HINSTANCE hInst, wchar_t *name, uint32_t type, int32_t cx, int32_t cy, uint32_t fuLoad);
+extern void __stdcall RegisterClassExW(const WNDCLASSEXW *unnamedParam1);
+extern HWND __stdcall CreateWindowExW(uint32_t dwExStyle, wchar_t *lpClassName, wchar_t *lpWindowName, uint32_t dwStyle,
     int32_t X, int32_t Y, int32_t nWidth, int32_t nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPARAM lpParam);
 extern bool __stdcall ShowWindow(HWND hWnd, int32_t nCmdShow);
 extern bool __stdcall UpdateWindow(HWND hWnd);
-extern bool __stdcall GetMessageA(MSG *lpMsg, HWND hWnd, uint32_t wMsgFilterMin, uint32_t wMsgFilterMax);
-extern bool __stdcall PeekMessageA(MSG *lpMsg, HWND hWnd, uint32_t wMsgFilterMin, uint32_t wMsgFilterMax, uint32_t wRemoveMsg);
+extern bool __stdcall GetMessageW(MSG *lpMsg, HWND hWnd, uint32_t wMsgFilterMin, uint32_t wMsgFilterMax);
+extern bool __stdcall PeekMessageW(MSG *lpMsg, HWND hWnd, uint32_t wMsgFilterMin, uint32_t wMsgFilterMax, uint32_t wRemoveMsg);
 extern bool __stdcall TranslateMessage(const MSG *lpMsg);
-extern int32_t __stdcall DispatchMessageA(const MSG *lpMsg);
+extern int32_t __stdcall DispatchMessageW(const MSG *lpMsg);
 extern bool __stdcall GetClientRect(HWND hWnd, RECT *lpRect);
 extern int32_t __stdcall GetSystemMetrics(int32_t nIndex);
 extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, int32_t Y, int32_t cx, int32_t cy, uint32_t uFlags);
-extern int32_t __stdcall SendMessageA(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
+extern int32_t __stdcall SendMessageW(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
 extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM lParam);
-extern int32_t __stdcall GetWindowTextA(HWND hWnd, char *lpString, int32_t nMaxCount);
-extern bool __stdcall SetWindowTextA(HWND hWnd, char *lpString);
 extern bool __stdcall DestroyWindow(HWND hWnd);
 extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uElapse,void *lpTimerFunc);
 extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);
 extern bool __stdcall MessageBeep(uint32_t uType);
-extern int32_t __stdcall LoadStringA(HINSTANCE hInstance, uint32_t uID, char *lpBuffer, int32_t cchBufferMax);
+extern int32_t __stdcall LoadStringW(HINSTANCE hInstance, uint32_t uID, wchar_t *lpBuffer, int32_t cchBufferMax);
 extern HWND __stdcall GetDlgItem(HWND hDlg, int32_t nIDDlgItem);
-extern int32_t __stdcall DrawTextA(HDC hdc, const char *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
-extern int32_t __cdecl wsprintfA(char *, char *, ...);
+extern int32_t __stdcall DrawTextW(HDC hdc, const wchar_t *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
+extern int32_t __cdecl wsprintfW(wchar_t *, wchar_t *, ...);
 
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
@@ -271,13 +271,13 @@ extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 extern bool __stdcall InvalidateRect(HWND hWnd, const RECT *lpRect, bool bErase);
 
 #ifdef WIN64
-    extern void * __stdcall SetWindowLongPtrA(HWND hWnd, int32_t nIndex, void *dwNewLong);
-    extern void * __stdcall GetWindowLongPtrA(HWND hWnd, int32_t nIndex);
+    extern void * __stdcall SetWindowLongPtrW(HWND hWnd, int32_t nIndex, void *dwNewLong);
+    extern void * __stdcall GetWindowLongPtrW(HWND hWnd, int32_t nIndex);
 #else
-    extern void * __stdcall SetWindowLongA(HWND hWnd, int32_t nIndex, void *dwNewLong);
-    #define SetWindowLongPtrA(hWnd, nIndex, dwNewLong) (SetWindowLongA((hWnd), (nIndex), (dwNewLong)))
-    extern void * __stdcall GetWindowLongA(HWND hWnd, int32_t nIndex);
-    #define GetWindowLongPtrA(hWnd, nIndex) (GetWindowLongA((hWnd), (nIndex)))
+    extern void * __stdcall SetWindowLongW(HWND hWnd, int32_t nIndex, void *dwNewLong);
+    #define SetWindowLongPtrW(hWnd, nIndex, dwNewLong) (SetWindowLongW((hWnd), (nIndex), (dwNewLong)))
+    extern void * __stdcall GetWindowLongW(HWND hWnd, int32_t nIndex);
+    #define GetWindowLongPtrW(hWnd, nIndex) (GetWindowLongW((hWnd), (nIndex)))
 #endif
 
 // Gdi32
@@ -317,11 +317,13 @@ extern bool __stdcall DeleteObject(HGDIOBJ ho);
 extern bool __stdcall DeleteDC(HDC hdc);
 extern bool __stdcall BitBlt(HDC hdc, int32_t x, int32_t y, int32_t cx, int32_t cy,
     HDC hdcSrc, int32_t x1, int32_t y1, uint32_t rop);
-extern HFONT __stdcall CreateFontA(int32_t cHeight, int32_t cWidth, int32_t cEscapement, int32_t cOrientation, int32_t cWeight, uint32_t bItalic, uint32_t bUnderline, uint32_t bStrikeOut, uint32_t iCharSet, uint32_t iOutPrecision, uint32_t iClipPrecision, uint32_t iQuality, uint32_t iPitchAndFamily, char *pszFaceName);
+extern HFONT __stdcall CreateFontW(int32_t cHeight, int32_t cWidth, int32_t cEscapement, int32_t cOrientation,
+    int32_t cWeight, uint32_t bItalic, uint32_t bUnderline, uint32_t bStrikeOut, uint32_t iCharSet,
+    uint32_t iOutPrecision, uint32_t iClipPrecision, uint32_t iQuality, uint32_t iPitchAndFamily, wchar_t *pszFaceName);
 extern int32_t __stdcall SetBkMode(HDC hdc, int32_t mode);
 extern uint32_t __stdcall SetTextColor(HDC hdc, uint32_t color);
 extern uint32_t __stdcall SetTextAlign(HDC hdc, uint32_t align);
-extern bool __stdcall TextOutA(HDC hdc, int32_t x, int32_t y, char *lpString, int32_t c);
+extern bool __stdcall TextOutW(HDC hdc, int32_t x, int32_t y, wchar_t *lpString, int32_t c);
 
 // Gdiplus
 typedef struct GdiplusStartupInput {
@@ -353,12 +355,12 @@ extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
 #define CSIDL_COMMON_APPDATA 0x0023
 #define CSIDL_LOCAL_APPDATA 0x001C
 
-extern HINSTANCE __stdcall ShellExecuteA(HWND hwnd, char *lpOperation, char *lpFile, char *lpParameters, char *lpDirectory, int32_t nShowCmd);
-extern int32_t __stdcall SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, uint32_t dwFlags, char *pszPath);
+extern HINSTANCE __stdcall ShellExecuteW(HWND hwnd, wchar_t *lpOperation, wchar_t *lpFile, wchar_t *lpParameters, wchar_t *lpDirectory, int32_t nShowCmd);
+extern int32_t __stdcall SHGetFolderPathW(HWND hwnd, int csidl, HANDLE hToken, uint32_t dwFlags, wchar_t *pszPath);
 
 // Comctl
 #define LVM_FIRST 0x1000
-#define LVM_INSERTITEMA LVM_FIRST + 7
+#define LVM_INSERTITEMW LVM_FIRST + 77
 #define LVM_DELETEALLITEMS LVM_FIRST + 9
 
 #define LVS_LIST 0x0003
@@ -385,7 +387,7 @@ typedef struct {
     int32_t SubItem;
     uint32_t state;
     uint32_t stateMask;
-    char *pszText;
+    wchar_t *pszText;
     int32_t cchTextMax;
     int32_t iImage;
     LPARAM lParam;
@@ -395,7 +397,7 @@ typedef struct {
     uint32_t *puColumns;
     int32_t *piColFmt;
     int32_t iGroup;
-} LVITEMA;
+} LVITEMW;
 
 #define ICC_WIN95_CLASSES 0x000000FF;
 
@@ -405,16 +407,16 @@ extern bool __stdcall InitCommonControlsEx(const INITCOMMONCONTROLSEX *picce);
 #define SND_ASYNC 0x00000001
 #define SND_RESOURCE 0x00040004
 
-extern bool __stdcall PlaySoundA(char *pszSound, HMODULE hmod, uint32_t fdwSound);
+extern bool __stdcall PlaySoundW(wchar_t *pszSound, HMODULE hmod, uint32_t fdwSound);
 
 // Advapi
-extern bool __stdcall GetUserNameA(char *lpBuffer, uint32_t *pcbBuffer);
+extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
 
 // Msvcrt
 extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cdecl *compare )(const void *, const void *));
 
 // Stdlib functions
-#if defined(WIN32_MALLOC) || defined(USE_STRDUP)
+#ifdef WIN32_MALLOC
     void *malloc(size_t size) {
         return HeapAlloc(GetProcessHeap(), 0, size);
     }
@@ -444,36 +446,30 @@ extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cd
     }
 #endif
 
-#if defined(WIN32_STRLEN) || defined(USE_STRDUP)
-    size_t strlen(char *string) {
-        char *start = string;
+#ifdef WIN32_WCSLEN
+    size_t wcslen(wchar_t *string) {
+        wchar_t *start = string;
         while (*string++ != '\0');
         return string - start;
     }
 #endif
 
-#if defined(WIN32_STRCPY) || defined(USE_STRDUP)
-    char *strcpy(char *dest, char *src) {
-        char *start = dest;
+#ifdef WIN32_WCSCPY
+    wchar_t *wcscpy(wchar_t *dest, wchar_t *src) {
+        wchar_t *start = dest;
         while ((*dest++ = *src++) != '\0');
         return start;
     }
 #endif
 
-#ifdef WIN32_STRCAT
-    char *strcat(char *dest, char *src) {
-        char *start = dest;
+#ifdef WIN32_WCSCAT
+    wchar_t *wcscat(wchar_t *dest, wchar_t *src) {
+        wchar_t *start = dest;
         while (*dest++ != '\0');
         dest--;
         while ((*dest++ = *src++) != '\0');
         *dest = '\0';
         return start;
-    }
-#endif
-
-#ifdef WIN32_STRDUP
-    char *strdup(char *string) {
-        return strcpy(malloc(strlen(string) + 1), string);
     }
 #endif
 

@@ -8,33 +8,33 @@ dp = arch == 'x64' and 'dq' or 'dd'
 
 libraries = {
     'KERNEL32.DLL': [
-        'GetModuleHandleA', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
+        'GetModuleHandleW', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
         'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep',
-        'GetLastError', 'lstrlenA', 'lstrcpyA', 'lstrcatA',
-        'CreateFileA', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle',
-        'GetVersionExA', 'LoadLibraryA', 'GetProcAddress', 'FindResourceA', 'SizeofResource', 'LoadResource', 'LockResource'
+        'GetLastError', 'lstrlenW', 'lstrcpyW', 'lstrcatW',
+        'CreateFileW', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle',
+        'GetVersionExW', 'LoadLibraryW', 'GetProcAddress', 'FindResourceW', 'SizeofResource', 'LoadResource', 'LockResource'
     ],
     'USER32.DLL': [
-        'MessageBoxA', 'PostQuitMessage', 'DefWindowProcA', 'LoadIconA', 'LoadCursorA', 'LoadBitmapA', 'LoadImageA', 'RegisterClassExA',
-        'CreateWindowExA', 'ShowWindow', 'UpdateWindow', 'GetMessageA', 'PeekMessageA', 'TranslateMessage', 'DispatchMessageA',
-        'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageA', 'EnumChildWindows', 'SetWindowTextA', 'GetWindowTextA', 'DestroyWindow',
-        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'LoadStringA', 'GetDlgItem', 'DrawTextA', 'wsprintfA'
+        'MessageBoxW', 'PostQuitMessage', 'DefWindowProcW', 'LoadIconW', 'LoadCursorW', 'LoadBitmapW', 'LoadImageW', 'RegisterClassExW',
+        'CreateWindowExW', 'ShowWindow', 'UpdateWindow', 'GetMessageW', 'PeekMessageW', 'TranslateMessage', 'DispatchMessageW',
+        'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW', 'DestroyWindow',
+        'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'LoadStringW', 'GetDlgItem', 'DrawTextW', 'wsprintfW'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
-        'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontA', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutA'
+        'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontW', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutW'
     ],
     'SHELL32.DLL': [
-        'ShellExecuteA', 'SHGetFolderPathA'
+        'ShellExecuteW', 'SHGetFolderPathW'
     ],
     'COMCTL32.DLL': [
         'InitCommonControlsEx'
     ],
     'ADVAPI32.DLL': [
-        'GetUserNameA'
+        'GetUserNameW'
     ],
     'WINMM.DLL': [
-        'PlaySoundA'
+        'PlaySoundW'
     ],
     'gdiplus.dll': [
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
@@ -46,9 +46,9 @@ libraries = {
 }
 
 if arch == 'x64':
-    libraries['USER32.DLL'].extend(['SetWindowLongPtrA', 'GetWindowLongPtrA'])
+    libraries['USER32.DLL'].extend(['SetWindowLongPtrW', 'GetWindowLongPtrW', 'SetWindowLongPtrW', 'GetWindowLongPtrW'])
 else:
-    libraries['USER32.DLL'].extend(['SetWindowLongA', 'GetWindowLongA'])
+    libraries['USER32.DLL'].extend(['SetWindowLongW', 'GetWindowLongW', 'SetWindowLongW', 'GetWindowLongW'])
 
 registers = ['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'ebp', 'esp']
 if arch == 'x64':
@@ -75,8 +75,8 @@ with open(sys.argv[2], 'r') as file:
     output = output.replace(' PTR ', ' ')
     output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
     output = output.replace(' OFFSET FLAT:', ' ')
-    output = output.replace('\\0"', '", 0')
-    output = output.replace('\\\\', '\\')
+    output = output.replace('`', '\`')
+    output = output.replace('"', '`')
 
     output = re.sub(r'DWORD LC(.+)\n', 'DWORD [LC\\1]\n', output)
     output = re.sub(r'st\((\d+)\)', 'st\\1', output)
@@ -95,6 +95,7 @@ with open(sys.argv[2], 'r') as file:
     for register in registers:
         output = output.replace('shl ' + register + '\n', 'shl ' + register + ', 1\n')
         output = output.replace('shr ' + register + '\n', 'shr ' + register + ', 1\n')
+        output = output.replace('sar ' + register + '\n', 'sar ' + register + ', 1\n')
 
     data = ''
     text = ''

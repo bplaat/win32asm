@@ -20,73 +20,73 @@ MAIN_LAYOUT_ID RCDATA "layout.bin"
 // Neutral strings
 STRINGTABLE LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 {
-    FONT_STRING_ID, "Georgia"
+    FONT_STRING_ID, "Georgia\0"
     #ifdef WIN64
-        MENU_VERSION_STRING_ID, "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x64)"
+        MENU_VERSION_STRING_ID, "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x64)\0"
     #else
-        MENU_VERSION_STRING_ID, "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x86)"
+        MENU_VERSION_STRING_ID, "v" STR(APP_VERSION_MAJOR) "." STR(APP_VERSION_MINOR) "." STR(APP_VERSION_PATCH) " (x86)\0"
     #endif
-    MENU_TITLE_STRING_ID, "RedSquare"
+    MENU_TITLE_STRING_ID, "RedSquare\0"
 }
 
 // English Strings
 STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 {
-    MENU_PLAY_STRING_ID, "Play"
-    MENU_HIGHSCORES_STRING_ID, "High Scores"
-    MENU_HELP_STRING_ID, "Help"
-    MENU_SETTINGS_STRING_ID, "Settings"
-    MENU_EXIT_STRING_ID, "Exit"
-    MENU_FOOTER_STRING_ID, "Made by Bastiaan van der Plaat"
+    MENU_PLAY_STRING_ID, "Play\0"
+    MENU_HIGHSCORES_STRING_ID, "High Scores\0"
+    MENU_HELP_STRING_ID, "Help\0"
+    MENU_SETTINGS_STRING_ID, "Settings\0"
+    MENU_EXIT_STRING_ID, "Exit\0"
+    MENU_FOOTER_STRING_ID, "Made by Bastiaan van der Plaat\0"
 
-    GAME_SCORE_STRING_ID, "Score: %d"
-    GAME_TIME_STRIND_ID, "Time: %d:%02d"
-    GAME_LEVEL_STRING_ID, "Level: %d"
-    GAMEOVER_TITLE_STRING_ID, "Game Over"
-    BACK_STRING_ID, "Back"
+    GAME_SCORE_STRING_ID, "Score: %d\0"
+    GAME_TIME_STRIND_ID, "Time: %d:%02d\0"
+    GAME_LEVEL_STRING_ID, "Level: %d\0"
+    GAMEOVER_TITLE_STRING_ID, "Game Over\0"
+    BACK_STRING_ID, "Back\0"
 
-    HIGHSCORES_EMPTY_STRING_ID, "No high scores found!"
+    HIGHSCORES_EMPTY_STRING_ID, "No high scores found!\0"
     HELP_TEXT_STRING_ID, "RedSquare is an classic 2D action game.\n\
 Click and hold the red square.\n\
 Now move so that you neither touch the wall\n\
 nor get hit by any of the blue squares.\n\
 If you make it to 60 seconds, you are\n\
-doing brilliantly!"
-    SETTINGS_NAME_STRING_ID, "Name:"
-    SETTINGS_LANGUAGE_STRING_ID, "Language:"
-    SETTINGS_THEME_STRING_ID, "Theme:"
-    SETTINGS_THEME_LIGHT_STRING_ID, "Light"
-    SETTINGS_THEME_DARK_STRING_ID, "Dark"
+doing brilliantly!\0"
+    SETTINGS_NAME_STRING_ID, "Name:\0"
+    SETTINGS_LANGUAGE_STRING_ID, "Language:\0"
+    SETTINGS_THEME_STRING_ID, "Theme:\0"
+    SETTINGS_THEME_LIGHT_STRING_ID, "Light\0"
+    SETTINGS_THEME_DARK_STRING_ID, "Dark\0"
 }
 
 // Dutch strings
 STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
 {
-    MENU_PLAY_STRING_ID, "Spelen"
-    MENU_HIGHSCORES_STRING_ID, "Hoogste Scores"
-    MENU_HELP_STRING_ID, "Help"
-    MENU_SETTINGS_STRING_ID, "Instellingen"
-    MENU_EXIT_STRING_ID, "Afsluiten"
-    MENU_FOOTER_STRING_ID, "Gemaakt door Bastiaan van der Plaat"
+    MENU_PLAY_STRING_ID, "Spelen\0"
+    MENU_HIGHSCORES_STRING_ID, "Hoogste Scores\0"
+    MENU_HELP_STRING_ID, "Help\0"
+    MENU_SETTINGS_STRING_ID, "Instellingen\0"
+    MENU_EXIT_STRING_ID, "Afsluiten\0"
+    MENU_FOOTER_STRING_ID, "Gemaakt door Bastiaan van der Plaat\0"
 
-    GAME_SCORE_STRING_ID, "Score: %d"
-    GAME_TIME_STRIND_ID, "Tijd: %d:%02d"
-    GAME_LEVEL_STRING_ID, "Level: %d"
-    GAMEOVER_TITLE_STRING_ID, "Game Over"
-    BACK_STRING_ID, "Terug"
+    GAME_SCORE_STRING_ID, "Score: %d\0"
+    GAME_TIME_STRIND_ID, "Tijd: %d:%02d\0"
+    GAME_LEVEL_STRING_ID, "Level: %d\0"
+    GAMEOVER_TITLE_STRING_ID, "Game Over\0"
+    BACK_STRING_ID, "Terug\0"
 
-    HIGHSCORES_EMPTY_STRING_ID, "Er zijn geen hoogste scores gevonden!"
+    HIGHSCORES_EMPTY_STRING_ID, "Er zijn geen hoogste scores gevonden!\0"
     HELP_TEXT_STRING_ID, "RedSquare is een klassiek 2D-actiespel.\n\
 Klik en houd het rode vierkantje vast.\n\
 Beweeg nu zodat je de muur niet aanraakt\n\
 noch geraakt worden door een van de blauwe\n\
 vierkanten. Als je de 60 seconden haalt,\n\
-ben je briljant bezig!"
-    SETTINGS_NAME_STRING_ID, "Naam:"
-    SETTINGS_LANGUAGE_STRING_ID, "Taal:"
-    SETTINGS_THEME_STRING_ID, "Thema:"
-    SETTINGS_THEME_LIGHT_STRING_ID, "Licht"
-    SETTINGS_THEME_DARK_STRING_ID, "Donker"
+ben je briljant bezig!\0"
+    SETTINGS_NAME_STRING_ID, "Naam:\0"
+    SETTINGS_LANGUAGE_STRING_ID, "Taal:\0"
+    SETTINGS_THEME_STRING_ID, "Thema:\0"
+    SETTINGS_THEME_LIGHT_STRING_ID, "Licht\0"
+    SETTINGS_THEME_DARK_STRING_ID, "Donker\0"
 }
 
 // Version Information

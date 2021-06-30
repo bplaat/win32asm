@@ -16,7 +16,7 @@
 // Version
 #define APP_VERSION_MAJOR 0
 #define APP_VERSION_MINOR 5
-#define APP_VERSION_PATCH 1
+#define APP_VERSION_PATCH 2
 
 // Icons
 #define APP_ICON_ID 1
@@ -24,6 +24,7 @@
 // Bitmaps
 #define PAPER_BITMAP_ID 1
 #define PAPER_DARK_BITMAP_ID 2
+#define PAPER_BITMAP_SIZE 256
 
 // Sounds
 #define GAMEOVER_WAVE_ID 1
