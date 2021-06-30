@@ -260,10 +260,6 @@ void __stdcall StartGame(HWND hwnd) {
     InitBlueSquares(hwnd, 1);
 }
 
-int32_t __cdecl SortHighScores(const void *a, const void *b) {
-    return ((HighScore *)a)->score - ((HighScore *)b)->score;
-}
-
 void __stdcall UpdateControlsTexts(HWND hwnd) {
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
@@ -292,6 +288,40 @@ void __stdcall UpdateControlsTexts(HWND hwnd) {
     }
 }
 
+void __stdcall AddHighScore(HWND hwnd) {
+    WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+    if (window->highscores == NULL) {
+        window->highscores = malloc(sizeof(HighScore));
+    } else {
+        window->highscores = realloc(window->highscores, (window->highscores_size + 1) * sizeof(HighScore));
+        for (uint32_t i = 0; i < window->highscores_size; i++) {
+            HighScore *highscore = &window->highscores[i];
+            if (window->score >= highscore->score) {
+                // Move rest highscores one to right
+                for (int32_t j = (int32_t)window->highscores_size; j > i; j--) {
+                    for (int32_t k = 0; k < SETTINGS_NAME_SIZE; k++) window->highscores[j].name[k] = '\0';
+                    wcscpy(window->highscores[j].name, window->highscores[j - 1].name);
+                    window->highscores[j].score = window->highscores[j - 1].score;
+                }
+
+                // Replace this highscore
+                for (int32_t j = 0; j < SETTINGS_NAME_SIZE; j++) highscore->name[j] = '\0';
+                wcscpy(highscore->name, window->name);
+                highscore->score = window->score;
+                window->highscores_size++;
+                return;
+            }
+        }
+    }
+
+    // Add highscore add the end
+    HighScore *highscore = &window->highscores[window->highscores_size];
+    for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) highscore->name[i] = '\0';
+    wcscpy(highscore->name, window->name);
+    highscore->score = window->score;
+    window->highscores_size++;
+}
+
 void __stdcall ChangePage(HWND hwnd, uint32_t page) {
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
     uint32_t old_page = window->page;
@@ -310,21 +340,8 @@ void __stdcall ChangePage(HWND hwnd, uint32_t page) {
     }
 
     if (page == PAGE_GAMEOVER) {
-        if (window->highscores == NULL) {
-            window->highscores = malloc(sizeof(HighScore));
-        } else {
-            window->highscores = realloc(window->highscores, (window->highscores_size + 1) * sizeof(HighScore));
-        }
-        HighScore *highscore = &window->highscores[window->highscores_size];
-        for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) highscore->name[i] = '\0';
-        wcscpy(highscore->name, window->name);
-        highscore->score = window->score;
-        window->highscores_size++;
-
-        qsort(window->highscores, window->highscores_size, sizeof(HighScore), SortHighScores);
-
+        AddHighScore(hwnd);
         SaveSettings(hwnd);
-
         PlaySoundW((wchar_t *)GAMEOVER_WAVE_ID, window->instance, SND_RESOURCE | SND_ASYNC);
     }
 
@@ -340,12 +357,12 @@ void __stdcall ChangePage(HWND hwnd, uint32_t page) {
         HWND *highscores_list = GetDlgItem(hwnd, HIGHSCORES_LIST_ID);
         SendMessageW(highscores_list, LVM_DELETEALLITEMS, NULL, NULL);
         if (window->highscores_size > 0) {
-            for (uint32_t i = 0; i < window->highscores_size; i++) {
+            for (int32_t i = (int32_t)window->highscores_size - 1; i >= 0; i--) {
                 HighScore *highscore = &window->highscores[i];
                 LVITEMW item = {0};
                 item.mask = LVIF_TEXT;
                 wchar_t string_buffer[64];
-                wsprintfW(string_buffer, L"%s: %d", highscore->name, highscore->score);
+                wsprintfW(string_buffer, L"%d. %s: %d", i + 1, highscore->name, highscore->score);
                 item.pszText = string_buffer;
                 SendMessageW(highscores_list, LVM_INSERTITEMW, NULL, &item);
             }

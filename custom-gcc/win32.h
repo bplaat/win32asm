@@ -91,9 +91,6 @@ extern bool __stdcall HeapFree(HANDLE hHeap, uint32_t dwFlags, void *lpMem);
 extern void __stdcall GetLocalTime(SYSTEMTIME *lpSystemTime);
 extern void __stdcall Sleep(uint32_t dwMilliseconds);
 extern uint32_t __stdcall GetLastError(void);
-extern int32_t __stdcall lstrlenW(wchar_t *lpString);
-extern wchar_t * __stdcall lstrcpyW(wchar_t *lpString1, const wchar_t *lpString2);
-extern wchar_t * __stdcall lstrcatW(wchar_t *lpString1, wchar_t *lpString2);
 extern HANDLE __stdcall CreateFileW(wchar_t *lpFileName, uint32_t dwDesiredAccess, uint32_t dwShareMode, void *lpSecurityAttributes, uint32_t dwCreationDisposition, uint32_t dwFlagsAndAttributes, HANDLE hTemplateFile);
 extern bool __stdcall ReadFile(HANDLE hFile, void *lpBuffer, uint32_t nNumberOfBytesToRead, uint32_t *lpNumberOfBytesRead, void *lpOverlapped);
 extern bool __stdcall WriteFile(HANDLE hFile, const void *lpBuffer, uint32_t nNumberOfBytesToWrite, uint32_t *lpNumberOfBytesWritten, void *lpOverlapped);
@@ -264,12 +261,10 @@ extern int32_t __stdcall LoadStringW(HINSTANCE hInstance, uint32_t uID, wchar_t 
 extern HWND __stdcall GetDlgItem(HWND hDlg, int32_t nIDDlgItem);
 extern int32_t __stdcall DrawTextW(HDC hdc, const wchar_t *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
 extern int32_t __cdecl wsprintfW(wchar_t *, wchar_t *, ...);
-
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 extern bool __stdcall InvalidateRect(HWND hWnd, const RECT *lpRect, bool bErase);
-
 #ifdef WIN64
     extern void * __stdcall SetWindowLongPtrW(HWND hWnd, int32_t nIndex, void *dwNewLong);
     extern void * __stdcall GetWindowLongPtrW(HWND hWnd, int32_t nIndex);
@@ -411,9 +406,6 @@ extern bool __stdcall PlaySoundW(wchar_t *pszSound, HMODULE hmod, uint32_t fdwSo
 
 // Advapi
 extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
-
-// Msvcrt
-extern void __cdecl qsort(void *base, size_t number, size_t width, int32_t (__cdecl *compare )(const void *, const void *));
 
 // Stdlib functions
 #ifdef WIN32_MALLOC

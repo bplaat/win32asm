@@ -4,3 +4,5 @@
 *.res
 *.ico
 *.bmp
+*.bin
+redsquare.inc
