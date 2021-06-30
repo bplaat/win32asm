@@ -416,8 +416,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->instance = GetModuleHandleW(NULL);
 
         // Load background image resource
-        window->paper_bitmap = LoadImageW(window->instance, (wchar_t *)PAPER_BITMAP_ID, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION);
-        window->paper_dark_bitmap = LoadImageW(window->instance, (wchar_t *)PAPER_DARK_BITMAP_ID, IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR | LR_CREATEDIBSECTION);
+        window->paper_bitmap = LoadBitmapW(window->instance, (wchar_t *)PAPER_BITMAP_ID);
+        window->paper_dark_bitmap = LoadBitmapW(window->instance, (wchar_t *)PAPER_DARK_BITMAP_ID);
 
         // Read layout
         HRSRC main_layout_resource = FindResourceW(window->instance, (wchar_t *)MAIN_LAYOUT_ID, (wchar_t *)RT_RCDATA);

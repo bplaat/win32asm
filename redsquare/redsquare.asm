@@ -6,7 +6,7 @@
 
 %include "../libwindows.inc"
 
-header HEADER_GUI
+header HEADER_GUI ;, HEADER_HAS_RESOURCES
 
 code_section
     ; ### Some stdlib like Win32 wrappers ###
@@ -226,7 +226,6 @@ code_section
             invoke GetModuleHandleA, NULL
             invoke LoadBitmapA, _ax, BASSIEBAS_BITMAP_ID
 
-            ; Bitmap will not load on Windows 10 😭
             ; cmp _ax, NULL
             ; je .wm_destroy
 
@@ -797,6 +796,10 @@ code_section
         invoke ExitProcess, [message + MSG.wParam]
 
         end_local
+
+    %ifdef WIN64
+        times 1234 db 0 ; Dirty hack
+    %endif
 end_code_section
 
 data_section
@@ -909,7 +912,7 @@ end_data_section
 ;     resource manifests, \
 ;         1, LANG_NEUTRAL, app_manifest
 
-;     bitmap bassiebas_bitmap, "paper.bmp"
+;     bitmap bassiebas_bitmap, "bassiebas.bmp"
 
 ;     %ifdef WIN64
 ;         versioninfo version, \
@@ -920,7 +923,7 @@ end_data_section
 ;             FileDescription, "RedSquare", \
 ;             FileVersion, "1.0.0.0", \
 ;             InternalName, "RedSquare", \
-;             LegalCopyright, "Copyright (C) 2021 PlaatSoft", \
+;             LegalCopyright, "Copyright (c) 2021 PlaatSoft", \
 ;             OriginalFilename, "redsquare-x64.exe", \
 ;             ProductName, "RedSquare", \
 ;             ProductVersion, "1.0.0.0"
@@ -933,7 +936,7 @@ end_data_section
 ;             FileDescription, "RedSquare", \
 ;             FileVersion, "1.0.0.0", \
 ;             InternalName, "RedSquare", \
-;             LegalCopyright, "Copyright (C) 2021 PlaatSoft", \
+;             LegalCopyright, "Copyright (c) 2021 PlaatSoft", \
 ;             OriginalFilename, "redsquare-x86.exe", \
 ;             ProductName, "RedSquare", \
 ;             ProductVersion, "1.0.0.0"

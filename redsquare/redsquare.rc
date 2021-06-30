@@ -1,3 +1,5 @@
+#include <winver.h>
+
 // Manifest
 1 MANIFEST "redsquare.manifest"
 
@@ -5,7 +7,7 @@
 1 ICON "icon.ico"
 
 // Bitmap
-1 BITMAP "paper.bmp"
+1 BITMAP "bassiebas.bmp"
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO
@@ -25,8 +27,12 @@ FILESUBTYPE VFT2_UNKNOWN
             VALUE "FileDescription", "RedSquare"
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "RedSquare"
-            VALUE "LegalCopyright", "Copyright \u00a9 2021 PlaatSoft"
-            VALUE "OriginalFilename", "redsquare-x86.exe"
+            VALUE "LegalCopyright", "Copyright (c) 2021 PlaatSoft"
+            #ifdef WIN64
+                VALUE "OriginalFilename", "redsquare-x64.exe"
+            #else
+                VALUE "OriginalFilename", "redsquare-x86.exe"
+            #endif
             VALUE "ProductName", "RedSquare"
             VALUE "ProductVersion", "1.0.0.0"
         }
