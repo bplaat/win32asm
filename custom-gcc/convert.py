@@ -23,7 +23,8 @@ libraries = {
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
-        'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontW', 'SetBkMode', 'SetTextColor', 'SetTextAlign', 'TextOutW'
+        'CreateRectRgn', 'SelectClipRgn', 'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontW', 'SetBkMode',
+        'SetTextColor', 'SetTextAlign', 'TextOutW'
     ],
     'SHELL32.DLL': [
         'ShellExecuteW', 'SHGetFolderPathW'

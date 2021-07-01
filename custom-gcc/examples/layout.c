@@ -6,11 +6,13 @@
 #define WIN32_WCSDUP
 #include "win32.h"
 
+// Enable debug mode
 #define DEBUG
 
-// Types
+// Color
 typedef uint32_t Color;
 
+// Rect
 typedef struct Rect {
     int32_t x;
     int32_t y;
@@ -18,18 +20,13 @@ typedef struct Rect {
     uint32_t height;
 } Rect;
 
-typedef struct Offset {
-    int32_t top;
-    int32_t left;
-    int32_t right;
-    int32_t bottom;
-} Offset;
-
+// Orientation
 typedef enum Orientation {
     ORIENTATION_HORIZONTAL,
     ORIENTATION_VERTICAL
 } Orientation;
 
+// Align
 typedef enum HorizontalAlign {
     HORIZONTAL_ALIGN_LEFT,
     HORIZONTAL_ALIGN_CENTER,
@@ -41,6 +38,44 @@ typedef enum VerticalAlign {
     VERTICAL_ALIGN_CENTER,
     VERTICAL_ALIGN_BOTTOM
 } VerticalAlign;
+
+// Unit
+typedef enum UnitType {
+    UNIT_TYPE_UNDEFINED,
+    UNIT_TYPE_PX,
+    UNIT_TYPE_DP,
+    UNIT_TYPE_SP,
+    UNIT_TYPE_VW,
+    UNIT_TYPE_VH,
+    UNIT_TYPE_WRAP,
+    UNIT_TYPE_PERCENT
+} UnitType;
+
+typedef struct Unit {
+    float value;
+    UnitType type;
+} Unit;
+
+uint32_t global_width;
+uint32_t global_height;
+
+int32_t unit_to_pixels(Unit *unit, uint32_t size) {
+    if (unit->type == UNIT_TYPE_PX) return unit->value;
+    if (unit->type == UNIT_TYPE_DP) return unit->value * 1.25; // Todo: DPI-aware & Get window DPI
+    if (unit->type == UNIT_TYPE_SP) return unit->value * 1.25;
+    if (unit->type == UNIT_TYPE_VW) return unit->value * ((float)global_width / 100);
+    if (unit->type == UNIT_TYPE_VH) return unit->value * ((float)global_height / 100);
+    if (unit->type == UNIT_TYPE_PERCENT) return unit->value * ((float)size / 100);
+    return 0;
+}
+
+// Offset
+typedef struct Offset {
+    Unit top;
+    Unit left;
+    Unit right;
+    Unit bottom;
+} Offset;
 
 // List
 typedef struct List {
@@ -74,32 +109,32 @@ void list_add(List *list, void *item) {
 // Font
 typedef struct Font {
     wchar_t *name;
-    uint32_t size;
+    Unit size;
     uint32_t weight;
 } Font;
 
 Font *global_font;
 
-void font_init(Font *font, wchar_t *name, uint32_t size, uint32_t weight);
+void font_init(Font *font, wchar_t *name, Unit *size, uint32_t weight);
 
-Font *font_new(wchar_t *name, uint32_t size, uint32_t weight) {
+Font *font_new(wchar_t *name, Unit *size, uint32_t weight) {
     Font *font = malloc(sizeof(Font));
     font_init(font, name, size, weight);
     return font;
 }
 
-void font_init(Font *font, wchar_t *name, uint32_t size, uint32_t weight) {
+void font_init(Font *font, wchar_t *name, Unit *size, uint32_t weight) {
     font->name = wcsdup(name);
-    font->size = size;
+    font->size = *size;
     font->weight = weight;
 }
 
 Font *font_copy(Font *font) {
-    return font_new(font->name, font->size, font->weight);
+    return font_new(font->name, &font->size, font->weight);
 }
 
 HFONT font_get_handle(Font *font) {
-    return CreateFontW(font->size, 0, 0, 0, font->weight, FALSE, FALSE, FALSE, ANSI_CHARSET,
+    return CreateFontW(unit_to_pixels(&font->size, 0), 0, 0, 0, font->weight, FALSE, FALSE, FALSE, ANSI_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
 }
 
@@ -109,14 +144,10 @@ void font_free(Font *font) {
 }
 
 // Widget
-#define WIDGET_UNDEFINED -1
-#define WIDGET_WRAP_CONTENT -2
-#define WIDGET_MATCH_PARENT -3
-
 #define WIDGET(ptr) ((Widget *)ptr)
 typedef struct Widget {
-    int32_t width;
-    int32_t height;
+    Unit width;
+    Unit height;
     Color background_color;
     Offset margin;
     Offset padding;
@@ -144,17 +175,27 @@ void widget_draw(Widget *widget, HDC hdc);
 void widget_free(Widget *widget);
 
 void widget_init(Widget *widget) {
-    widget->width = WIDGET_UNDEFINED;
-    widget->height = WIDGET_UNDEFINED;
+    widget->width.type = UNIT_TYPE_UNDEFINED;
+    widget->height.type = UNIT_TYPE_UNDEFINED;
     widget->background_color = 0;
-    widget->margin.top = 0;
-    widget->margin.left = 0;
-    widget->margin.right = 0;
-    widget->margin.bottom = 0;
-    widget->padding.top = 0;
-    widget->padding.left = 0;
-    widget->padding.right = 0;
-    widget->padding.bottom = 0;
+
+    widget->margin.top.value = 0;
+    widget->margin.top.type = UNIT_TYPE_PX;
+    widget->margin.left.value = 0;
+    widget->margin.left.type = UNIT_TYPE_PX;
+    widget->margin.right.value = 0;
+    widget->margin.right.type = UNIT_TYPE_PX;
+    widget->margin.bottom.value = 0;
+    widget->margin.bottom.type = UNIT_TYPE_PX;
+
+    widget->padding.top.value = 0;
+    widget->padding.top.type = UNIT_TYPE_PX;
+    widget->padding.left.value = 0;
+    widget->padding.left.type = UNIT_TYPE_PX;
+    widget->padding.right.value = 0;
+    widget->padding.right.type = UNIT_TYPE_PX;
+    widget->padding.bottom.value = 0;
+    widget->padding.bottom.type = UNIT_TYPE_PX;
 
     widget->measure_function = widget_measure;
     widget->place_function = widget_place;
@@ -162,20 +203,20 @@ void widget_init(Widget *widget) {
     widget->free_function = widget_free;
 }
 
-int32_t widget_get_width(Widget *widget) {
-    return widget->width;
+Unit *widget_get_width(Widget *widget) {
+    return &widget->width;
 }
 
-void widget_set_width(Widget *widget, int32_t width) {
-    widget->width = width;
+void widget_set_width(Widget *widget, Unit *width) {
+    widget->width = *width;
 }
 
-int32_t widget_get_height(Widget *widget) {
-    return widget->height;
+Unit *widget_get_height(Widget *widget) {
+    return &widget->height;
 }
 
-void widget_set_height(Widget *widget, int32_t height) {
-    widget->height = height;
+void widget_set_height(Widget *widget, Unit *height) {
+    widget->height = *height;
 }
 
 Color widget_get_background_color(Widget *widget) {
@@ -190,117 +231,113 @@ Offset *widget_get_margin(Widget *widget) {
     return &widget->margin;
 }
 
-void widget_set_margin(Widget *widget, uint32_t top, uint32_t left, uint32_t right, uint32_t bottom) {
-    widget->margin.top = top;
-    widget->margin.left = left;
-    widget->margin.right = right;
-    widget->margin.bottom = bottom;
+void widget_set_margin(Widget *widget, Unit *top, Unit *left, Unit *right, Unit *bottom) {
+    widget->margin.top = *top;
+    widget->margin.left = *left;
+    widget->margin.right = *right;
+    widget->margin.bottom = *bottom;
 }
 
-uint32_t widget_get_margin_top(Widget *widget) {
-    return widget->margin.top;
+Unit *widget_get_margin_top(Widget *widget) {
+    return &widget->margin.top;
 }
 
-void widget_set_margin_top(Widget *widget, uint32_t top) {
-    widget->margin.top = top;
+void widget_set_margin_top(Widget *widget, Unit *top) {
+    widget->margin.top = *top;
 }
 
-uint32_t widget_get_margin_left(Widget *widget) {
-    return widget->margin.left;
+Unit *widget_get_margin_left(Widget *widget) {
+    return &widget->margin.left;
 }
 
-void widget_set_margin_left(Widget *widget, uint32_t left) {
-    widget->margin.left = left;
+void widget_set_margin_left(Widget *widget, Unit *left) {
+    widget->margin.left = *left;
 }
 
-uint32_t widget_get_margin_right(Widget *widget) {
-    return widget->margin.right;
+Unit *widget_get_margin_right(Widget *widget) {
+    return &widget->margin.right;
 }
 
-void widget_set_margin_right(Widget *widget, uint32_t right) {
-    widget->margin.right = right;
+void widget_set_margin_right(Widget *widget, Unit *right) {
+    widget->margin.right = *right;
 }
 
-uint32_t widget_get_margin_bottom(Widget *widget) {
-    return widget->margin.bottom;
+Unit *widget_get_margin_bottom(Widget *widget) {
+    return &widget->margin.bottom;
 }
 
-void widget_set_margin_bottom(Widget *widget, uint32_t bottom) {
-    widget->margin.bottom = bottom;
+void widget_set_margin_bottom(Widget *widget, Unit *bottom) {
+    widget->margin.bottom = *bottom;
 }
 
 Offset *widget_get_padding(Widget *widget) {
     return &widget->padding;
 }
 
-void widget_set_padding(Widget *widget, uint32_t top, uint32_t left, uint32_t right, uint32_t bottom) {
-    widget->padding.top = top;
-    widget->padding.left = left;
-    widget->padding.right = right;
-    widget->padding.bottom = bottom;
+void widget_set_padding(Widget *widget, Unit *top, Unit *left, Unit *right, Unit *bottom) {
+    widget->padding.top = *top;
+    widget->padding.left = *left;
+    widget->padding.right = *right;
+    widget->padding.bottom = *bottom;
 }
 
-uint32_t widget_get_padding_top(Widget *widget) {
-    return widget->padding.top;
+Unit *widget_get_padding_top(Widget *widget) {
+    return &widget->padding.top;
 }
 
-void widget_set_padding_top(Widget *widget, uint32_t top) {
-    widget->padding.top = top;
+void widget_set_padding_top(Widget *widget, Unit *top) {
+    widget->padding.top = *top;
 }
 
-uint32_t widget_get_padding_left(Widget *widget) {
-    return widget->padding.left;
+Unit *widget_get_padding_left(Widget *widget) {
+    return &widget->padding.left;
 }
 
-void widget_set_padding_left(Widget *widget, uint32_t left) {
-    widget->padding.left = left;
+void widget_set_padding_left(Widget *widget, Unit *left) {
+    widget->padding.left = *left;
 }
 
-uint32_t widget_get_padding_right(Widget *widget) {
-    return widget->padding.right;
+Unit *widget_get_padding_right(Widget *widget) {
+    return &widget->padding.right;
 }
 
-void widget_set_padding_right(Widget *widget, uint32_t right) {
-    widget->padding.right = right;
+void widget_set_padding_right(Widget *widget, Unit *right) {
+    widget->padding.right = *right;
 }
 
-uint32_t widget_get_padding_bottom(Widget *widget) {
-    return widget->padding.bottom;
+Unit *widget_get_padding_bottom(Widget *widget) {
+    return &widget->padding.bottom;
 }
 
-void widget_set_padding_bottom(Widget *widget, uint32_t bottom) {
-    widget->padding.bottom = bottom;
+void widget_set_padding_bottom(Widget *widget, Unit *bottom) {
+    widget->padding.bottom = *bottom;
 }
 
 void widget_measure(Widget *widget, uint32_t parent_width, uint32_t parent_height) {
-    if (widget->width == WIDGET_WRAP_CONTENT) {
+    if (widget->width.type == UNIT_TYPE_WRAP) {
         widget->content_rect.width = 0;
-    } else if (widget->width == WIDGET_MATCH_PARENT) {
-        widget->content_rect.width = parent_width - widget->padding.left - widget->padding.right - widget->margin.left - widget->margin.right;
     } else {
-        widget->content_rect.width = widget->width;
+        widget->content_rect.width = unit_to_pixels(&widget->width, parent_width - unit_to_pixels(&widget->padding.left, 0) - unit_to_pixels(&widget->padding.right, 0) - unit_to_pixels(&widget->margin.left, 0) - unit_to_pixels(&widget->margin.right, 0));
     }
-    widget->padding_rect.width = widget->padding.left + widget->content_rect.width + widget->padding.right;
-    widget->margin_rect.width = widget->margin.left + widget->padding_rect.width + widget->margin.right;
+    widget->padding_rect.width = unit_to_pixels(&widget->padding.left, 0) + widget->content_rect.width + unit_to_pixels(&widget->padding.right, 0);
+    widget->margin_rect.width = unit_to_pixels(&widget->margin.left, 0) + widget->padding_rect.width + unit_to_pixels(&widget->margin.right, 0);
 
-    if (widget->height == WIDGET_WRAP_CONTENT) {
+    if (widget->height.type == UNIT_TYPE_WRAP) {
         widget->content_rect.height = 0;
-    } else if (widget->height == WIDGET_MATCH_PARENT) {
-        widget->content_rect.height = parent_height - widget->padding.top - widget->padding.bottom - widget->margin.top - widget->margin.bottom;
     } else {
-        widget->content_rect.height = widget->height;
+        widget->content_rect.height = unit_to_pixels(&widget->height, parent_height - unit_to_pixels(&widget->padding.top, 0) - unit_to_pixels(&widget->padding.bottom, 0) - unit_to_pixels(&widget->margin.top, 0) - unit_to_pixels(&widget->margin.bottom, 0));
     }
-    widget->padding_rect.height = widget->padding.top + widget->content_rect.height + widget->padding.bottom;
-    widget->margin_rect.height = widget->margin.top + widget->padding_rect.height + widget->margin.bottom;
+    widget->padding_rect.height = unit_to_pixels(&widget->padding.top, 0) + widget->content_rect.height + unit_to_pixels(&widget->padding.bottom, 0);
+    widget->margin_rect.height = unit_to_pixels(&widget->margin.top, 0) + widget->padding_rect.height + unit_to_pixels(&widget->margin.bottom, 0);
 }
 
 void widget_place(Widget *widget, int32_t x, int32_t y) {
     widget->margin_rect.x = x;
     widget->margin_rect.y = y;
-    widget->padding_rect.x = widget->margin_rect.x + widget->margin.left;
-    widget->padding_rect.y = widget->margin_rect.y + widget->margin.top;
-    widget->content_rect.x = widget->padding_rect.x + widget->padding.left;
-    widget->content_rect.y = widget->padding_rect.y + widget->padding.top;
+    widget->padding_rect.x = widget->margin_rect.x + unit_to_pixels(&widget->margin.left, 0);
+    widget->padding_rect.y = widget->margin_rect.y + unit_to_pixels(&widget->margin.top, 0);
+    widget->content_rect.x = widget->padding_rect.x + unit_to_pixels(&widget->padding.left, 0);
+    widget->content_rect.y = widget->padding_rect.y + unit_to_pixels(&widget->padding.top, 0);
 
 }
 
@@ -418,20 +455,22 @@ void box_measure(Widget *widget, uint32_t parent_width, uint32_t parent_height) 
     uint32_t max_height = 0;
     for (uint32_t i = 0; i < container->widgets.size; i++) {
         Widget *other_widget = container->widgets.items[i];
-        if (other_widget->width == WIDGET_UNDEFINED) {
+        if (other_widget->width.type == UNIT_TYPE_UNDEFINED) {
             if (box->orientation == ORIENTATION_HORIZONTAL) {
-                other_widget->width = WIDGET_WRAP_CONTENT;
+                other_widget->width.type = UNIT_TYPE_WRAP;
             }
             if (box->orientation == ORIENTATION_VERTICAL) {
-                other_widget->width = WIDGET_MATCH_PARENT;
+                other_widget->width.value = 100;
+                other_widget->width.type = UNIT_TYPE_PERCENT;
             }
         }
-        if (other_widget->height == WIDGET_UNDEFINED) {
+        if (other_widget->height.type == UNIT_TYPE_UNDEFINED) {
             if (box->orientation == ORIENTATION_HORIZONTAL) {
-                other_widget->height = WIDGET_MATCH_PARENT;
+                other_widget->height.value = 100;
+                other_widget->height.type = UNIT_TYPE_PERCENT;
             }
             if (box->orientation == ORIENTATION_VERTICAL) {
-                other_widget->height = WIDGET_WRAP_CONTENT;
+                other_widget->height.type = UNIT_TYPE_WRAP;
             }
         }
 
@@ -442,35 +481,31 @@ void box_measure(Widget *widget, uint32_t parent_width, uint32_t parent_height) 
         max_height = MAX(max_height, other_widget->margin_rect.height);
     }
 
-    if (widget->width == WIDGET_WRAP_CONTENT) {
+    if (widget->width.type == UNIT_TYPE_WRAP) {
         if (box->orientation == ORIENTATION_HORIZONTAL) {
             widget->content_rect.width = sum_width;
         }
         if (box->orientation == ORIENTATION_VERTICAL) {
             widget->content_rect.width = max_width;
         }
-    } else if (widget->width == WIDGET_MATCH_PARENT) {
-        widget->content_rect.width = parent_width - widget->padding.left - widget->padding.right - widget->margin.left - widget->margin.right;
     } else {
-        widget->content_rect.width = widget->width;
+        widget->content_rect.width = unit_to_pixels(&widget->width, parent_width - unit_to_pixels(&widget->padding.left, 0) - unit_to_pixels(&widget->padding.right, 0) - unit_to_pixels(&widget->margin.left, 0) - unit_to_pixels(&widget->margin.right, 0));
     }
-    widget->padding_rect.width = widget->padding.left + widget->content_rect.width + widget->padding.right;
-    widget->margin_rect.width = widget->margin.left + widget->padding_rect.width + widget->margin.right;
+    widget->padding_rect.width = unit_to_pixels(&widget->padding.left, 0) + widget->content_rect.width + unit_to_pixels(&widget->padding.right, 0);
+    widget->margin_rect.width = unit_to_pixels(&widget->margin.left, 0) + widget->padding_rect.width + unit_to_pixels(&widget->margin.right, 0);
 
-    if (widget->height == WIDGET_WRAP_CONTENT) {
+    if (widget->height.type == UNIT_TYPE_WRAP) {
         if (box->orientation == ORIENTATION_HORIZONTAL) {
             widget->content_rect.height = max_height;
         }
         if (box->orientation == ORIENTATION_VERTICAL) {
             widget->content_rect.height = sum_height;
         }
-    } else if (widget->height == WIDGET_MATCH_PARENT) {
-        widget->content_rect.height = parent_height - widget->padding.top - widget->padding.bottom - widget->margin.top - widget->margin.bottom;
     } else {
-        widget->content_rect.height = widget->height;
+        widget->content_rect.height = unit_to_pixels(&widget->height, parent_height - unit_to_pixels(&widget->padding.top, 0) - unit_to_pixels(&widget->padding.bottom, 0) - unit_to_pixels(&widget->margin.top, 0) - unit_to_pixels(&widget->margin.bottom, 0));
     }
-    widget->padding_rect.height = widget->padding.top + widget->content_rect.height + widget->padding.bottom;
-    widget->margin_rect.height = widget->margin.top + widget->padding_rect.height + widget->margin.bottom;
+    widget->padding_rect.height = unit_to_pixels(&widget->padding.top, 0) + widget->content_rect.height + unit_to_pixels(&widget->padding.bottom, 0);
+    widget->margin_rect.height = unit_to_pixels(&widget->margin.top, 0) + widget->padding_rect.height + unit_to_pixels(&widget->margin.bottom, 0);
 }
 
 void box_place(Widget *widget, int32_t x, int32_t y) {
@@ -479,13 +514,13 @@ void box_place(Widget *widget, int32_t x, int32_t y) {
 
     widget->margin_rect.x = x;
     widget->margin_rect.y = y;
-    x += widget->margin.left;
+    x += unit_to_pixels(&widget->margin.left, 0);
     widget->padding_rect.x = x;
-    y += widget->margin.top;
+    y += unit_to_pixels(&widget->margin.top, 0);
     widget->padding_rect.y = y;
-    x += widget->padding.left;
+    x += unit_to_pixels(&widget->padding.left, 0);
     widget->content_rect.x = x;
-    y += widget->padding.top;
+    y += unit_to_pixels(&widget->padding.top, 0);
     widget->content_rect.y = y;
 
     for (uint32_t i = 0; i < container->widgets.size; i++) {
@@ -510,7 +545,13 @@ void box_draw(Widget *widget, HDC hdc) {
 
     for (uint32_t i = 0; i < container->widgets.size; i++) {
         Widget *other_widget = container->widgets.items[i];
+        HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
+            widget->padding_rect.x + widget->padding_rect.width,
+            widget->padding_rect.y + widget->padding_rect.height);
+        SelectClipRgn(hdc, &padding_region);
+        DeleteObject(padding_region);
         other_widget->draw_function(other_widget, hdc);
+        SelectClipRgn(hdc, NULL);
     }
 }
 
@@ -547,7 +588,7 @@ void label_init(Label *label, wchar_t *text) {
 
     label->text = wcsdup(text);
     if (global_font == NULL) {
-        global_font = font_new(L"Tamoha", 20, 400);
+        global_font = font_new(L"Tamoha", &(Unit){ 16, UNIT_TYPE_DP }, 400);
     }
     label->font = global_font;
     label->text_color = 0x00111111;
@@ -602,7 +643,7 @@ void label_set_horizontal_align(Label *label, HorizontalAlign horizontal_align) 
 void label_measure(Widget *widget, uint32_t parent_width, uint32_t parent_height) {
     Label *label = LABEL(widget);
 
-    if (widget->width == WIDGET_WRAP_CONTENT) {
+    if (widget->width.type == UNIT_TYPE_WRAP) {
         HDC hdc = GetDC(NULL);
         HFONT font = font_get_handle(label->font);
         SelectObject(hdc, font);
@@ -610,17 +651,15 @@ void label_measure(Widget *widget, uint32_t parent_width, uint32_t parent_height
         DrawTextW(hdc, label->text, -1, &rect, DT_CALCRECT);
         DeleteObject(font);
         widget->content_rect.width = rect.right - rect.left;
-    } else if (widget->width == WIDGET_MATCH_PARENT) {
-        widget->content_rect.width = parent_width - widget->padding.left - widget->padding.right - widget->margin.left - widget->margin.right;
     } else {
-        widget->content_rect.width = widget->width;
+        widget->content_rect.width = unit_to_pixels(&widget->width, parent_width - unit_to_pixels(&widget->padding.left, 0) - unit_to_pixels(&widget->padding.right, 0) - unit_to_pixels(&widget->margin.left, 0) - unit_to_pixels(&widget->margin.right, 0));
     }
-    widget->padding_rect.width = widget->padding.left + widget->content_rect.width + widget->padding.right;
-    widget->margin_rect.width = widget->margin.left + widget->padding_rect.width + widget->margin.right;
+    widget->padding_rect.width = unit_to_pixels(&widget->padding.left, 0) + widget->content_rect.width + unit_to_pixels(&widget->padding.right, 0);
+    widget->margin_rect.width = unit_to_pixels(&widget->margin.left, 0) + widget->padding_rect.width + unit_to_pixels(&widget->margin.right, 0);
 
-    if (widget->height == WIDGET_WRAP_CONTENT) {
+    if (widget->height.type == UNIT_TYPE_WRAP) {
         if (label->single_line) {
-            widget->content_rect.height = label->font->size;
+            widget->content_rect.height = unit_to_pixels(&label->font->size, 0);
         } else {
             HDC hdc = GetDC(NULL);
             HFONT font = font_get_handle(label->font);
@@ -629,13 +668,11 @@ void label_measure(Widget *widget, uint32_t parent_width, uint32_t parent_height
             widget->content_rect.height = DrawTextW(hdc, label->text, -1, &rect, DT_CALCRECT | DT_WORDBREAK);
             DeleteObject(font);
         }
-    } else if (widget->height == WIDGET_MATCH_PARENT) {
-        widget->content_rect.height = parent_height - widget->padding.top - widget->padding.bottom - widget->margin.top - widget->margin.bottom;
     } else {
-        widget->content_rect.height = widget->height;
+        widget->content_rect.height = unit_to_pixels(&widget->height, parent_height - unit_to_pixels(&widget->padding.top, 0) - unit_to_pixels(&widget->padding.bottom, 0) - unit_to_pixels(&widget->margin.top, 0) - unit_to_pixels(&widget->margin.bottom, 0));
     }
-    widget->padding_rect.height = widget->padding.top + widget->content_rect.height + widget->padding.bottom;
-    widget->margin_rect.height = widget->margin.top + widget->padding_rect.height + widget->margin.bottom;
+    widget->padding_rect.height = unit_to_pixels(&widget->padding.top, 0) + widget->content_rect.height + unit_to_pixels(&widget->padding.bottom, 0);
+    widget->margin_rect.height = unit_to_pixels(&widget->margin.top, 0) + widget->padding_rect.height + unit_to_pixels(&widget->margin.bottom, 0);
 }
 
 void label_draw(Widget *widget, HDC hdc) {
@@ -760,8 +797,6 @@ wchar_t *window_class_name = L"window-test";
 #define WINDOW_HEIGHT 720
 
 typedef struct {
-    uint32_t width;
-    uint32_t height;
     Widget *root;
 } WindowData;
 
@@ -769,13 +804,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     if (msg == WM_CREATE) {
-        global_hwnd = hwnd;
-
         // Create window data
         window = malloc(sizeof(WindowData));
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-        window->width = WINDOW_WIDTH;
-        window->height = WINDOW_HEIGHT;
+        global_hwnd = hwnd;
+        global_width = WINDOW_WIDTH;
+        global_height = WINDOW_HEIGHT;
 
         // Generate random seed by time
         SYSTEMTIME time;
@@ -784,12 +818,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Create widgets
         Box *root = box_new(ORIENTATION_VERTICAL);
-        widget_set_width(WIDGET(root), WIDGET_MATCH_PARENT);
-        widget_set_height(WIDGET(root), WIDGET_MATCH_PARENT);
+        widget_set_width(WIDGET(root), &(Unit){ 100, UNIT_TYPE_PERCENT });
+        widget_set_height(WIDGET(root), &(Unit){ 100, UNIT_TYPE_PERCENT });
         widget_set_background_color(WIDGET(root), rand() & 0x007f7f7f);
+        Unit padding = { 16, UNIT_TYPE_DP };
+        widget_set_padding(WIDGET(root), &padding, &padding, &padding, &padding);
         window->root = WIDGET(root);
 
-        Font *font = font_new(L"Georgia", 24, 400);
+        Font *font = font_new(L"Georgia", &(Unit){ 2, UNIT_TYPE_VW }, 400);
 
         Label *header = label_new(L"Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!");
         label_set_font(header, font);
@@ -797,33 +833,36 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         widget_set_background_color(WIDGET(header), 0x00ff00ff);
         label_set_horizontal_align(header, HORIZONTAL_ALIGN_CENTER);
 
-        widget_set_padding(WIDGET(header), 16, 16, 16, 16);
-        widget_set_margin(WIDGET(header), 0, 0, 0, 16);
+        widget_set_padding(WIDGET(header), &padding, &padding, &padding, &padding);
+        Unit zero = { 0, UNIT_TYPE_PX };
+        widget_set_margin(WIDGET(header), &zero, &zero, &zero, &padding);
         container_add(CONTAINER(root), WIDGET(header));
 
-        for (int32_t y = 1; y <= 10; y++) {
+        for (int32_t y = 1; y <= 4; y++) {
             Box *row = box_new(ORIENTATION_HORIZONTAL);
-            widget_set_width(WIDGET(row), WIDGET_WRAP_CONTENT);
+            widget_set_width(WIDGET(row), &(Unit){ 0, UNIT_TYPE_WRAP });
             widget_set_background_color(WIDGET(row), 0x0000ffff);
-            widget_set_margin(WIDGET(row), 0, 16, 16, 16);
+            widget_set_margin(WIDGET(row), &zero, &padding, &padding, &padding);
             container_add(CONTAINER(root), WIDGET(row));
 
             for (int32_t x = 1; x <= 10; x++) {
                 wchar_t string_buffer[64];
                 wsprintfW(string_buffer, L"Item %dx%d", x, y);
                 Label *item = x % 2 == y % 2 ? label_new(string_buffer) : LABEL(button_new(string_buffer));
-                widget_set_width(WIDGET(item), 125);
-                widget_set_height(WIDGET(item), WIDGET_WRAP_CONTENT);
+                widget_set_width(WIDGET(item), &(Unit){ 96, UNIT_TYPE_DP });
+                widget_set_height(WIDGET(item), &(Unit){ 0, UNIT_TYPE_WRAP });
                 label_set_horizontal_align(item, HORIZONTAL_ALIGN_CENTER);
                 label_set_single_line(item, true);
-                widget_set_padding(WIDGET(item), 8, 0, 0, 8);
+                Unit item_padding = { 8, UNIT_TYPE_DP };
+                widget_set_padding(WIDGET(item), &item_padding, &zero, &zero, &item_padding);
                 container_add(CONTAINER(row), WIDGET(item));
             }
         }
 
         Button *button = button_new(L"Click me to!");
-        widget_set_padding(WIDGET(button), 16, 16, 16, 16);
+        widget_set_padding(WIDGET(button), &padding, &padding, &padding, &padding);
         label_set_font(LABEL(button), font);
+        widget_set_margin(WIDGET(button), &zero, &zero, &zero, &padding);
         container_add(CONTAINER(root), WIDGET(button));
 
         Label *footer = label_new(L"Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!");
@@ -838,19 +877,19 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Resize window to right size and center it
         RECT window_rect;
         GetClientRect(hwnd, &window_rect);
-        uint32_t new_width = window->width * 2 - window_rect.right;
-        uint32_t new_height = window->height * 2 - window_rect.bottom;
+        uint32_t new_width = global_width * 2 - window_rect.right;
+        uint32_t new_height = global_height * 2 - window_rect.bottom;
         SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - new_width) / 2, (GetSystemMetrics(SM_CYSCREEN) - new_height) / 2, new_width, new_height, SWP_NOZORDER);
         return 0;
     }
 
     if (msg == WM_SIZE) {
         // Save new window size
-        window->width = LOWORD(lParam);
-        window->height = HIWORD(lParam);
+        global_width = LOWORD(lParam);
+        global_height = HIWORD(lParam);
 
         // Resize widgets
-        window->root->measure_function(window->root, window->width, window->height);
+        window->root->measure_function(window->root, global_width, global_height);
         window->root->place_function(window->root, 0, 0);
         return 0;
     }
@@ -874,14 +913,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Create back buffer
         HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window->width, window->height);
+        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, global_width, global_height);
         SelectObject(hdc_buffer, bitmap_buffer);
 
         // Draw widgets
         window->root->draw_function(window->root, hdc_buffer);
 
         // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, window->width, window->height, hdc_buffer, 0, 0, SRCCOPY);
+        BitBlt(hdc, 0, 0, global_width, global_height, hdc_buffer, 0, 0, SRCCOPY);
         DeleteObject(bitmap_buffer);
         DeleteDC(hdc_buffer);
 

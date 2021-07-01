@@ -17,6 +17,7 @@
 #define HBITMAP HANDLE
 #define HFONT HANDLE
 #define HGDIOBJ HANDLE
+#define HRGN HANDLE
 #define HRSRC HANDLE
 #define HGLOBAL HANDLE
 #define WPARAM void *
@@ -315,6 +316,8 @@ extern HDC __stdcall CreateCompatibleDC(HDC hdc);
 extern HBITMAP __stdcall CreateCompatibleBitmap(HDC hdc, int32_t cx, int32_t cy);
 extern HBRUSH __stdcall CreateSolidBrush(uint32_t color);
 extern HGDIOBJ __stdcall SelectObject(HDC hdc, HGDIOBJ h);
+extern HRGN __stdcall CreateRectRgn(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+extern int32_t __stdcall SelectClipRgn(HDC hdc, HRGN hrgn);
 extern bool __stdcall DeleteObject(HGDIOBJ ho);
 extern bool __stdcall DeleteDC(HDC hdc);
 extern bool __stdcall BitBlt(HDC hdc, int32_t x, int32_t y, int32_t cx, int32_t cy,
