@@ -1,13 +1,17 @@
+#ifndef LAYOUT_H
+#define LAYOUT_H
+
 #define WIN32_MALLOC
 #define WIN32_REALLOC
 #define WIN32_FREE
-#define WIN32_RAND
 #define WIN32_WCSLEN
 #define WIN32_WCSDUP
 #include "win32.h"
 
-// Enable debug mode
-#define DEBUG
+// Globals
+HWND global_hwnd;
+int32_t global_width;
+int32_t global_height;
 
 // Color
 typedef uint32_t Color;
@@ -21,43 +25,34 @@ typedef struct Rect {
 } Rect;
 
 // Orientation
-typedef enum Orientation {
-    ORIENTATION_HORIZONTAL,
-    ORIENTATION_VERTICAL
-} Orientation;
+#define ORIENTATION_HORIZONTAL 0
+#define ORIENTATION_VERTICAL 1
+typedef uint32_t Orientation;
 
 // Align
-typedef enum HorizontalAlign {
-    HORIZONTAL_ALIGN_LEFT,
-    HORIZONTAL_ALIGN_CENTER,
-    HORIZONTAL_ALIGN_RIGHT
-} HorizontalAlign;
-
-typedef enum VerticalAlign {
-    VERTICAL_ALIGN_TOP,
-    VERTICAL_ALIGN_CENTER,
-    VERTICAL_ALIGN_BOTTOM
-} VerticalAlign;
+#define ALIGN_HORIZONTAL_LEFT (1 << 0)
+#define ALIGN_HORIZONTAL_CENTER (1 << 1)
+#define ALIGN_HORIZONTAL_RIGHT (1 << 2)
+#define ALIGN_VERTICAL_TOP (1 << 3)
+#define ALIGN_VERTICAL_CENTER (1 << 4)
+#define ALIGN_VERTICAL_BOTTOM (1 << 5)
+typedef uint32_t Align;
 
 // Unit
-typedef enum UnitType {
-    UNIT_TYPE_UNDEFINED,
-    UNIT_TYPE_PX,
-    UNIT_TYPE_DP,
-    UNIT_TYPE_SP,
-    UNIT_TYPE_VW,
-    UNIT_TYPE_VH,
-    UNIT_TYPE_WRAP,
-    UNIT_TYPE_PERCENT
-} UnitType;
+#define UNIT_TYPE_UNDEFINED 0
+#define UNIT_TYPE_PX 1
+#define UNIT_TYPE_DP 2
+#define UNIT_TYPE_SP 3
+#define UNIT_TYPE_VW 4
+#define UNIT_TYPE_VH 5
+#define UNIT_TYPE_PERCENT 6
+#define UNIT_TYPE_WRAP 7
+typedef uint32_t UnitType;
 
 typedef struct Unit {
     float value;
     UnitType type;
 } Unit;
-
-int32_t global_width;
-int32_t global_height;
 
 int32_t unit_to_pixels(Unit *unit, int32_t size) {
     if (unit->type == UNIT_TYPE_PX) return unit->value;
@@ -72,9 +67,9 @@ int32_t unit_to_pixels(Unit *unit, int32_t size) {
 // Offset
 typedef struct Offset {
     Unit top;
-    Unit left;
     Unit right;
     Unit bottom;
+    Unit left;
 } Offset;
 
 // List
@@ -106,45 +101,22 @@ void list_add(List *list, void *item) {
     list->items[list->size++] = item;
 }
 
-// Font
-typedef struct Font {
-    wchar_t *name;
-    Unit size;
-    uint32_t weight;
-} Font;
-
-Font *global_font;
-
-void font_init(Font *font, wchar_t *name, Unit *size, uint32_t weight);
-
-Font *font_new(wchar_t *name, Unit *size, uint32_t weight) {
-    Font *font = malloc(sizeof(Font));
-    font_init(font, name, size, weight);
-    return font;
-}
-
-void font_init(Font *font, wchar_t *name, Unit *size, uint32_t weight) {
-    font->name = wcsdup(name);
-    font->size = *size;
-    font->weight = weight;
-}
-
-Font *font_copy(Font *font) {
-    return font_new(font->name, &font->size, font->weight);
-}
-
-HFONT font_get_handle(Font *font) {
-    return CreateFontW(unit_to_pixels(&font->size, 0), 0, 0, 0, font->weight, FALSE, FALSE, FALSE, ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
-}
-
-void font_free(Font *font) {
-    free(font->name);
-    free(font);
-}
-
 // Widget
 #define WIDGET(ptr) ((Widget *)ptr)
+#define TYPE_WIDGET 1
+#define ATTRIBUTE_WIDTH 1
+#define ATTRIBUTE_HEIGHT ATTRIBUTE_WIDTH + 1
+#define ATTRIBUTE_BACKGROUND_COLOR ATTRIBUTE_HEIGHT + 1
+#define ATTRIBUTE_MARGIN ATTRIBUTE_BACKGROUND_COLOR + 1
+#define ATTRIBUTE_MARGIN_TOP ATTRIBUTE_MARGIN + 1
+#define ATTRIBUTE_MARGIN_LEFT ATTRIBUTE_MARGIN_TOP + 1
+#define ATTRIBUTE_MARGIN_RIGHT ATTRIBUTE_MARGIN_LEFT + 1
+#define ATTRIBUTE_MARGIN_BOTTOM ATTRIBUTE_MARGIN_RIGHT + 1
+#define ATTRIBUTE_PADDING ATTRIBUTE_MARGIN_BOTTOM + 1
+#define ATTRIBUTE_PADDING_TOP ATTRIBUTE_PADDING + 1
+#define ATTRIBUTE_PADDING_LEFT ATTRIBUTE_PADDING_TOP + 1
+#define ATTRIBUTE_PADDING_RIGHT ATTRIBUTE_PADDING_LEFT + 1
+#define ATTRIBUTE_PADDING_BOTTOM ATTRIBUTE_PADDING_RIGHT + 1
 typedef struct Widget {
     Unit width;
     Unit height;
@@ -184,21 +156,21 @@ void widget_init(Widget *widget) {
 
     widget->margin.top.value = 0;
     widget->margin.top.type = UNIT_TYPE_PX;
-    widget->margin.left.value = 0;
-    widget->margin.left.type = UNIT_TYPE_PX;
     widget->margin.right.value = 0;
     widget->margin.right.type = UNIT_TYPE_PX;
     widget->margin.bottom.value = 0;
     widget->margin.bottom.type = UNIT_TYPE_PX;
+    widget->margin.left.value = 0;
+    widget->margin.left.type = UNIT_TYPE_PX;
 
     widget->padding.top.value = 0;
     widget->padding.top.type = UNIT_TYPE_PX;
-    widget->padding.left.value = 0;
-    widget->padding.left.type = UNIT_TYPE_PX;
     widget->padding.right.value = 0;
     widget->padding.right.type = UNIT_TYPE_PX;
     widget->padding.bottom.value = 0;
     widget->padding.bottom.type = UNIT_TYPE_PX;
+    widget->padding.left.value = 0;
+    widget->padding.left.type = UNIT_TYPE_PX;
 
     widget->measure_function = widget_measure;
     widget->place_function = widget_place;
@@ -234,11 +206,11 @@ Offset *widget_get_margin(Widget *widget) {
     return &widget->margin;
 }
 
-void widget_set_margin(Widget *widget, Unit *top, Unit *left, Unit *right, Unit *bottom) {
+void widget_set_margin(Widget *widget, Unit *top, Unit *right, Unit *bottom, Unit *left) {
     widget->margin.top = *top;
-    widget->margin.left = *left;
     widget->margin.right = *right;
     widget->margin.bottom = *bottom;
+    widget->margin.left = *left;
 }
 
 Unit *widget_get_margin_top(Widget *widget) {
@@ -247,14 +219,6 @@ Unit *widget_get_margin_top(Widget *widget) {
 
 void widget_set_margin_top(Widget *widget, Unit *top) {
     widget->margin.top = *top;
-}
-
-Unit *widget_get_margin_left(Widget *widget) {
-    return &widget->margin.left;
-}
-
-void widget_set_margin_left(Widget *widget, Unit *left) {
-    widget->margin.left = *left;
 }
 
 Unit *widget_get_margin_right(Widget *widget) {
@@ -273,15 +237,23 @@ void widget_set_margin_bottom(Widget *widget, Unit *bottom) {
     widget->margin.bottom = *bottom;
 }
 
+Unit *widget_get_margin_left(Widget *widget) {
+    return &widget->margin.left;
+}
+
+void widget_set_margin_left(Widget *widget, Unit *left) {
+    widget->margin.left = *left;
+}
+
 Offset *widget_get_padding(Widget *widget) {
     return &widget->padding;
 }
 
-void widget_set_padding(Widget *widget, Unit *top, Unit *left, Unit *right, Unit *bottom) {
+void widget_set_padding(Widget *widget, Unit *top, Unit *right, Unit *bottom, Unit *left) {
     widget->padding.top = *top;
-    widget->padding.left = *left;
     widget->padding.right = *right;
     widget->padding.bottom = *bottom;
+    widget->padding.left = *left;
 }
 
 Unit *widget_get_padding_top(Widget *widget) {
@@ -290,14 +262,6 @@ Unit *widget_get_padding_top(Widget *widget) {
 
 void widget_set_padding_top(Widget *widget, Unit *top) {
     widget->padding.top = *top;
-}
-
-Unit *widget_get_padding_left(Widget *widget) {
-    return &widget->padding.left;
-}
-
-void widget_set_padding_left(Widget *widget, Unit *left) {
-    widget->padding.left = *left;
 }
 
 Unit *widget_get_padding_right(Widget *widget) {
@@ -314,6 +278,14 @@ Unit *widget_get_padding_bottom(Widget *widget) {
 
 void widget_set_padding_bottom(Widget *widget, Unit *bottom) {
     widget->padding.bottom = *bottom;
+}
+
+Unit *widget_get_padding_left(Widget *widget) {
+    return &widget->padding.left;
+}
+
+void widget_set_padding_left(Widget *widget, Unit *left) {
+    widget->padding.left = *left;
 }
 
 void widget_measure(Widget *widget, int32_t parent_width, int32_t parent_height) {
@@ -360,7 +332,7 @@ void widget_draw(Widget *widget, HDC hdc) {
         DeleteObject(brush);
     }
 
-    #ifdef DEBUG
+    #ifdef LAYOUT_DEBUG
         HBRUSH brush = CreateSolidBrush(0x000000ff);
         RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
             widget->content_rect.x + widget->content_rect.width,
@@ -390,6 +362,8 @@ void widget_free(Widget *widget) {
 #define CONTAINER_WIDGETS_INIT_CAPACITY 4
 
 #define CONTAINER(ptr) ((Container *)ptr)
+#define TYPE_CONTAINER TYPE_WIDGET + 1
+#define ATTRIBUTE_WIDGETS ATTRIBUTE_PADDING_BOTTOM + 1
 typedef struct Container {
     Widget super;
     List widgets;
@@ -416,32 +390,40 @@ void container_free(Widget *widget) {
 
 // Box
 #define BOX(ptr) ((Box *)ptr)
+#define TYPE_BOX TYPE_CONTAINER + 1
+#define ATTRIBUTE_ORIENTATION ATTRIBUTE_WIDGETS + 1
+#define ATTRIBUTE_ALIGN ATTRIBUTE_ORIENTATION + 1
 typedef struct Box {
     Container super;
     Orientation orientation;
-    HorizontalAlign horizontal_align;
-    // VerticalAlign vertical_align;
+    Align align;
 } Box;
 
-void box_init(Box *box, Orientation orientation);
+void box_init(Box *box);
 void box_measure(Widget *widget, int32_t parent_width, int32_t parent_height);
 void box_place(Widget *widget, int32_t x, int32_t y);
 void box_draw(Widget *widget, HDC hdc);
 void box_free(Widget *widget);
 
-Box *box_new(Orientation orientation) {
+Box *box_new(void) {
     Box *box = malloc(sizeof(Box));
-    box_init(box, orientation);
+    box_init(box);
     return box;
 }
 
-void box_init(Box *box, Orientation orientation) {
+Box *box_new_with_orientation(Orientation orientation) {
+    Box *box = box_new();
+    box->orientation = orientation;
+    return box;
+}
+
+void box_init(Box *box) {
     Container *container = &box->super;
     Widget *widget = &container->super;
     container_init(container);
 
-    box->orientation = orientation;
-    box->horizontal_align = HORIZONTAL_ALIGN_LEFT;
+    box->orientation = ORIENTATION_HORIZONTAL;
+    box->align = ALIGN_HORIZONTAL_LEFT || ALIGN_VERTICAL_TOP;
 
     widget->measure_function = box_measure;
     widget->place_function = box_place;
@@ -457,12 +439,12 @@ void box_set_orientation(Box *box, Orientation orientation) {
     box->orientation = orientation;
 }
 
-HorizontalAlign box_get_horizontal_align(Box *box) {
-    return box->horizontal_align;
+Align box_get_align(Box *box) {
+    return box->align;
 }
 
-void box_set_horizontal_align(Box *box, HorizontalAlign horizontal_align) {
-    box->horizontal_align = horizontal_align;
+void box_set_align(Box *box, Align align) {
+    box->align = align;
 }
 
 void box_measure(Widget *widget, int32_t parent_width, int32_t parent_height) {
@@ -554,18 +536,23 @@ void box_place(Widget *widget, int32_t x, int32_t y) {
     widget->content_rect.y = y;
 
     int32_t sum_width = 0;
+    int32_t sum_height = 0;
     for (size_t i = 0; i < container->widgets.size; i++) {
         Widget *other_widget = container->widgets.items[i];
         sum_width += other_widget->margin_rect.width;
+        sum_height += other_widget->margin_rect.height;
     }
-    if (box->horizontal_align == HORIZONTAL_ALIGN_LEFT) {
-        x = widget->content_rect.x;
-    }
-    if (box->horizontal_align == HORIZONTAL_ALIGN_CENTER) {
+    if ((box->align & ALIGN_HORIZONTAL_CENTER) != 0) {
         x = MAX(widget->content_rect.x + (widget->content_rect.width - sum_width) / 2, widget->content_rect.x);
     }
-    if (box->horizontal_align == HORIZONTAL_ALIGN_RIGHT) {
+    if ((box->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
         x = MAX(widget->content_rect.x + widget->content_rect.width - sum_width, widget->content_rect.x);
+    }
+    if ((box->align & ALIGN_VERTICAL_CENTER) != 0) {
+        y = MAX(widget->content_rect.y + (widget->content_rect.height - sum_height) / 2, widget->content_rect.y);
+    }
+    if ((box->align & ALIGN_VERTICAL_BOTTOM) != 0) {
+        y = MAX(widget->content_rect.y + widget->content_rect.height - sum_height, widget->content_rect.y);
     }
 
     for (size_t i = 0; i < container->widgets.size; i++) {
@@ -608,43 +595,68 @@ void box_free(Widget *widget) {
 
 // Label
 #define LABEL(ptr) ((Label *)ptr)
+#define TYPE_LABEL TYPE_BOX + 1
+#define ATTRIBUTE_TEXT ATTRIBUTE_ALIGN + 1
+#define ATTRIBUTE_FONT_NAME ATTRIBUTE_TEXT + 1
+#define ATTRIBUTE_FONT_WEIGHT ATTRIBUTE_FONT_NAME + 1
+#define ATTRIBUTE_FONT_ITALIC ATTRIBUTE_FONT_WEIGHT + 1
+#define ATTRIBUTE_FONT_UNDERLINE ATTRIBUTE_FONT_ITALIC + 1
+#define ATTRIBUTE_FONT_LINE_THROUGH ATTRIBUTE_FONT_UNDERLINE + 1
+#define ATTRIBUTE_TEXT_SIZE ATTRIBUTE_FONT_LINE_THROUGH + 1
+#define ATTRIBUTE_TEXT_COLOR ATTRIBUTE_TEXT_SIZE + 1
+#define ATTRIBUTE_SINGLE_LINE ATTRIBUTE_TEXT_COLOR + 1
+#define FONT_WEIGHT_NORMAL 400
+#define FONT_WEIGHT_BOLD 700
 typedef struct Label {
     Widget super;
+
     wchar_t *text;
     bool text_changed;
-    Font *font;
+
+    wchar_t *font_name;
+    uint32_t font_weight;
+    bool font_italic;
+    bool font_underline;
+    bool font_line_through;
+    Unit text_size;
     bool font_changed;
+
     Color text_color;
     bool single_line;
-    HorizontalAlign horizontal_align;
-    // VerticalAlign vertical_align;
+    Align align;
 } Label;
 
-void label_init(Label *label, wchar_t *text);
+void label_init(Label *label);
 void label_measure(Widget *widget, int32_t parent_width, int32_t parent_height);
 void label_draw(Widget *widget, HDC hdc);
 void label_free(Widget *widget);
 
-Label *label_new(wchar_t *text) {
+Label *label_new(void) {
     Label *label = malloc(sizeof(Label));
-    label_init(label, text);
+    label_init(label);
     return label;
 }
 
-void label_init(Label *label, wchar_t *text) {
+Label *label_new_with_text(wchar_t *text) {
+    Label *label = label_new();
+    label->text = wcsdup(text);
+    label->text_changed = true;
+    return label;
+}
+
+void label_init(Label *label) {
     Widget *widget = WIDGET(label);
     widget_init(widget);
 
-    label->text = wcsdup(text);
-    label->text_changed = true;
-    if (global_font == NULL) {
-        global_font = font_new(L"Tamoha", &(Unit){ 16, UNIT_TYPE_DP }, 400);
-    }
-    label->font = global_font;
+    label->font_name = wcsdup(L"Tamoha");
+    label->font_weight = FONT_WEIGHT_NORMAL;
+    label->text_size.value = 16;
+    label->text_size.type = UNIT_TYPE_SP;
     label->font_changed = true;
+
     label->text_color = 0x00111111;
     label->single_line = false;
-    label->horizontal_align = HORIZONTAL_ALIGN_LEFT;
+    label->align = ALIGN_HORIZONTAL_LEFT || ALIGN_VERTICAL_TOP;
 
     widget->measure_function = label_measure;
     widget->draw_function = label_draw;
@@ -660,13 +672,61 @@ void label_set_text(Label *label, wchar_t *text) {
     label->text_changed = true;
 }
 
-Font *label_get_font(Label *label) {
-    return label->font;
+wchar_t *label_get_font_name(Label *label) {
+    return label->font_name;
 }
 
-void label_set_font(Label *label, Font *font) {
-    label->font = font_copy(font);
+void label_set_font_name(Label *label, wchar_t *font_name) {
+    label->font_name = wcsdup(font_name);
     label->font_changed = true;
+}
+
+uint32_t label_get_font_weight(Label *label) {
+    return label->font_weight;
+}
+
+void label_set_font_weight(Label *label, uint32_t font_weight) {
+    label->font_weight = font_weight;
+    label->font_changed = true;
+}
+
+Unit *label_get_text_size(Label *label) {
+    return &label->text_size;
+}
+
+void label_set_text_size(Label *label, Unit *text_size) {
+    label->text_size = *text_size;
+    label->font_changed = true;
+}
+
+bool label_get_font_italic(Label *label) {
+    return label->font_italic;
+}
+
+void label_set_font_italic(Label *label, bool font_italic) {
+    label->font_italic = font_italic;
+}
+
+bool label_get_font_underlne(Label *label) {
+    return label->font_underline;
+}
+
+void label_set_font_underline(Label *label, bool font_underline) {
+    label->font_underline = font_underline;
+}
+
+bool label_get_font_line_through(Label *label) {
+    return label->font_line_through;
+}
+
+void label_set_font_line_through(Label *label, bool font_line_through) {
+    label->font_line_through = font_line_through;
+}
+
+HFONT label_get_hfont(Label *label) {
+    return CreateFontW(unit_to_pixels(&label->text_size, 0), 0, 0, 0, label->font_weight, label->font_italic,
+        label->font_underline, label->font_line_through, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, label->font_name);
 }
 
 Color label_get_text_color(Label *label) {
@@ -685,12 +745,12 @@ void label_set_single_line(Label *label, bool single_line) {
     label->single_line = single_line;
 }
 
-HorizontalAlign label_get_horizontal_align(Label *label) {
-    return label->horizontal_align;
+Align label_get_align(Label *label) {
+    return label->align;
 }
 
-void label_set_horizontal_align(Label *label, HorizontalAlign horizontal_align) {
-    label->horizontal_align = horizontal_align;
+void label_set_align(Label *label, Align align) {
+    label->align = align;
 }
 
 void label_measure(Widget *widget, int32_t parent_width, int32_t parent_height) {
@@ -699,12 +759,12 @@ void label_measure(Widget *widget, int32_t parent_width, int32_t parent_height) 
     widget->parent_width = parent_width;
     if (widget->width.type == UNIT_TYPE_WRAP) {
         HDC hdc = GetDC(NULL);
-        HFONT font = font_get_handle(label->font);
+        HFONT font = label_get_hfont(label);
         SelectObject(hdc, font);
-        RECT rect = { 0, 0, 0, 0 };
-        DrawTextW(hdc, label->text, -1, &rect, DT_CALCRECT);
+        RECT measure_rect = { 0, 0, 0, 0 };
+        DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT);
         DeleteObject(font);
-        widget->content_rect.width = rect.right - rect.left;
+        widget->content_rect.width = measure_rect.right - measure_rect.left;
     } else {
         widget->content_rect.width = unit_to_pixels(&widget->width, parent_width - unit_to_pixels(&widget->padding.left, parent_width) - unit_to_pixels(&widget->padding.right, parent_width) -
             unit_to_pixels(&widget->margin.left, parent_width) - unit_to_pixels(&widget->margin.right, parent_width));
@@ -715,13 +775,13 @@ void label_measure(Widget *widget, int32_t parent_width, int32_t parent_height) 
     widget->parent_height = parent_height;
     if (widget->height.type == UNIT_TYPE_WRAP) {
         if (label->single_line) {
-            widget->content_rect.height = unit_to_pixels(&label->font->size, 0);
+            widget->content_rect.height = unit_to_pixels(&label->text_size, 0);
         } else {
             HDC hdc = GetDC(NULL);
-            HFONT font = font_get_handle(label->font);
+            HFONT font = label_get_hfont(label);
             SelectObject(hdc, font);
-            RECT rect = { 0, 0, widget->content_rect.width, 0 };
-            widget->content_rect.height = DrawTextW(hdc, label->text, -1, &rect, DT_CALCRECT | DT_WORDBREAK);
+            RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
+            widget->content_rect.height = DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
             DeleteObject(font);
         }
     } else {
@@ -738,23 +798,29 @@ void label_draw(Widget *widget, HDC hdc) {
     Label *label = LABEL(widget);
     widget_draw(widget, hdc);
 
-    HFONT font = font_get_handle(label->font);
+    HFONT font = label_get_hfont(label);
     SelectObject(hdc, font);
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, label->text_color);
     if (label->single_line) {
         int32_t x = widget->content_rect.x;
         int32_t y = widget->content_rect.y;
-        if (label->horizontal_align == HORIZONTAL_ALIGN_LEFT) {
+        if ((label->align & ALIGN_HORIZONTAL_LEFT) != 0) {
             SetTextAlign(hdc, TA_LEFT);
         }
-        if (label->horizontal_align == HORIZONTAL_ALIGN_CENTER) {
+        if ((label->align & ALIGN_HORIZONTAL_CENTER) != 0) {
             x += widget->content_rect.width / 2;
             SetTextAlign(hdc, TA_CENTER);
         }
-        if (label->horizontal_align == HORIZONTAL_ALIGN_RIGHT) {
+        if ((label->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
             x += widget->content_rect.width;
             SetTextAlign(hdc, TA_RIGHT);
+        }
+        if ((label->align & ALIGN_VERTICAL_CENTER) != 0) {
+            y += (widget->content_rect.height - unit_to_pixels(&label->text_size, 0)) / 2;
+        }
+        if ((label->align & ALIGN_VERTICAL_BOTTOM) != 0) {
+            y += widget->content_rect.height - unit_to_pixels(&label->text_size, 0);
         }
         TextOutW(hdc, x, y, label->text, wcslen(label->text));
     } else {
@@ -762,7 +828,33 @@ void label_draw(Widget *widget, HDC hdc) {
         RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
             widget->content_rect.x + widget->content_rect.width,
             widget->content_rect.y + widget->content_rect.height };
-        DrawTextW(hdc, label->text, -1, &content_rect, label->horizontal_align | DT_WORDBREAK);
+        uint32_t style = DT_WORDBREAK;
+        if ((label->align & ALIGN_HORIZONTAL_CENTER) != 0) {
+            style |= DT_CENTER;
+        }
+        if ((label->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
+            style |= DT_RIGHT;
+        }
+        if ((label->align & ALIGN_HORIZONTAL_LEFT) != 0) {
+            style |= DT_LEFT;
+        }
+        if ((label->align & ALIGN_VERTICAL_CENTER) != 0) {
+            HDC hdc = GetDC(NULL);
+            HFONT font = label_get_hfont(label);
+            SelectObject(hdc, font);
+            RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
+            content_rect.top += (widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK)) / 2;
+            DeleteObject(font);
+        }
+        if ((label->align & ALIGN_VERTICAL_BOTTOM) != 0) {
+            HDC hdc = GetDC(NULL);
+            HFONT font = label_get_hfont(label);
+            SelectObject(hdc, font);
+            RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
+            content_rect.top += widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
+            DeleteObject(font);
+        }
+        DrawTextW(hdc, label->text, -1, &content_rect, style);
     }
     DeleteObject(font);
 
@@ -773,36 +865,43 @@ void label_draw(Widget *widget, HDC hdc) {
 void label_free(Widget *widget) {
     Label *label = LABEL(widget);
     free(label->text);
-    font_free(label->font);
+    free(label->font_name);
     widget_free(widget);
 }
 
 // Button
 #define BUTTON(ptr) ((Button *)ptr)
+#define TYPE_BUTTON TYPE_LABEL + 1
 typedef struct Button {
     Label super;
     HWND hwnd;
     HFONT hfont;
 } Button;
 
-HWND global_hwnd;
-
-void button_init(Button *button, wchar_t *text);
+void button_init(Button *button);
 void button_draw(Widget *widget, HDC hdc);
 void button_free(Widget *widget);
 
-Button *button_new(wchar_t *text) {
+Button *button_new(void) {
     Button *button = malloc(sizeof(Button));
-    button_init(button, text);
+    button_init(button);
     return button;
 }
 
-void button_init(Button *button, wchar_t *text) {
+Button *button_new_with_text(wchar_t *text) {
+    Button *button = malloc(sizeof(Button));
+    Label *label = LABEL(button);
+    button_init(button);
+    label->text = wcsdup(text);
+    label->text_changed = true;
+    return button;
+}
+
+void button_init(Button *button) {
     Label *label = LABEL(button);
     Widget *widget = WIDGET(button);
-    label_init(label, text);
+    label_init(label);
     label->single_line = true;
-    label->horizontal_align = HORIZONTAL_ALIGN_CENTER;
 
     button->hwnd = CreateWindowExW(0, L"BUTTON", NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, global_hwnd, NULL, NULL, NULL);
     button->hfont = NULL;
@@ -829,7 +928,7 @@ void button_draw(Widget *widget, HDC hdc) {
         if (button->hfont != NULL) {
             DeleteObject(button->hfont);
         }
-        button->hfont = font_get_handle(label->font);
+        button->hfont = label_get_hfont(label);
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
         label->font_changed = false;
     }
@@ -838,199 +937,245 @@ void button_draw(Widget *widget, HDC hdc) {
 void button_free(Widget *widget) {
     Button *button = BUTTON(widget);
     Label *label = LABEL(widget);
-    DeleteObject(button->hfont);
+    if (button->hfont != NULL) {
+        DeleteObject(button->hfont);
+    }
     DestroyWindow(button->hwnd);
-    label_free(WIDGET(label));
+    label_free(widget);
 }
 
-// ####################################################################################################
+// Loader
+void *layout_load(void *data, Widget **widget) {
+    uint16_t widget_type = *(uint16_t *)data;
+    data += sizeof(uint16_t);
+    if (widget_type == TYPE_WIDGET) *widget = widget_new();
+    if (widget_type == TYPE_BOX) *widget = WIDGET(box_new());
+    if (widget_type == TYPE_LABEL) *widget = WIDGET(label_new());
+    if (widget_type == TYPE_BUTTON) *widget = WIDGET(button_new());
 
-wchar_t *window_class_name = L"window-test";
+    uint16_t attributes_count = *(uint16_t *)data;
+    data += sizeof(uint16_t);
+    for (size_t i = 0; i < attributes_count; i++) {
+        uint16_t attribute = *(uint16_t *)data;
+        data += sizeof(uint16_t);
 
-#ifdef WIN64
-    wchar_t *window_title = L"This is a test window 😍 (64-bit)";
-#else
-    wchar_t *window_title = L"This is a test window 😍 (32-bit)";
-#endif
+        // Widget attributes
+        if (attribute == ATTRIBUTE_WIDTH) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_width(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_HEIGHT) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_height(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_BACKGROUND_COLOR) {
+            widget_set_background_color(*widget, *(Color *)data);
+            data += sizeof(Color);
+        }
+        if (attribute == ATTRIBUTE_MARGIN) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_top(*widget, &unit);
 
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_right(*widget, &unit);
 
-typedef struct {
-    Widget *root;
-} WindowData;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_bottom(*widget, &unit);
 
-int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
-    WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_left(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_MARGIN_TOP) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_top(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_MARGIN_RIGHT) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_right(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_MARGIN_BOTTOM) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_bottom(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_MARGIN_LEFT) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_margin_left(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_PADDING) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_top(*widget, &unit);
 
-    if (msg == WM_CREATE) {
-        // Create window data
-        window = malloc(sizeof(WindowData));
-        SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-        global_hwnd = hwnd;
-        global_width = WINDOW_WIDTH;
-        global_height = WINDOW_HEIGHT;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_right(*widget, &unit);
 
-        // Generate random seed by time
-        SYSTEMTIME time;
-        GetLocalTime(&time);
-        srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_bottom(*widget, &unit);
 
-        // Create widgets
-        Box *root = box_new(ORIENTATION_VERTICAL);
-        widget_set_width(WIDGET(root), &(Unit){ 100, UNIT_TYPE_PERCENT });
-        widget_set_height(WIDGET(root), &(Unit){ 100, UNIT_TYPE_PERCENT });
-        widget_set_background_color(WIDGET(root), rand() & 0x007f7f7f);
-        Unit padding = { 16, UNIT_TYPE_DP };
-        widget_set_padding(WIDGET(root), &padding, &padding, &padding, &padding);
-        window->root = WIDGET(root);
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_left(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_PADDING_TOP) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_top(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_PADDING_RIGHT) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_right(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_PADDING_BOTTOM) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_bottom(*widget, &unit);
+        }
+        if (attribute == ATTRIBUTE_PADDING_LEFT) {
+            Unit unit;
+            unit.value = *(float *)data;
+            data += sizeof(float);
+            unit.type = *(uint8_t *)data;
+            data += sizeof(uint8_t);
+            widget_set_padding_left(*widget, &unit);
+        }
 
-        Font *font = font_new(L"Georgia", &(Unit){ 1.75, UNIT_TYPE_VW }, 400);
-
-        Label *header = label_new(L"Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!");
-        label_set_font(header, font);
-        label_set_text_color(header, 0x00ffffff);
-        widget_set_background_color(WIDGET(header), 0x00ff00ff);
-        label_set_horizontal_align(header, HORIZONTAL_ALIGN_CENTER);
-
-        widget_set_padding(WIDGET(header), &padding, &padding, &padding, &padding);
-        Unit zero = { 0, UNIT_TYPE_PX };
-        widget_set_margin(WIDGET(header), &zero, &zero, &zero, &padding);
-        container_add(CONTAINER(root), WIDGET(header));
-
-        for (int32_t y = 1; y <= 4; y++) {
-            Box *row = box_new(ORIENTATION_HORIZONTAL);
-            widget_set_margin(WIDGET(row), &zero, &padding, &padding, &padding);
-            box_set_horizontal_align(row, HORIZONTAL_ALIGN_CENTER);
-            container_add(CONTAINER(root), WIDGET(row));
-
-            for (int32_t x = 1; x <= 10; x++) {
-                wchar_t string_buffer[64];
-                wsprintfW(string_buffer, L"Item %dx%d", x, y);
-                Label *item = x % 2 == y % 2 ? label_new(string_buffer) : LABEL(button_new(string_buffer));
-                widget_set_width(WIDGET(item), &(Unit){ 96, UNIT_TYPE_DP });
-                widget_set_height(WIDGET(item), &(Unit){ 0, UNIT_TYPE_WRAP });
-                widget_set_background_color(WIDGET(item), 0x0000ffff);
-                label_set_horizontal_align(item, HORIZONTAL_ALIGN_CENTER);
-                label_set_single_line(item, true);
-                Unit item_padding = { 8, UNIT_TYPE_DP };
-                widget_set_padding(WIDGET(item), &item_padding, &zero, &zero, &item_padding);
-                container_add(CONTAINER(row), WIDGET(item));
+        // Container attributes
+        if (widget_type == TYPE_CONTAINER || widget_type == TYPE_BOX) {
+            if (attribute == ATTRIBUTE_WIDGETS) {
+                uint16_t widgets_size = *(uint16_t *)data;
+                data += sizeof(uint16_t);
+                for (size_t j = 0; j < widgets_size; j++) {
+                    Widget *other_widget;
+                    data = layout_load(data, &other_widget);
+                    container_add(CONTAINER(*widget), other_widget);
+                }
             }
         }
 
-        Button *button = button_new(L"Click me to!");
-        widget_set_padding(WIDGET(button), &padding, &padding, &padding, &padding);
-        label_set_font(LABEL(button), font);
-        widget_set_margin(WIDGET(button), &zero, &zero, &zero, &padding);
-        container_add(CONTAINER(root), WIDGET(button));
-
-        Label *footer = label_new(L"Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!");
-        label_set_font(footer, font);
-        label_set_text_color(footer, 0x00ffffff);
-        widget_set_background_color(WIDGET(footer), 0x00ff0000);
-        label_set_horizontal_align(footer, HORIZONTAL_ALIGN_RIGHT);
-        container_add(CONTAINER(root), WIDGET(footer));
-
-        font_free(font);
-
-        // Resize window to right size and center it
-        RECT window_rect;
-        GetClientRect(hwnd, &window_rect);
-        uint32_t new_width = global_width * 2 - window_rect.right;
-        uint32_t new_height = global_height * 2 - window_rect.bottom;
-        SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - new_width) / 2, (GetSystemMetrics(SM_CYSCREEN) - new_height) / 2, new_width, new_height, SWP_NOZORDER);
-        return 0;
-    }
-
-    if (msg == WM_SIZE) {
-        // Save new window size
-        global_width = LOWORD(lParam);
-        global_height = HIWORD(lParam);
-
-        // Resize widgets
-        window->root->measure_function(window->root, global_width, global_height);
-        window->root->place_function(window->root, 0, 0);
-        return 0;
-    }
-
-    if (msg == WM_GETMINMAXINFO) {
-        // Set window min size
-        MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        minMaxInfo->ptMinTrackSize.x = 640;
-        minMaxInfo->ptMinTrackSize.y = 480;
-        return 0;
-    }
-
-    if (msg == WM_ERASEBKGND) {
-        // Draw no background
-        return TRUE;
-    }
-
-    if (msg == WM_PAINT) {
-        PAINTSTRUCT paint_struct;
-        HDC hdc = BeginPaint(hwnd, &paint_struct);
-
-        // Create back buffer
-        HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, global_width, global_height);
-        SelectObject(hdc_buffer, bitmap_buffer);
-
-        // Draw widgets
-        window->root->draw_function(window->root, hdc_buffer);
-
-        // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, global_width, global_height, hdc_buffer, 0, 0, SRCCOPY);
-        DeleteObject(bitmap_buffer);
-        DeleteDC(hdc_buffer);
-
-        EndPaint(hwnd, &paint_struct);
-        return 0;
-    }
-
-    if (msg == WM_DESTROY) {
-        // Free window data
-        window->root->free_function(window->root);
-        if (global_font != NULL) {
-            font_free(global_font);
+        // Box attributes
+        if (widget_type == TYPE_BOX) {
+            if (attribute == ATTRIBUTE_ORIENTATION) {
+                box_set_orientation(BOX(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
+            if (attribute == ATTRIBUTE_ALIGN) {
+                box_set_align(BOX(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
         }
-        free(window);
 
-        // Close process
-        PostQuitMessage(0);
-        return 0;
+        // Label attributes
+        if (widget_type == TYPE_BUTTON || widget_type == TYPE_LABEL) {
+            if (attribute == ATTRIBUTE_TEXT) {
+                uint16_t string_size = *(uint16_t *)data;
+                data += sizeof(uint16_t);
+                label_set_text(LABEL(*widget), (wchar_t *)data);
+                data += (string_size + 1) * sizeof(wchar_t);
+            }
+            if (attribute == ATTRIBUTE_FONT_NAME) {
+                uint16_t string_size = *(uint16_t *)data;
+                data += sizeof(uint16_t);
+                label_set_font_name(LABEL(*widget), (wchar_t *)data);
+                data += (string_size + 1) * sizeof(wchar_t);
+            }
+            if (attribute == ATTRIBUTE_FONT_WEIGHT) {
+                label_set_font_weight(LABEL(*widget), *(uint16_t *)data);
+                data += sizeof(uint16_t);
+            }
+            if (attribute == ATTRIBUTE_FONT_ITALIC) {
+                label_set_font_italic(LABEL(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
+            if (attribute == ATTRIBUTE_FONT_UNDERLINE) {
+                label_set_font_underline(LABEL(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
+            if (attribute == ATTRIBUTE_FONT_LINE_THROUGH) {
+                label_set_font_line_through(LABEL(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
+            if (attribute == ATTRIBUTE_TEXT_SIZE) {
+                Unit unit;
+                unit.value = *(float *)data;
+                data += sizeof(float);
+                unit.type = *(uint8_t *)data;
+                data += sizeof(uint8_t);
+                label_set_text_size(LABEL(*widget), &unit);
+            }
+            if (attribute == ATTRIBUTE_TEXT_COLOR) {
+                label_set_text_color(LABEL(*widget), *(Color *)data);
+                data += sizeof(Color);
+            }
+            if (attribute == ATTRIBUTE_SINGLE_LINE) {
+                label_set_single_line(LABEL(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
+            if (attribute == ATTRIBUTE_ALIGN) {
+                label_set_align(LABEL(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
+            }
+        }
     }
 
-    return DefWindowProcW(hwnd, msg, wParam, lParam);
+    return data;
 }
 
-void _start(void) {
-    INITCOMMONCONTROLSEX icc;
-    icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    icc.dwICC = ICC_WIN95_CLASSES;
-    InitCommonControlsEx(&icc);
-
-    WNDCLASSEXW wc = {0};
-    wc.cbSize = sizeof(WNDCLASSEXW);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WndProc;
-    wc.hInstance = GetModuleHandleW(NULL);
-    wc.hIcon = LoadIconW(NULL, IDI_APPLICATION);
-    wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
-    wc.lpszClassName = window_class_name;
-    wc.hIconSm = wc.hIcon;
-    RegisterClassExW(&wc);
-
-    HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
-        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
-        WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL, wc.hInstance, NULL);
-    ShowWindow(hwnd, SW_SHOWDEFAULT);
-    UpdateWindow(hwnd);
-
-    MSG message;
-    while (GetMessageW(&message, NULL, 0, 0) > 0) {
-        TranslateMessage(&message);
-        DispatchMessageW(&message);
-    }
-    ExitProcess((int32_t)(uintptr_t)message.wParam);
-}
+#endif

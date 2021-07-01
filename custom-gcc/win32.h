@@ -169,6 +169,12 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 #define IMAGE_BITMAP 0
 #define IMAGE_ICON 1
 
+#define DT_TOP 0x00000000
+#define DT_LEFT 0x00000000
+#define DT_CENTER 0x00000001
+#define DT_RIGHT 0x00000002
+#define DT_VCENTER 0x00000004
+#define DT_BOTTOM 0x00000008
 #define DT_WORDBREAK 0x00000010
 #define DT_CALCRECT 0x00000400
 

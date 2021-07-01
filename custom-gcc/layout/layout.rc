@@ -1,0 +1,5 @@
+// Manifest
+1 MANIFEST "layout.manifest"
+
+// Layouts
+1 RCDATA "layout.bin"
