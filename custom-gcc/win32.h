@@ -270,6 +270,7 @@ extern int32_t __cdecl wsprintfW(wchar_t *, wchar_t *, ...);
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
+extern int32_t __stdcall FrameRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 extern bool __stdcall InvalidateRect(HWND hWnd, const RECT *lpRect, bool bErase);
 #ifdef WIN64
     extern void * __stdcall SetWindowLongPtrW(HWND hWnd, int32_t nIndex, void *dwNewLong);

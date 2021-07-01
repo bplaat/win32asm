@@ -18,8 +18,8 @@ libraries = {
         'MessageBoxW', 'PostQuitMessage', 'DefWindowProcW', 'LoadIconW', 'LoadCursorW', 'LoadBitmapW', 'LoadImageW', 'RegisterClassExW',
         'CreateWindowExW', 'ShowWindow', 'UpdateWindow', 'GetMessageW', 'PeekMessageW', 'TranslateMessage', 'DispatchMessageW',
         'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW',
-        'DestroyWindow', 'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'InvalidateRect', 'MessageBeep', 'LoadStringW',
-        'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW'
+        'DestroyWindow', 'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'FrameRect', 'InvalidateRect',
+        'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
