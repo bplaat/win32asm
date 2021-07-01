@@ -104,10 +104,12 @@ void list_add(List *list, void *item) {
 // Widget
 #define WIDGET(ptr) ((Widget *)ptr)
 #define TYPE_WIDGET 1
-#define ATTRIBUTE_WIDTH 1
+#define ATTRIBUTE_ID 1
+#define ATTRIBUTE_WIDTH ATTRIBUTE_ID + 1
 #define ATTRIBUTE_HEIGHT ATTRIBUTE_WIDTH + 1
 #define ATTRIBUTE_BACKGROUND_COLOR ATTRIBUTE_HEIGHT + 1
-#define ATTRIBUTE_MARGIN ATTRIBUTE_BACKGROUND_COLOR + 1
+#define ATTRIBUTE_VISIBLE ATTRIBUTE_BACKGROUND_COLOR + 1
+#define ATTRIBUTE_MARGIN ATTRIBUTE_VISIBLE + 1
 #define ATTRIBUTE_MARGIN_TOP ATTRIBUTE_MARGIN + 1
 #define ATTRIBUTE_MARGIN_LEFT ATTRIBUTE_MARGIN_TOP + 1
 #define ATTRIBUTE_MARGIN_RIGHT ATTRIBUTE_MARGIN_LEFT + 1
@@ -118,9 +120,13 @@ void list_add(List *list, void *item) {
 #define ATTRIBUTE_PADDING_RIGHT ATTRIBUTE_PADDING_LEFT + 1
 #define ATTRIBUTE_PADDING_BOTTOM ATTRIBUTE_PADDING_RIGHT + 1
 typedef struct Widget {
+    uint32_t id;
+    bool id_changed;
     Unit width;
     Unit height;
     Color background_color;
+    bool visible;
+    bool visible_changed;
     Offset margin;
     Offset padding;
 
@@ -150,9 +156,13 @@ void widget_draw(Widget *widget, HDC hdc);
 void widget_free(Widget *widget);
 
 void widget_init(Widget *widget) {
+    widget->id = 0;
+    widget->id_changed = false;
     widget->width.type = UNIT_TYPE_UNDEFINED;
     widget->height.type = UNIT_TYPE_UNDEFINED;
     widget->background_color = 0;
+    widget->visible = true;
+    widget->visible_changed = false;
 
     widget->margin.top.value = 0;
     widget->margin.top.type = UNIT_TYPE_PX;
@@ -178,6 +188,15 @@ void widget_init(Widget *widget) {
     widget->free_function = widget_free;
 }
 
+uint32_t widget_get_id(Widget *widget) {
+    return widget->id;
+}
+
+void widget_set_id(Widget *widget, uint32_t id) {
+    widget->id = id;
+    widget->id_changed = true;
+}
+
 Unit *widget_get_width(Widget *widget) {
     return &widget->width;
 }
@@ -200,6 +219,15 @@ Color widget_get_background_color(Widget *widget) {
 
 void widget_set_background_color(Widget *widget, Color background_color) {
     widget->background_color = background_color;
+}
+
+bool widget_get_visible(Widget *widget) {
+    return widget->visible;
+}
+
+void widget_set_visible(Widget *widget, bool visible) {
+    widget->visible = visible;
+    widget->visible_changed = true;
 }
 
 Offset *widget_get_margin(Widget *widget) {
@@ -323,34 +351,38 @@ void widget_place(Widget *widget, int32_t x, int32_t y) {
 }
 
 void widget_draw(Widget *widget, HDC hdc) {
-    if (widget->background_color != 0) {
-        HBRUSH brush = CreateSolidBrush(widget->background_color);
-        RECT rect = { widget->padding_rect.x, widget->padding_rect.y,
-            widget->padding_rect.x + widget->padding_rect.width,
-            widget->padding_rect.y + widget->padding_rect.height };
-        FillRect(hdc, &rect, brush);
-        DeleteObject(brush);
+    if (widget->visible) {
+        if (widget->background_color != 0) {
+            HBRUSH brush = CreateSolidBrush(widget->background_color);
+            RECT rect = { widget->padding_rect.x, widget->padding_rect.y,
+                widget->padding_rect.x + widget->padding_rect.width,
+                widget->padding_rect.y + widget->padding_rect.height };
+            FillRect(hdc, &rect, brush);
+            DeleteObject(brush);
+        }
+
+        #ifdef LAYOUT_DEBUG
+            HBRUSH brush = CreateSolidBrush(0x000000ff);
+            RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
+                widget->content_rect.x + widget->content_rect.width,
+                widget->content_rect.y + widget->content_rect.height };
+            FrameRect(hdc, &content_rect, brush);
+
+            RECT padding_rect = { widget->padding_rect.x, widget->padding_rect.y,
+                widget->padding_rect.x + widget->padding_rect.width,
+                widget->padding_rect.y + widget->padding_rect.height };
+            FrameRect(hdc, &padding_rect, brush);
+
+            RECT margin_rect = { widget->margin_rect.x, widget->margin_rect.y,
+                widget->margin_rect.x + widget->margin_rect.width,
+                widget->margin_rect.y + widget->margin_rect.height };
+            FrameRect(hdc, &margin_rect, brush);
+            DeleteObject(brush);
+        #endif
     }
 
-    #ifdef LAYOUT_DEBUG
-        HBRUSH brush = CreateSolidBrush(0x000000ff);
-        RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
-            widget->content_rect.x + widget->content_rect.width,
-            widget->content_rect.y + widget->content_rect.height };
-        FrameRect(hdc, &content_rect, brush);
-
-        RECT padding_rect = { widget->padding_rect.x, widget->padding_rect.y,
-            widget->padding_rect.x + widget->padding_rect.width,
-            widget->padding_rect.y + widget->padding_rect.height };
-        FrameRect(hdc, &padding_rect, brush);
-
-        RECT margin_rect = { widget->margin_rect.x, widget->margin_rect.y,
-            widget->margin_rect.x + widget->margin_rect.width,
-            widget->margin_rect.y + widget->margin_rect.height };
-        FrameRect(hdc, &margin_rect, brush);
-        DeleteObject(brush);
-    #endif
-
+    widget->id_changed = false;
+    widget->visible_changed = false;
     widget->rect_changed = false;
 }
 
@@ -574,18 +606,18 @@ void box_place(Widget *widget, int32_t x, int32_t y) {
 void box_draw(Widget *widget, HDC hdc) {
     Box *box = BOX(widget);
     Container *container = CONTAINER(widget);
-
-    widget_draw(widget, hdc);
-
-    for (size_t i = 0; i < container->widgets.size; i++) {
-        Widget *other_widget = container->widgets.items[i];
-        HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
-            widget->padding_rect.x + widget->padding_rect.width,
-            widget->padding_rect.y + widget->padding_rect.height);
-        SelectClipRgn(hdc, &padding_region);
-        DeleteObject(padding_region);
-        other_widget->draw_function(other_widget, hdc);
-        SelectClipRgn(hdc, NULL);
+    if (widget->visible) {
+        widget_draw(widget, hdc);
+        for (size_t i = 0; i < container->widgets.size; i++) {
+            Widget *other_widget = container->widgets.items[i];
+            HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
+                widget->padding_rect.x + widget->padding_rect.width,
+                widget->padding_rect.y + widget->padding_rect.height);
+            SelectClipRgn(hdc, &padding_region);
+            DeleteObject(padding_region);
+            other_widget->draw_function(other_widget, hdc);
+            SelectClipRgn(hdc, NULL);
+        }
     }
 }
 
@@ -650,6 +682,9 @@ void label_init(Label *label) {
 
     label->font_name = wcsdup(L"Tamoha");
     label->font_weight = FONT_WEIGHT_NORMAL;
+    label->font_italic = false;
+    label->font_underline = false;
+    label->font_line_through = false;
     label->text_size.value = 16;
     label->text_size.type = UNIT_TYPE_SP;
     label->font_changed = true;
@@ -796,67 +831,69 @@ void label_measure(Widget *widget, int32_t parent_width, int32_t parent_height) 
 
 void label_draw(Widget *widget, HDC hdc) {
     Label *label = LABEL(widget);
-    widget_draw(widget, hdc);
+    if (widget->visible) {
+        widget_draw(widget, hdc);
 
-    HFONT font = label_get_hfont(label);
-    SelectObject(hdc, font);
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, label->text_color);
-    if (label->single_line) {
-        int32_t x = widget->content_rect.x;
-        int32_t y = widget->content_rect.y;
-        if ((label->align & ALIGN_HORIZONTAL_LEFT) != 0) {
+        HFONT font = label_get_hfont(label);
+        SelectObject(hdc, font);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, label->text_color);
+        if (label->single_line) {
+            int32_t x = widget->content_rect.x;
+            int32_t y = widget->content_rect.y;
+            if ((label->align & ALIGN_HORIZONTAL_LEFT) != 0) {
+                SetTextAlign(hdc, TA_LEFT);
+            }
+            if ((label->align & ALIGN_HORIZONTAL_CENTER) != 0) {
+                x += widget->content_rect.width / 2;
+                SetTextAlign(hdc, TA_CENTER);
+            }
+            if ((label->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
+                x += widget->content_rect.width;
+                SetTextAlign(hdc, TA_RIGHT);
+            }
+            if ((label->align & ALIGN_VERTICAL_CENTER) != 0) {
+                y += (widget->content_rect.height - unit_to_pixels(&label->text_size, 0)) / 2;
+            }
+            if ((label->align & ALIGN_VERTICAL_BOTTOM) != 0) {
+                y += widget->content_rect.height - unit_to_pixels(&label->text_size, 0);
+            }
+            TextOutW(hdc, x, y, label->text, wcslen(label->text));
+        } else {
             SetTextAlign(hdc, TA_LEFT);
+            RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
+                widget->content_rect.x + widget->content_rect.width,
+                widget->content_rect.y + widget->content_rect.height };
+            uint32_t style = DT_WORDBREAK;
+            if ((label->align & ALIGN_HORIZONTAL_CENTER) != 0) {
+                style |= DT_CENTER;
+            }
+            if ((label->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
+                style |= DT_RIGHT;
+            }
+            if ((label->align & ALIGN_HORIZONTAL_LEFT) != 0) {
+                style |= DT_LEFT;
+            }
+            if ((label->align & ALIGN_VERTICAL_CENTER) != 0) {
+                HDC hdc = GetDC(NULL);
+                HFONT font = label_get_hfont(label);
+                SelectObject(hdc, font);
+                RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
+                content_rect.top += (widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK)) / 2;
+                DeleteObject(font);
+            }
+            if ((label->align & ALIGN_VERTICAL_BOTTOM) != 0) {
+                HDC hdc = GetDC(NULL);
+                HFONT font = label_get_hfont(label);
+                SelectObject(hdc, font);
+                RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
+                content_rect.top += widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
+                DeleteObject(font);
+            }
+            DrawTextW(hdc, label->text, -1, &content_rect, style);
         }
-        if ((label->align & ALIGN_HORIZONTAL_CENTER) != 0) {
-            x += widget->content_rect.width / 2;
-            SetTextAlign(hdc, TA_CENTER);
-        }
-        if ((label->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
-            x += widget->content_rect.width;
-            SetTextAlign(hdc, TA_RIGHT);
-        }
-        if ((label->align & ALIGN_VERTICAL_CENTER) != 0) {
-            y += (widget->content_rect.height - unit_to_pixels(&label->text_size, 0)) / 2;
-        }
-        if ((label->align & ALIGN_VERTICAL_BOTTOM) != 0) {
-            y += widget->content_rect.height - unit_to_pixels(&label->text_size, 0);
-        }
-        TextOutW(hdc, x, y, label->text, wcslen(label->text));
-    } else {
-        SetTextAlign(hdc, TA_LEFT);
-        RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
-            widget->content_rect.x + widget->content_rect.width,
-            widget->content_rect.y + widget->content_rect.height };
-        uint32_t style = DT_WORDBREAK;
-        if ((label->align & ALIGN_HORIZONTAL_CENTER) != 0) {
-            style |= DT_CENTER;
-        }
-        if ((label->align & ALIGN_HORIZONTAL_RIGHT) != 0) {
-            style |= DT_RIGHT;
-        }
-        if ((label->align & ALIGN_HORIZONTAL_LEFT) != 0) {
-            style |= DT_LEFT;
-        }
-        if ((label->align & ALIGN_VERTICAL_CENTER) != 0) {
-            HDC hdc = GetDC(NULL);
-            HFONT font = label_get_hfont(label);
-            SelectObject(hdc, font);
-            RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
-            content_rect.top += (widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK)) / 2;
-            DeleteObject(font);
-        }
-        if ((label->align & ALIGN_VERTICAL_BOTTOM) != 0) {
-            HDC hdc = GetDC(NULL);
-            HFONT font = label_get_hfont(label);
-            SelectObject(hdc, font);
-            RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
-            content_rect.top += widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
-            DeleteObject(font);
-        }
-        DrawTextW(hdc, label->text, -1, &content_rect, style);
+        DeleteObject(font);
     }
-    DeleteObject(font);
 
     label->text_changed = false;
     label->font_changed = false;
@@ -913,17 +950,23 @@ void button_init(Button *button) {
 void button_draw(Widget *widget, HDC hdc) {
     Button *button = BUTTON(widget);
     Label *label = LABEL(widget);
-
+    if (widget->id_changed) {
+        DestroyWindow(button->hwnd);
+        button->hwnd = CreateWindowExW(0, L"BUTTON", NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, global_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        widget->id_changed = false;
+    }
+    if (widget->visible_changed) {
+        ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+        widget->visible_changed = false;
+    }
     if (widget->rect_changed) {
         SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
         widget->rect_changed = false;
     }
-
     if (label->text_changed) {
         SendMessageW(button->hwnd, WM_SETTEXT, NULL, label->text);
         label->text_changed = false;
     }
-
     if (label->font_changed) {
         if (button->hfont != NULL) {
             DeleteObject(button->hfont);
@@ -945,7 +988,7 @@ void button_free(Widget *widget) {
 }
 
 // Loader
-void *layout_load(void *data, Widget **widget) {
+uint8_t *layout_load(uint8_t *data, Widget **widget) {
     uint16_t widget_type = *(uint16_t *)data;
     data += sizeof(uint16_t);
     if (widget_type == TYPE_WIDGET) *widget = widget_new();
@@ -960,6 +1003,10 @@ void *layout_load(void *data, Widget **widget) {
         data += sizeof(uint16_t);
 
         // Widget attributes
+        if (attribute == ATTRIBUTE_ID) {
+            widget_set_id(*widget, *(uint16_t *)data);
+            data += sizeof(uint16_t);
+        }
         if (attribute == ATTRIBUTE_WIDTH) {
             Unit unit;
             unit.value = *(float *)data;
@@ -979,6 +1026,10 @@ void *layout_load(void *data, Widget **widget) {
         if (attribute == ATTRIBUTE_BACKGROUND_COLOR) {
             widget_set_background_color(*widget, *(Color *)data);
             data += sizeof(Color);
+        }
+        if (attribute == ATTRIBUTE_VISIBLE) {
+            widget_set_id(*widget, *(uint8_t *)data);
+            data += sizeof(uint8_t);
         }
         if (attribute == ATTRIBUTE_MARGIN) {
             Unit unit;

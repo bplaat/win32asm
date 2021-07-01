@@ -265,6 +265,7 @@ extern int32_t __stdcall GetSystemMetrics(int32_t nIndex);
 extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, int32_t Y, int32_t cx, int32_t cy, uint32_t uFlags);
 extern int32_t __stdcall SendMessageW(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
 extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM lParam);
+extern bool __stdcall SetMenu(HWND hWnd, HMENU hMenu);
 extern bool __stdcall DestroyWindow(HWND hWnd);
 extern uint32_t * __stdcall SetTimer(HWND hWnd, uint32_t nIDEvent, uint32_t uElapse,void *lpTimerFunc);
 extern bool __stdcall KillTimer(HWND hWnd, uint32_t uIDEvent);

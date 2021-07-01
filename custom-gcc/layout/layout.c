@@ -111,6 +111,16 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         return 0;
     }
 
+    if (msg == WM_COMMAND) {
+        uint16_t id = LOWORD(wParam);
+        if (id == 1) {
+            MessageBoxW(hwnd, L"Made by Bastiaan van der Plaat", L"About", MB_OK);
+        }
+        if (id == 2) {
+            DestroyWindow(hwnd);
+        }
+    }
+
     if (msg == WM_SIZE) {
         // Save new window size
         global_width = LOWORD(lParam);

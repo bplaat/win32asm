@@ -148,6 +148,10 @@ with open (sys.argv[2], 'wb') as file:
             value = widget.attrib[attribute]
 
             # Widget attributes
+            if attribute == 'id':
+                file.write(struct.pack('<H', constants['ATTRIBUTE_ID']))
+                file.write(struct.pack('<H', int(value)))
+
             if attribute == 'width':
                 file.write(struct.pack('<H', constants['ATTRIBUTE_WIDTH']))
                 unit = parseUnit(value)
@@ -163,6 +167,10 @@ with open (sys.argv[2], 'wb') as file:
             if attribute == 'backgroundColor':
                 file.write(struct.pack('<H', constants['ATTRIBUTE_BACKGROUND_COLOR']))
                 file.write(struct.pack('<I', parseColor(value)))
+
+            if attribute == 'visible':
+                file.write(struct.pack('<H', constants['ATTRIBUTE_VISIBLE']))
+                file.write(struct.pack('B', parseBoolean(value)))
 
             if attribute == 'margin':
                 file.write(struct.pack('<H', constants['ATTRIBUTE_MARGIN']))
