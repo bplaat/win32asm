@@ -434,13 +434,13 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 window->controls_handles[i] = CreateWindowExW(0, L"BUTTON", NULL, WS_CHILD | control->style, 0, 0, 0, 0, hwnd, (HMENU)(size_t)control->id, NULL, NULL);
             }
             if (control->type == CONTROL_TYPE_EDIT) {
-                window->controls_handles[i] = CreateWindowExW(0, L"EDIT", NULL, WS_CHILD | control->style, 0, 0, 0, 0, hwnd, (HMENU)(size_t)control->id, NULL, NULL);
+                window->controls_handles[i] = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", NULL, WS_CHILD | control->style, 0, 0, 0, 0, hwnd, (HMENU)(size_t)control->id, NULL, NULL);
             }
             if (control->type == CONTROL_TYPE_COMBOBOX) {
                 window->controls_handles[i] = CreateWindowExW(0, L"COMBOBOX", NULL, WS_CHILD | control->style, 0, 0, 0, 0, hwnd, (HMENU)(size_t)control->id, NULL, NULL);
             }
             if (control->type == CONTROL_TYPE_LIST) {
-                window->controls_handles[i] = CreateWindowExW(0, L"SysListView32", NULL, WS_CHILD | control->style, 0, 0, 0, 0, hwnd, (HMENU)(size_t)control->id, NULL, NULL);
+                window->controls_handles[i] = CreateWindowExW(WS_EX_CLIENTEDGE, L"SysListView32", NULL, WS_CHILD | control->style, 0, 0, 0, 0, hwnd, (HMENU)(size_t)control->id, NULL, NULL);
             }
         }
 

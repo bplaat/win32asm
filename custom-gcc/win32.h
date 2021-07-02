@@ -129,6 +129,8 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 #define WS_MAXIMIZEBOX 0x000010000
 #define WS_CLIPCHILDREN 0x02000000
 
+#define WS_EX_CLIENTEDGE 0x00000200
+
 #define SW_HIDE 0
 #define SW_SHOWNORMAL 1
 #define SW_SHOW 5

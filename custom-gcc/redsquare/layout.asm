@@ -72,14 +72,14 @@
     ; ################### SETTINGS PAGE ###################
     ; #####################################################
 
-    %assign y (480 - (48 + 16 + 24 + 8 + 24 + 16 + (24 + 8 + 32 + 16) * 2 + 52)) / 2
+    %assign y (480 - (48 + 16 + 24 + 8 + 28 + 16 + (24 + 8 + 32 + 16) * 2 + 52)) / 2
     label PAGE_SETTINGS, 0, MENU_SETTINGS_STRING_ID, FONT_TITLE_ID, ES_CENTER, 0 px, y vh, 640 vw, 48 vh
     %assign y y + 48 + 16
 
     label PAGE_SETTINGS, 0, SETTINGS_NAME_STRING_ID, FONT_TEXT_ID, ES_CENTER, 0 px, y vh, 640 vw, 24 vh
     %assign y y + 24 + 8
-    edit PAGE_SETTINGS, SETTINGS_NAME_EDIT_ID, 0, FONT_TEXT_ID, ES_AUTOHSCROLL | ES_CENTER, 160 vw, y vh, 320 vw, 24 vh
-    %assign y y + 24 + 16
+    edit PAGE_SETTINGS, SETTINGS_NAME_EDIT_ID, 0, FONT_TEXT_ID, ES_AUTOHSCROLL | ES_CENTER, 160 vw, y vh, 320 vw, 28 vh
+    %assign y y + 28 + 16
 
     label PAGE_SETTINGS, 0, SETTINGS_LANGUAGE_STRING_ID, FONT_TEXT_ID, ES_CENTER, 0 px, y vh, 640 vw, 24 vh
     %assign y y + 24 + 8
