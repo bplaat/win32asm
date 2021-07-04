@@ -11,7 +11,7 @@
 
 ; Setup executable base
 %define _base 0x400000
-%define _alignment 0x200
+%define _alignment 0x1000
 [org _base]
 %define RVA(_address) (_address - _base)
 

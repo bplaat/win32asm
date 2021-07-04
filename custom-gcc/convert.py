@@ -182,7 +182,7 @@ with open(sys.argv[2], 'r') as file:
         outFile.write("""[bits %d]
 
 _base equ 0x400000
-_alignment equ 0x200
+_alignment equ 0x1000
 [org _base]
 
 _header:

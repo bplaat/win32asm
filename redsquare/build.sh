@@ -17,4 +17,6 @@ ResourceHacker -open redsquare-x64.exe -save redsquare-x64.exe -action addskip -
 # Clean up
 rm redsquare-x86.res redsquare-x64.res icon.ico bassiebas.bmp
 
-./redsquare-x64
+if [[ $1 != "norun" ]]; then
+    ./redsquare-x64
+fi

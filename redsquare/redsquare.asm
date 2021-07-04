@@ -796,10 +796,6 @@ code_section
         invoke ExitProcess, [message + MSG.wParam]
 
         end_local
-
-    %ifdef WIN64
-        times 1234 db 0 ; Dirty hack
-    %endif
 end_code_section
 
 data_section
