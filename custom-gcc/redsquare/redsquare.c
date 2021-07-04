@@ -767,10 +767,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         GdipCreateFromHDC(hdc_buffer, &graphics);
         GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
 
-        if (window->paper_bitmap == NULL) {
-            GdipGraphicsClear(graphics, window->theme == THEME_DARK ? 0xff222222 : 0xffffffff);
-        }
-
         // Setup text drawing
         SetBkMode(hdc_buffer, TRANSPARENT);
         SetTextColor(hdc_buffer, window->theme == THEME_DARK ? 0x00ffffff : 0x00111111);
