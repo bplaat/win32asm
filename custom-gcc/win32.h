@@ -61,6 +61,8 @@
 
 #define RT_RCDATA 10
 
+#define ERROR_ALREADY_EXISTS 183
+
 typedef struct {
     uint16_t wYear;
     uint16_t wMonth;
@@ -97,6 +99,8 @@ extern bool __stdcall ReadFile(HANDLE hFile, void *lpBuffer, uint32_t nNumberOfB
 extern bool __stdcall WriteFile(HANDLE hFile, const void *lpBuffer, uint32_t nNumberOfBytesToWrite, uint32_t *lpNumberOfBytesWritten, void *lpOverlapped);
 extern uint32_t __stdcall SetFilePointer(HANDLE hFile, uint32_t lDistanceToMove, uint32_t *lpDistanceToMoveHigh, uint32_t dwMoveMethod);
 extern bool __stdcall CloseHandle(HANDLE hObject);
+extern HANDLE __stdcall CreateMutexW(void *lpMutexAttributes, bool bInitialOwner, const wchar_t *lpName);
+extern bool __stdcall ReleaseMutex(HANDLE hMutex);
 extern bool __stdcall GetVersionExW(OSVERSIONINFOW *lpVersionInformation);
 extern HMODULE __stdcall LoadLibraryW(wchar_t *lpLibFileName);
 extern void * __stdcall GetProcAddress(HMODULE hModule, char *lpProcName);
@@ -282,6 +286,9 @@ extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 extern int32_t __stdcall FrameRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
 extern bool __stdcall InvalidateRect(HWND hWnd, const RECT *lpRect, bool bErase);
+extern bool __stdcall IsIconic(HWND hWnd);
+extern HWND __stdcall FindWindowW(const wchar_t *lpClassName, const wchar_t *lpWindowName);
+extern bool __stdcall SetForegroundWindow(HWND hWnd);
 #ifdef WIN64
     extern void * __stdcall SetWindowLongPtrW(HWND hWnd, int32_t nIndex, void *dwNewLong);
     extern void * __stdcall GetWindowLongPtrW(HWND hWnd, int32_t nIndex);

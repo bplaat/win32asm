@@ -20,7 +20,11 @@
 #define VIEWPORT_WIDTH 640
 #define VIEWPORT_HEIGHT 480
 
-wchar_t *window_class_name = L"redsquare";
+#ifdef WIN64
+    wchar_t *window_class_name = L"redsquare-x64";
+#else
+    wchar_t *window_class_name = L"redsquare-x86";
+#endif
 wchar_t *settings_file = L"\\redsquare-settings.bin";
 
 #define SETTINGS_SIGNATURE 0x56415352
@@ -962,6 +966,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
+    HANDLE mutex = CreateMutexW(NULL, TRUE, window_class_name);
+    if (mutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS) {
+        HWND window = FindWindowW(window_class_name, NULL);
+        if (window != NULL) {
+            if (IsIconic(window)) {
+                ShowWindow(window, SW_SHOW);
+            }
+            SetForegroundWindow(window);
+        }
+        ExitProcess(0);
+    }
+
     INITCOMMONCONTROLSEX icc;
     icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icc.dwICC = ICC_WIN95_CLASSES;
@@ -1001,6 +1017,9 @@ void _start(void) {
     }
 
     GdiplusShutdown(&gdiplusToken);
+
+    ReleaseMutex(mutex);
+    CloseHandle(mutex);
 
     ExitProcess((int32_t)(uintptr_t)message.wParam);
 }

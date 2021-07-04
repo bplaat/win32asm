@@ -11,7 +11,7 @@ libraries = {
         'GetModuleHandleW', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
         'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep',
         'GetLastError', 'lstrlenW', 'lstrcpyW', 'lstrcatW',
-        'CreateFileW', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle',
+        'CreateFileW', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle', 'CreateMutexW', 'ReleaseMutex',
         'GetVersionExW', 'LoadLibraryW', 'GetProcAddress', 'FindResourceW', 'SizeofResource', 'LoadResource', 'LockResource'
     ],
     'USER32.DLL': [
@@ -19,7 +19,7 @@ libraries = {
         'CreateWindowExW', 'ShowWindow', 'UpdateWindow', 'GetMessageW', 'PeekMessageW', 'TranslateMessage', 'DispatchMessageW',
         'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW',
         'SetMenu', 'DestroyWindow', 'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'FrameRect', 'InvalidateRect',
-        'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW'
+        'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW', 'IsIconic', 'FindWindowW', 'SetForegroundWindow'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
@@ -41,9 +41,6 @@ libraries = {
     'gdiplus.dll': [
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
         'GdipFillRectangle', 'GdipFillRectangleI', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode'
-    ],
-    'msvcrt.dll': [
-        'qsort'
     ]
 }
 
@@ -275,7 +272,7 @@ _sections:
     dw 0                          ; NumberOfLinenumbers
     dd 0xC0000040                 ; Characteristics
 
-    _sections_count equ ($ - _sections) / (8 + 4 * 6 + 2 * 2 + 4)
+    _sections_count equ ($ - _sections) / 40
 
 _header_size equ $ - _header
     align _alignment, db 0
