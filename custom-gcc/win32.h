@@ -268,6 +268,7 @@ extern bool __stdcall TranslateMessage(const MSG *lpMsg);
 extern int32_t __stdcall DispatchMessageW(const MSG *lpMsg);
 extern bool __stdcall GetClientRect(HWND hWnd, RECT *lpRect);
 extern int32_t __stdcall GetSystemMetrics(int32_t nIndex);
+extern bool __stdcall AdjustWindowRectEx(RECT *lpRect, uint32_t dwStyle, bool bMenu, uint32_t dwExStyle);
 extern bool __stdcall SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int32_t X, int32_t Y, int32_t cx, int32_t cy, uint32_t uFlags);
 extern int32_t __stdcall SendMessageW(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
 extern bool __stdcall EnumChildWindows(HWND hWndParent, void *lpEnumFunc, LPARAM lParam);

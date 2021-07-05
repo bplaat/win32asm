@@ -17,7 +17,7 @@ libraries = {
     'USER32.DLL': [
         'MessageBoxW', 'PostQuitMessage', 'DefWindowProcW', 'LoadIconW', 'LoadCursorW', 'LoadBitmapW', 'LoadImageW', 'RegisterClassExW',
         'CreateWindowExW', 'ShowWindow', 'UpdateWindow', 'GetMessageW', 'PeekMessageW', 'TranslateMessage', 'DispatchMessageW',
-        'GetClientRect', 'GetSystemMetrics', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW',
+        'GetClientRect', 'GetSystemMetrics', 'AdjustWindowRectEx', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW',
         'SetMenu', 'DestroyWindow', 'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'FrameRect', 'InvalidateRect',
         'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW', 'IsIconic', 'FindWindowW', 'SetForegroundWindow'
     ],

@@ -16,6 +16,7 @@
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
+#define WINDOW_STYLE WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN
 
 #define VIEWPORT_WIDTH 640
 #define VIEWPORT_HEIGHT 480
@@ -456,13 +457,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         SendMessageW(settings_language_select, CB_ADDSTRING, NULL, L"English");
         SendMessageW(settings_language_select, CB_ADDSTRING, NULL, L"Nederlands");
 
-        // Center window
-        RECT window_rect;
-        GetClientRect(hwnd, &window_rect);
-        uint32_t new_width = window->width * 2 - window_rect.right;
-        uint32_t new_height = window->height * 2 - window_rect.bottom;
-        SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - new_width) / 2, (GetSystemMetrics(SM_CYSCREEN) - new_height) / 2, new_width, new_height, SWP_NOZORDER);
-
         // Load settings
         for (int32_t i = 0; i < SETTINGS_NAME_SIZE; i++) window->name[i] = '\0';
         uint32_t size = SETTINGS_NAME_SIZE;
@@ -666,8 +660,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_GETMINMAXINFO) {
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        minMaxInfo->ptMinTrackSize.x = VIEWPORT_WIDTH;
-        minMaxInfo->ptMinTrackSize.y = VIEWPORT_HEIGHT;
+        RECT window_rect = { 0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
+        AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
+        minMaxInfo->ptMinTrackSize.x = window_rect.right - window_rect.left;
+        minMaxInfo->ptMinTrackSize.y = window_rect.bottom - window_rect.top;
         return 0;
     }
 
@@ -955,6 +951,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             }
         }
         free(window->controls_handles);
+        free(window->highscores);
         free(window);
 
         // Close process
@@ -1002,11 +999,18 @@ void _start(void) {
     wc.hIconSm = LoadImageW(wc.hInstance, (wchar_t *)APP_ICON_ID, IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED);
     RegisterClassExW(&wc);
 
+    uint32_t x = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
+    uint32_t y = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
+    RECT window_rect = { x, y, x + WINDOW_WIDTH, y + WINDOW_HEIGHT };
+    AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
+
     wchar_t *window_title;
     LoadStringW(wc.hInstance, MENU_TITLE_STRING_ID, (wchar_t *)&window_title, 0);
+
     HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
-        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
-        WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL, wc.hInstance, NULL);
+        WINDOW_STYLE, window_rect.left, window_rect.top,
+        window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
+        NULL, NULL, wc.hInstance, NULL);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 

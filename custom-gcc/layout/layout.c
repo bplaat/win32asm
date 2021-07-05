@@ -18,6 +18,7 @@ wchar_t *window_class_name = L"window-test";
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
+#define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 
 typedef struct {
     Widget *root;
@@ -101,13 +102,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             label_set_align(footer, ALIGN_HORIZONTAL_CENTER);
             container_add(CONTAINER(root), WIDGET(footer));
         #endif
-
-        // Resize window to right size and center it
-        RECT window_rect;
-        GetClientRect(hwnd, &window_rect);
-        uint32_t new_width = global_width * 2 - window_rect.right;
-        uint32_t new_height = global_height * 2 - window_rect.bottom;
-        SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - new_width) / 2, (GetSystemMetrics(SM_CYSCREEN) - new_height) / 2, new_width, new_height, SWP_NOZORDER);
         return 0;
     }
 
@@ -135,8 +129,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_GETMINMAXINFO) {
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        minMaxInfo->ptMinTrackSize.x = 640;
-        minMaxInfo->ptMinTrackSize.y = 480;
+        RECT window_rect = { 0, 0, 640, 480 };
+        AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
+        minMaxInfo->ptMinTrackSize.x = window_rect.right - window_rect.left;
+        minMaxInfo->ptMinTrackSize.y = window_rect.bottom - window_rect.top;
         return 0;
     }
 
@@ -196,9 +192,15 @@ void _start(void) {
     wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);
 
+    uint32_t x = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
+    uint32_t y = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
+    RECT window_rect = { x, y, x + WINDOW_WIDTH, y + WINDOW_HEIGHT };
+    AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
+
     HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
-        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
-        WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL, wc.hInstance, NULL);
+        WINDOW_STYLE, window_rect.left, window_rect.top,
+        window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
+        NULL, NULL, wc.hInstance, NULL);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
