@@ -315,6 +315,11 @@ typedef struct JanLabel {
     JanAlign align;
 } JanLabel;
 
+extern wchar_t *jan_label_default_font_name;
+extern uint32_t jan_label_default_font_weight;
+extern JanUnit jan_label_default_font_size;
+extern JanColor jan_label_default_text_color;
+
 JanLabel *jan_label_new(void);
 
 JanLabel *jan_label_new_with_text(wchar_t *text);

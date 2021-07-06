@@ -34,6 +34,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         jan_hwnd = hwnd;
         jan_width = WINDOW_WIDTH;
         jan_height = WINDOW_HEIGHT;
+        jan_label_default_font_name = L"Georgia";
+        jan_label_default_text_color = RGB(255, 255, 255);
 
         // Load widgets
         HRSRC main_layout_resource = FindResourceW(GetModuleHandleW(NULL), (wchar_t *)1, (wchar_t *)RT_RCDATA);
@@ -146,7 +148,7 @@ void _start(void) {
     wc.hInstance = GetModuleHandleW(NULL);
     wc.hIcon = LoadIconW(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
-    wc.hbrBackground = CreateSolidBrush(RGB(0x11, 0x11, 0x11));
+    wc.hbrBackground = CreateSolidBrush(RGB(17, 17, 17));
     wc.lpszClassName = window_class_name;
     wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);

@@ -128,7 +128,7 @@ with open(sys.argv[2], 'r') as file:
                 data += line + '\n'
 
     for symbol in sorted(symbols, key=len, reverse=True):
-        text = text.replace('DWORD ' + symbol, 'DWORD [' + symbol + ']')
+        text = re.sub(r'DWORD ' + symbol + '([^,\n]*)', 'DWORD [' + symbol + '\\1]', text)
 
     def symbolRealName(name):
         if arch == 'x86':
@@ -174,8 +174,6 @@ with open(sys.argv[2], 'r') as file:
         importTable += '    %s 0\n' % (dp)
         for func in funcs:
             importTable += '    _%s db 0, 0, \'%s\', 0\n' % (func, symbolRealName(func))
-
-    text = text.replace('][0+', '+')
 
     with open (sys.argv[3], 'w') as outFile:
         outFile.write("""[bits %d]

@@ -722,6 +722,11 @@ void *jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param
 }
 
 // JanLabel
+wchar_t *jan_label_default_font_name = L"Tamoha";
+uint32_t jan_label_default_font_weight = JAN_FONT_WEIGHT_NORMAL;
+JanUnit jan_label_default_font_size = { 16, JAN_UNIT_TYPE_SP };
+JanColor jan_label_default_text_color = RGB(17, 17, 17);
+
 JanLabel *jan_label_new(void) {
     JanLabel *label = malloc(sizeof(JanLabel));
     jan_label_init(label);
@@ -738,14 +743,13 @@ void jan_label_init(JanLabel *label) {
     JanWidget *widget = JAN_WIDGET(label);
     jan_widget_init(widget);
     label->text = NULL;
-    label->font_name = wcsdup(L"Tamoha");
-    label->font_weight = JAN_FONT_WEIGHT_NORMAL;
+    label->font_name = wcsdup(jan_label_default_font_name );
+    label->font_weight = jan_label_default_font_weight;
     label->font_italic = false;
     label->font_underline = false;
     label->font_line_through = false;
-    label->font_size.value = 16;
-    label->font_size.type = JAN_UNIT_TYPE_SP;
-    label->text_color = RGB(0x11, 0x11, 0x11);
+    label->font_size = jan_label_default_font_size;
+    label->text_color = jan_label_default_text_color;
     label->single_line = false;
     label->align = JAN_ALIGN_HORIZONTAL_LEFT || JAN_ALIGN_VERTICAL_TOP;
     widget->event_function = jan_label_event;
