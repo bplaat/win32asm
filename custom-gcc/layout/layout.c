@@ -66,7 +66,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_GETMINMAXINFO) {
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        RECT window_rect = { 0, 0, 640, 480 };
+        RECT window_rect = { 0, 0, 320, 240 };
         AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
         minMaxInfo->ptMinTrackSize.x = window_rect.right - window_rect.left;
         minMaxInfo->ptMinTrackSize.y = window_rect.bottom - window_rect.top;

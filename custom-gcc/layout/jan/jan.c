@@ -500,8 +500,8 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
                 widget->padding_rect.x + widget->padding_rect.width,
                 widget->padding_rect.y + widget->padding_rect.height);
             SelectClipRgn(hdc, &padding_region);
-            DeleteObject(padding_region);
             other_widget->event_function(other_widget, JAN_EVENT_DRAW, hdc, NULL);
+            DeleteObject(padding_region);
             SelectClipRgn(hdc, NULL);
         }
         return;
@@ -526,6 +526,7 @@ JanLabel *jan_label_new_with_text(wchar_t *text) {
 void jan_label_init(JanLabel *label) {
     JanWidget *widget = JAN_WIDGET(label);
     jan_widget_init(widget);
+    label->text = NULL;
     label->font_name = wcsdup(L"Tamoha");
     label->font_weight = JAN_FONT_WEIGHT_NORMAL;
     label->font_italic = false;
@@ -665,7 +666,7 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
             RECT measure_rect = { 0, 0, 0, 0 };
             DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT);
             DeleteObject(font);
-            widget->content_rect.width = measure_rect.right - measure_rect.left;
+            widget->content_rect.width = MIN((int32_t)(measure_rect.right - measure_rect.left), parent_width);
         } else {
             widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) - jan_unit_to_pixels(widget->padding.right, parent_width) -
                 jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
@@ -676,7 +677,7 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
         widget->parent_height = parent_height;
         if (widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
             if (label->single_line) {
-                widget->content_rect.height = jan_unit_to_pixels(label->font_size, 0);
+                widget->content_rect.height = MIN(jan_unit_to_pixels(label->font_size, 0), parent_height);
             } else {
                 HDC hdc = GetDC(NULL);
                 HFONT font = jan_label_get_hfont(label);
@@ -771,9 +772,8 @@ JanButton *jan_button_new(void) {
 }
 
 JanButton *jan_button_new_with_text(wchar_t *text) {
-    JanButton *button = malloc(sizeof(JanButton));
+    JanButton *button = jan_button_new();
     JanLabel *label = JAN_LABEL(button);
-    jan_button_init(button);
     label->text = wcsdup(text);
     return button;
 }
@@ -784,7 +784,7 @@ void jan_button_init(JanButton *button) {
     jan_label_init(label);
     label->single_line = true;
 
-    button->hwnd = CreateWindowExW(0, L"BUTTON", NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
+    button->hwnd = CreateWindowExW(0, L"BUTTON", label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
     button->hfont = jan_label_get_hfont(label);
     SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
 
@@ -796,8 +796,8 @@ void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *par
     JanLabel *label = JAN_LABEL(widget);
 
     if (event == JAN_EVENT_FREE) {
-        if (button->hfont != NULL) DeleteObject(button->hfont);
         DestroyWindow(button->hwnd);
+        DeleteObject(button->hfont);
     }
 
     if (event == JAN_EVENT_MEASURE) {
@@ -818,7 +818,8 @@ void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *par
 
     if (event == JAN_EVENT_ID_CHANGED) {
         DestroyWindow(button->hwnd);
-        button->hwnd = CreateWindowExW(0, L"BUTTON", NULL, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        button->hwnd = CreateWindowExW(0, L"BUTTON", label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
     }
 
@@ -835,7 +836,7 @@ void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *par
         event == JAN_EVENT_FONT_ITALIC_CHANGED || event == JAN_EVENT_FONT_UNDERLINE_CHANGED ||
         event == JAN_EVENT_FONT_LINE_THROUGH_CHANGED || event == JAN_EVENT_FONT_SIZE_CHANGED
     ) {
-        if (button->hfont != NULL) DeleteObject(button->hfont);
+        DeleteObject(button->hfont);
         button->hfont = jan_label_get_hfont(label);
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
     }
