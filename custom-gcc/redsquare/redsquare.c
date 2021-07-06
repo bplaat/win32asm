@@ -121,6 +121,9 @@ typedef uint32_t (__stdcall *_SetThreadUILanguage)(uint32_t LangId);
 void __stdcall SetLanguage(uint32_t language) {
     if (IsVistaOrHigher()) {
         HMODULE kernel32 = LoadLibraryW(L"kernel32.dll");
+        #ifdef __GNUC__
+            __extension__
+        #endif
         _SetThreadUILanguage SetThreadUILanguage = GetProcAddress(kernel32, "SetThreadUILanguage");
         SetThreadUILanguage(language);
     } else {
@@ -142,7 +145,7 @@ void __stdcall LoadSettings(HWND hwnd) {
         uint32_t bytes_read;
         ReadFile(settings_file, &settings_header, sizeof(SettingsHeader), &bytes_read, NULL);
 
-        SettingsVersion version = { APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, 0 };
+        SettingsVersion version = { { APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH, 0 } };
         if (
             settings_header.signature == SETTINGS_SIGNATURE &&
             settings_header.version.bits <= version.bits
@@ -303,14 +306,14 @@ void __stdcall AddHighScore(HWND hwnd) {
             HighScore *highscore = &window->highscores[i];
             if (window->score >= highscore->score) {
                 // Move rest highscores one to right
-                for (int32_t j = (int32_t)window->highscores_size; j > i; j--) {
-                    for (int32_t k = 0; k < SETTINGS_NAME_SIZE; k++) window->highscores[j].name[k] = '\0';
+                for (int32_t j = (int32_t)window->highscores_size; j > (int32_t)i; j--) {
+                    for (uint32_t k = 0; k < SETTINGS_NAME_SIZE; k++) window->highscores[j].name[k] = '\0';
                     wcscpy(window->highscores[j].name, window->highscores[j - 1].name);
                     window->highscores[j].score = window->highscores[j - 1].score;
                 }
 
                 // Replace this highscore
-                for (int32_t j = 0; j < SETTINGS_NAME_SIZE; j++) highscore->name[j] = '\0';
+                for (uint32_t j = 0; j < SETTINGS_NAME_SIZE; j++) highscore->name[j] = '\0';
                 wcscpy(highscore->name, window->name);
                 highscore->score = window->score;
                 window->highscores_size++;
@@ -644,7 +647,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_LBUTTONUP) {
         if (window->page == PAGE_MENU) {
-            float x = LOWORD(lParam) / window->vw;
             float y = HIWORD(lParam) / window->vh;
 
             if (y > 424) {
@@ -753,8 +755,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc_bitmap_buffer, window->theme == THEME_DARK ? window->paper_dark_bitmap : window->paper_bitmap);
             uint32_t cols = window->width / PAPER_BITMAP_SIZE + 1;
             uint32_t rows = window->height / PAPER_BITMAP_SIZE + 1;
-            for (int32_t y = 0; y <= rows; y ++) {
-                for (int32_t x = 0; x <= cols; x ++) {
+            for (uint32_t y = 0; y <= rows; y++) {
+                for (uint32_t x = 0; x <= cols; x++) {
                     BitBlt(hdc_buffer, (window->width / 2) + (x - cols / 2 - 1) * PAPER_BITMAP_SIZE, (window->height / 2) + (y - rows / 2 - 1) * PAPER_BITMAP_SIZE,
                         PAPER_BITMAP_SIZE, PAPER_BITMAP_SIZE, hdc_bitmap_buffer, 0, 0, SRCCOPY);
                 }

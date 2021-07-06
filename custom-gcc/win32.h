@@ -83,7 +83,11 @@ typedef struct {
     wchar_t szCSDVersion[128];
 } OSVERSIONINFOW;
 
-extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
+#ifdef __GNUC__
+    extern void __stdcall __attribute__((noreturn)) ExitProcess(uint32_t uExitCode);
+#else
+    extern void __stdcall ExitProcess(uint32_t uExitCode);
+#endif
 extern HMODULE __stdcall GetModuleHandleW(wchar_t *lpModuleName);
 extern HANDLE __stdcall GetProcessHeap(void);
 extern bool __stdcall SetThreadLocale(uint32_t Locale);
@@ -199,7 +203,7 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 typedef struct {
     uint32_t cbSize;
     uint32_t style;
-    void *lpfnWndProc;
+    int32_t __stdcall (*lpfnWndProc)(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam);
     int cbClsExtra;
     int cbWndExtra;
     HINSTANCE hInstance;
@@ -356,9 +360,9 @@ typedef struct GdiplusStartupInput {
     void (*GdiplusStartupInput)(void *debugEventCallback, bool suppressBackgroundThread, bool suppressExternalCodecs);
 } GdiplusStartupInput;
 
-typedef struct GpGraphics {} GpGraphics;
-typedef struct GpSolidFill {} GpSolidFill;
-typedef struct GpBrush {} GpBrush;
+typedef struct GpGraphics { uint8_t filler; } GpGraphics;
+typedef struct GpSolidFill { uint8_t filler; } GpSolidFill;
+typedef struct GpBrush { uint8_t filler; } GpBrush;
 
 #define SmoothingModeAntiAlias 5
 

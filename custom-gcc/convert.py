@@ -78,6 +78,8 @@ with open(sys.argv[2], 'r') as file:
     output = output.replace('"', '`')
 
     output = re.sub(r'DWORD LC(.+)\n', 'DWORD [LC\\1]\n', output)
+    output = re.sub(r'TBYTE \[(.+)\]\n', 'TWORD [\\1]\n', output)
+    output = re.sub(r'TBYTE LC(.+)\n', 'TWORD [LC\\1]\n', output)
     output = re.sub(r'st\((\d+)\)', 'st\\1', output)
     output = output.replace('st,', 'st0,')
     output = output.replace('st\n', 'st0\n')

@@ -1,12 +1,12 @@
 #define WIN32_MALLOC
 #define WIN32_REALLOC
 #define WIN32_FREE
-#define WIN32_RAND
 #define WIN32_WCSLEN
 #define WIN32_WCSDUP
 #include "win32.h"
-#define LAYOUT_DEBUG
-#include "layout.h"
+
+#define JAN_DEBUG
+#include "jan/jan.c"
 
 wchar_t *window_class_name = L"window-test";
 
@@ -21,7 +21,7 @@ wchar_t *window_class_name = L"window-test";
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 
 typedef struct {
-    Widget *root;
+    JanWidget *root;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -31,77 +31,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Create window data
         window = malloc(sizeof(WindowData));
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-        global_hwnd = hwnd;
-        global_width = WINDOW_WIDTH;
-        global_height = WINDOW_HEIGHT;
+        jan_hwnd = hwnd;
+        jan_width = WINDOW_WIDTH;
+        jan_height = WINDOW_HEIGHT;
 
-        // Generate random seed by time
-        SYSTEMTIME time;
-        GetLocalTime(&time);
-        srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
-
-        // Create widgets
-        #if TRUE
-            HRSRC main_layout_resource = FindResourceW(GetModuleHandleW(NULL), (wchar_t *)1, (wchar_t *)RT_RCDATA);
-            HGLOBAL main_layout = LoadResource(GetModuleHandleW(NULL), main_layout_resource);
-            layout_load(LockResource(main_layout), &window->root);
-        #else
-            Box *root = box_new_with_orientation(ORIENTATION_VERTICAL);
-            widget_set_width(WIDGET(root), &(Unit){ 100, UNIT_TYPE_PERCENT });
-            widget_set_height(WIDGET(root), &(Unit){ 100, UNIT_TYPE_PERCENT });
-            widget_set_background_color(WIDGET(root), rand() & 0x007f7f7f);
-            Unit padding = { 16, UNIT_TYPE_DP };
-            widget_set_padding(WIDGET(root), &padding, &padding, &padding, &padding);
-            window->root = WIDGET(root);
-
-            Label *header = label_new_with_text(L"Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!");
-            label_set_text_size(header, &(Unit){ 1.75, UNIT_TYPE_VW });
-            label_set_text_color(header, 0x00ffffff);
-            widget_set_background_color(WIDGET(header), 0x00ff00ff);
-            label_set_align(header, ALIGN_HORIZONTAL_CENTER);
-
-            widget_set_padding(WIDGET(header), &padding, &padding, &padding, &padding);
-            Unit zero = { 0, UNIT_TYPE_PX };
-            widget_set_margin(WIDGET(header), &zero, &zero, &padding, &zero);
-            container_add(CONTAINER(root), WIDGET(header));
-
-            for (int32_t y = 1; y <= 4; y++) {
-                Box *row = box_new_with_orientation(ORIENTATION_HORIZONTAL);
-                widget_set_margin(WIDGET(row), &zero, &padding, &padding, &padding);
-                box_set_align(row, ALIGN_HORIZONTAL_CENTER);
-                container_add(CONTAINER(root), WIDGET(row));
-
-                for (int32_t x = 1; x <= 10; x++) {
-                    wchar_t string_buffer[64];
-                    wsprintfW(string_buffer, L"Item %dx%d", x, y);
-                    Label *item = x % 2 == y % 2 ? label_new_with_text(string_buffer) : LABEL(button_new_with_text(string_buffer));
-                    widget_set_width(WIDGET(item), &(Unit){ 96, UNIT_TYPE_DP });
-                    widget_set_height(WIDGET(item), &(Unit){ 0, UNIT_TYPE_WRAP });
-                    widget_set_background_color(WIDGET(item), 0x0000ffff);
-                    label_set_font_underline(item, true);
-                    label_set_align(item, ALIGN_HORIZONTAL_CENTER);
-                    label_set_single_line(item, true);
-                    Unit item_padding = { 8, UNIT_TYPE_DP };
-                    widget_set_padding(WIDGET(item), &item_padding, &zero, &item_padding, &zero);
-                    container_add(CONTAINER(row), WIDGET(item));
-                }
-            }
-
-            Button *button = button_new_with_text(L"Click me to!");
-            widget_set_padding(WIDGET(button), &padding, &padding, &padding, &padding);
-            label_set_font_name(LABEL(button), L"Georgia");
-            label_set_font_line_through(LABEL(button), true);
-            widget_set_margin(WIDGET(button), &zero, &zero, &padding, &zero);
-            container_add(CONTAINER(root), WIDGET(button));
-
-            Label *footer = label_new_with_text(L"Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit, ipsa? Recusandae, aut impedit illum ducimus odit porro necessitatibus exercitationem iusto eaque voluptatum ipsam, magnam similique quia consequatur vel repudiandae perspiciatis minima. Doloribus, blanditiis totam sint fugiat alias magni recusandae nulla odit natus, ut quo at doloremque voluptas sequi autem! Iste!");
-            label_set_font_weight(footer, FONT_WEIGHT_BOLD);
-            label_set_font_italic(footer, true);
-            label_set_text_color(footer, 0x00ffffff);
-            widget_set_background_color(WIDGET(footer), 0x00ff0000);
-            label_set_align(footer, ALIGN_HORIZONTAL_CENTER);
-            container_add(CONTAINER(root), WIDGET(footer));
-        #endif
+        // Load widgets
+        HRSRC main_layout_resource = FindResourceW(GetModuleHandleW(NULL), (wchar_t *)1, (wchar_t *)RT_RCDATA);
+        HGLOBAL main_layout = LoadResource(GetModuleHandleW(NULL), main_layout_resource);
+        jan_load(LockResource(main_layout), &window->root);
         return 0;
     }
 
@@ -117,12 +54,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_SIZE) {
         // Save new window size
-        global_width = LOWORD(lParam);
-        global_height = HIWORD(lParam);
+        jan_width = LOWORD(lParam);
+        jan_height = HIWORD(lParam);
 
         // Resize widgets
-        window->root->measure_function(window->root, global_width, global_height);
-        window->root->place_function(window->root, 0, 0);
+        window->root->event_function(window->root, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
+        window->root->event_function(window->root, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
         return 0;
     }
 
@@ -147,14 +84,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Create back buffer
         HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, global_width, global_height);
+        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, jan_width, jan_height);
         SelectObject(hdc_buffer, bitmap_buffer);
 
         // Draw widgets
-        window->root->draw_function(window->root, hdc_buffer);
+        window->root->event_function(window->root, JAN_EVENT_DRAW, hdc_buffer, NULL);
 
         // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, global_width, global_height, hdc_buffer, 0, 0, SRCCOPY);
+        BitBlt(hdc, 0, 0, jan_width, jan_height, hdc_buffer, 0, 0, SRCCOPY);
         DeleteObject(bitmap_buffer);
         DeleteDC(hdc_buffer);
 
@@ -164,7 +101,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_DESTROY) {
         // Free window data
-        window->root->free_function(window->root);
+        window->root->event_function(window->root, JAN_EVENT_FREE, NULL, NULL);
         free(window);
 
         // Close process
