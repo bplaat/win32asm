@@ -2,6 +2,11 @@
 #ifndef JAN_H
 #define JAN_H
 
+#define WIN32_MALLOC
+#define WIN32_REALLOC
+#define WIN32_FREE
+#define WIN32_WCSLEN
+#define WIN32_WCSDUP
 #include "win32.h"
 
 // Jan Globals
@@ -26,12 +31,12 @@ typedef struct JanRect {
 typedef int32_t JanOrientation;
 
 // JanAlign
-#define JAN_ALIGN_HORIZONTAL_LEFT (1 << 0)
-#define JAN_ALIGN_HORIZONTAL_CENTER (1 << 1)
-#define JAN_ALIGN_HORIZONTAL_RIGHT (1 << 2)
-#define JAN_ALIGN_VERTICAL_TOP (1 << 3)
-#define JAN_ALIGN_VERTICAL_CENTER (1 << 4)
-#define JAN_ALIGN_VERTICAL_BOTTOM (1 << 5)
+#define JAN_ALIGN_HORIZONTAL_LEFT 0
+#define JAN_ALIGN_HORIZONTAL_CENTER 1
+#define JAN_ALIGN_HORIZONTAL_RIGHT 2
+#define JAN_ALIGN_VERTICAL_TOP 0
+#define JAN_ALIGN_VERTICAL_CENTER 4
+#define JAN_ALIGN_VERTICAL_BOTTOM 8
 typedef int32_t JanAlign;
 
 // JanUnit
@@ -118,7 +123,7 @@ typedef struct JanWidget {
     bool visible;
     JanOffset margin;
     JanOffset padding;
-    void (*event_function)(struct JanWidget *widget, uint32_t event, void *param1, void *param2);
+    void *(*event_function)(struct JanWidget *widget, uint32_t event, void *param1, void *param2);
     int32_t parent_width;
     int32_t parent_height;
     JanRect content_rect;
@@ -190,7 +195,7 @@ JanUnit widget_get_padding_left(JanWidget *widget);
 
 void jan_widget_set_padding_left(JanWidget *widget, JanUnit left);
 
-void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
 
 // JanContainer
 #define CONTAINER_WIDGETS_INIT_CAPACITY 4
@@ -201,6 +206,7 @@ void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *par
 #define JAN_ATTRIBUTE_WIDGETS JAN_ATTRIBUTE_PADDING_BOTTOM + 1
 
 #define JAN_EVENT_WIDGETS_CHANGED JAN_EVENT_PADDING_CHANGED + 1
+#define JAN_EVENT_FIND JAN_EVENT_WIDGETS_CHANGED + 1
 
 typedef struct JanContainer {
     JanWidget super;
@@ -211,17 +217,40 @@ void jan_container_init(JanContainer *container);
 
 void jan_container_add(JanContainer *container, JanWidget *ptr);
 
+JanWidget *jan_container_find(JanContainer *container, uint32_t id);
+
 void jan_container_free(JanWidget *widget);
+
+// JanStack
+#define JAN_STACK(ptr) ((JanStack *)ptr)
+#define JAN_TYPE_STACK JAN_TYPE_CONTAINER + 1
+
+#define JAN_ATTRIBUTE_ALIGN JAN_ATTRIBUTE_WIDGETS + 1
+
+#define JAN_EVENT_ALIGN_CHANGED JAN_EVENT_FIND + 1
+
+typedef struct JanStack {
+    JanContainer super;
+    JanAlign align;
+} JanStack;
+
+JanStack *jan_stack_new(void);
+
+void jan_stack_init(JanStack *stack);
+
+JanAlign jan_stack_get_align(JanStack *stack);
+
+void jan_stack_set_align(JanStack *stack, JanAlign align);
+
+void *jan_stack_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
 
 // JanBox
 #define JAN_BOX(ptr) ((JanBox *)ptr)
-#define JAN_TYPE_BOX JAN_TYPE_CONTAINER + 1
+#define JAN_TYPE_BOX JAN_TYPE_STACK + 1
 
-#define JAN_ATTRIBUTE_ORIENTATION JAN_ATTRIBUTE_WIDGETS + 1
-#define JAN_ATTRIBUTE_ALIGN JAN_ATTRIBUTE_ORIENTATION + 1
+#define JAN_ATTRIBUTE_ORIENTATION JAN_ATTRIBUTE_ALIGN + 1
 
-#define JAN_EVENT_ORIENTATION_CHANGED JAN_EVENT_WIDGETS_CHANGED + 1
-#define JAN_EVENT_ALIGN_CHANGED JAN_EVENT_ORIENTATION_CHANGED + 1
+#define JAN_EVENT_ORIENTATION_CHANGED JAN_EVENT_ALIGN_CHANGED + 1
 
 typedef struct JanBox {
     JanContainer super;
@@ -243,7 +272,7 @@ JanAlign jan_box_get_align(JanBox *box);
 
 void jan_box_set_align(JanBox *box, JanAlign align);
 
-void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+void *jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
 
 // JanLabel
 #define JAN_LABEL(ptr) ((JanLabel *)ptr)
@@ -334,7 +363,7 @@ JanAlign jan_label_get_align(JanLabel *label);
 
 void jan_label_set_align(JanLabel *label, JanAlign align);
 
-void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
 
 // JanButton
 #define JAN_BUTTON(ptr) ((JanButton *)ptr)
@@ -352,7 +381,7 @@ JanButton *jan_button_new_with_text(wchar_t *text);
 
 void jan_button_init(JanButton *button);
 
-void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
 
 // JanLoad
 uint8_t *jan_load(uint8_t *data, JanWidget **widget);

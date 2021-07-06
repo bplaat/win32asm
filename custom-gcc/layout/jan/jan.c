@@ -224,15 +224,14 @@ void jan_widget_set_padding_left(JanWidget *widget, JanUnit left) {
 }
 
 
-void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
     if (event == JAN_EVENT_FREE) {
         free(widget);
-        return;
     }
 
     if (event == JAN_EVENT_MEASURE) {
-        int32_t parent_width = (uintptr_t)param1;
-        int32_t parent_height = (uintptr_t)param2;
+        int32_t parent_width = (intptr_t)param1;
+        int32_t parent_height = (intptr_t)param2;
 
         widget->parent_width = parent_width;
         widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) -
@@ -245,12 +244,11 @@ void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *par
             jan_unit_to_pixels(widget->margin.top, parent_height) - jan_unit_to_pixels(widget->margin.bottom, parent_height));
         widget->padding_rect.height = jan_unit_to_pixels(widget->padding.top, parent_height) + widget->content_rect.height + jan_unit_to_pixels(widget->padding.bottom, parent_height);
         widget->margin_rect.height = jan_unit_to_pixels(widget->margin.top, parent_height) + widget->padding_rect.height + jan_unit_to_pixels(widget->margin.bottom, parent_height);
-        return;
     }
 
     if (event == JAN_EVENT_PLACE) {
-        int32_t x = (uintptr_t)param1;
-        int32_t y = (uintptr_t)param2;
+        int32_t x = (intptr_t)param1;
+        int32_t y = (intptr_t)param2;
 
         widget->margin_rect.x = x;
         widget->margin_rect.y = y;
@@ -260,7 +258,6 @@ void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *par
 
         widget->content_rect.x = widget->padding_rect.x + jan_unit_to_pixels(widget->padding.left, widget->parent_width);
         widget->content_rect.y = widget->padding_rect.y + jan_unit_to_pixels(widget->padding.top, widget->parent_height);
-        return;
     }
 
     if (event == JAN_EVENT_DRAW && widget->visible) {
@@ -292,13 +289,14 @@ void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *par
             FrameRect(hdc, &margin_rect, border_brush);
             DeleteObject(border_brush);
         #endif
-        return;
     }
+
+    return NULL;
 }
 
 // JanContainer
 void jan_container_init(JanContainer *container) {
-    JanWidget *widget = &container->super;
+    JanWidget *widget = JAN_WIDGET(container);
     jan_widget_init(widget);
     jan_list_init(&container->widgets, CONTAINER_WIDGETS_INIT_CAPACITY);
 }
@@ -309,7 +307,23 @@ void jan_container_add(JanContainer *container, JanWidget *ptr) {
     widget->event_function(widget, JAN_EVENT_WIDGETS_CHANGED, NULL, NULL);
 }
 
-void jan_container_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+JanWidget *jan_container_find(JanContainer *container, uint32_t id) {
+    for (size_t i = 0; i < container->widgets.size; i++) {
+        JanWidget *other_widget = container->widgets.items[i];
+        if (other_widget->id == id) {
+            return other_widget;
+        }
+        else {
+            JanWidget *find_widget = other_widget->event_function(other_widget, JAN_EVENT_FIND, JAN_PARAM(id), NULL);
+            if (find_widget != NULL) {
+                return find_widget;
+            }
+        }
+    }
+    return NULL;
+}
+
+void *jan_container_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
     JanContainer *container = JAN_CONTAINER(widget);
 
     if (event == JAN_EVENT_FREE) {
@@ -320,7 +334,168 @@ void jan_container_event(JanWidget *widget, uint32_t event, void *param1, void *
         free(container->widgets.items);
     }
 
-    jan_widget_event(widget, event, param1, param2);
+    if (event == JAN_EVENT_FIND) {
+        uint32_t id = (uintptr_t)param1;
+        for (size_t i = 0; i < container->widgets.size; i++) {
+            JanWidget *other_widget = container->widgets.items[i];
+            if (other_widget->id == id) {
+                return other_widget;
+            } else {
+                JanWidget *find_widget = other_widget->event_function(other_widget, JAN_EVENT_FIND, JAN_PARAM(id), NULL);
+                if (find_widget != NULL) {
+                    return find_widget;
+                }
+            }
+        }
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_VISIBLE_CHANGED) {
+        for (size_t i = 0; i < container->widgets.size; i++) {
+            JanWidget *other_widget = container->widgets.items[i];
+            jan_widget_set_visible(other_widget, widget->visible);
+        }
+    }
+
+    return jan_widget_event(widget, event, param1, param2);
+}
+
+// JanStack
+JanStack *jan_stack_new(void) {
+    JanStack *stack = malloc(sizeof(JanStack));
+    jan_stack_init(stack);
+    return stack;
+}
+
+void jan_stack_init(JanStack *stack) {
+    JanContainer *container = JAN_CONTAINER(stack);
+    JanWidget *widget = JAN_WIDGET(stack);
+    jan_container_init(container);
+    stack->align = JAN_ALIGN_HORIZONTAL_LEFT || JAN_ALIGN_VERTICAL_TOP;
+    widget->event_function = jan_stack_event;
+}
+
+JanAlign jan_stack_get_align(JanStack *stack) {
+    return stack->align;
+}
+
+void jan_stack_set_align(JanStack *stack, JanAlign align) {
+    JanWidget *widget = JAN_WIDGET(stack);
+    stack->align = align;
+    widget->event_function(widget, JAN_EVENT_ALIGN_CHANGED, NULL, NULL);
+}
+
+void *jan_stack_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+    JanStack *stack = JAN_STACK(widget);
+    JanContainer *container = JAN_CONTAINER(widget);
+
+    if (event == JAN_EVENT_MEASURE) {
+        int32_t parent_width = (intptr_t)param1;
+        int32_t parent_height = (intptr_t)param2;
+
+        widget->parent_width = parent_width;
+        if (widget->width.type != JAN_UNIT_TYPE_WRAP) {
+            widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) - jan_unit_to_pixels(widget->padding.right, parent_width) -
+                jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
+        } else {
+            widget->content_rect.width = INT32_MAX;
+        }
+
+        widget->parent_height = parent_height;
+        if (widget->height.type != JAN_UNIT_TYPE_WRAP) {
+            widget->content_rect.height = jan_unit_to_pixels(widget->height, parent_height - jan_unit_to_pixels(widget->padding.top, parent_height) - jan_unit_to_pixels(widget->padding.bottom, parent_height) -
+                jan_unit_to_pixels(widget->margin.top, parent_height) - jan_unit_to_pixels(widget->margin.bottom, parent_height));
+        } else {
+            widget->content_rect.height = INT32_MAX;
+        }
+
+        int32_t max_width = 0;
+        int32_t max_height = 0;
+        for (size_t i = 0; i < container->widgets.size; i++) {
+            JanWidget *other_widget = container->widgets.items[i];
+            if (other_widget->visible) {
+                if (other_widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
+                    other_widget->width.type = JAN_UNIT_TYPE_WRAP;
+                }
+                if (other_widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
+                    other_widget->height.type = JAN_UNIT_TYPE_WRAP;
+                }
+                other_widget->event_function(other_widget, JAN_EVENT_MEASURE, JAN_PARAM(widget->content_rect.width), JAN_PARAM(widget->content_rect.height));
+                max_width = MAX(max_width, other_widget->margin_rect.width);
+                max_height = MAX(max_height, other_widget->margin_rect.height);
+            }
+        }
+
+        if (widget->width.type == JAN_UNIT_TYPE_WRAP) {
+            widget->content_rect.width = max_width;
+        }
+        widget->padding_rect.width = jan_unit_to_pixels(widget->padding.left, parent_width) + widget->content_rect.width + jan_unit_to_pixels(widget->padding.right, parent_width);
+        widget->margin_rect.width = jan_unit_to_pixels(widget->margin.left, parent_width) + widget->padding_rect.width + jan_unit_to_pixels(widget->margin.right, parent_width);
+
+        if (widget->height.type == JAN_UNIT_TYPE_WRAP) {
+            widget->content_rect.height = max_height;
+        }
+        widget->padding_rect.height = jan_unit_to_pixels(widget->padding.top, parent_height) + widget->content_rect.height + jan_unit_to_pixels(widget->padding.bottom, parent_height);
+        widget->margin_rect.height = jan_unit_to_pixels(widget->margin.top, parent_height) + widget->padding_rect.height + jan_unit_to_pixels(widget->margin.bottom, parent_height);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_PLACE) {
+        int32_t x = (intptr_t)param1;
+        int32_t y = (intptr_t)param2;
+
+        widget->margin_rect.x = x;
+        widget->margin_rect.y = y;
+        widget->padding_rect.x = widget->margin_rect.x + jan_unit_to_pixels(widget->margin.left, widget->parent_width);
+        widget->padding_rect.y = widget->margin_rect.y + jan_unit_to_pixels(widget->margin.top, widget->parent_height);
+        widget->content_rect.x = widget->padding_rect.x + jan_unit_to_pixels(widget->padding.left, widget->parent_width);
+        widget->content_rect.y = widget->padding_rect.y + jan_unit_to_pixels(widget->padding.top, widget->parent_height);
+
+        for (size_t i = 0; i < container->widgets.size; i++) {
+            JanWidget *other_widget = container->widgets.items[i];
+            if (other_widget->visible) {
+                int32_t other_widget_x = widget->content_rect.x;
+                if ((stack->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
+                    other_widget_x += (widget->content_rect.width - other_widget->margin_rect.width) / 2;
+                }
+                if ((stack->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
+                    other_widget_x += widget->content_rect.width - other_widget->margin_rect.width;
+                }
+
+                int32_t other_widget_y = widget->content_rect.y;
+                if ((stack->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
+                    other_widget_y += (widget->content_rect.height - other_widget->margin_rect.height) / 2;
+                }
+                if ((stack->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
+                    other_widget_y += widget->content_rect.height - other_widget->margin_rect.height;
+                }
+
+                other_widget->event_function(other_widget, JAN_EVENT_PLACE, JAN_PARAM(other_widget_x), JAN_PARAM(other_widget_y));
+            }
+        }
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_DRAW && widget->visible) {
+        HDC hdc = param1;
+        jan_widget_event(widget, JAN_EVENT_DRAW, hdc, NULL);
+
+        for (size_t i = 0; i < container->widgets.size; i++) {
+            JanWidget *other_widget = container->widgets.items[i];
+            if (other_widget->visible) {
+                HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
+                    widget->padding_rect.x + widget->padding_rect.width,
+                    widget->padding_rect.y + widget->padding_rect.height);
+                SelectClipRgn(hdc, &padding_region);
+                other_widget->event_function(other_widget, JAN_EVENT_DRAW, hdc, NULL);
+                DeleteObject(padding_region);
+                SelectClipRgn(hdc, NULL);
+            }
+        }
+        return NULL;
+    }
+
+    return jan_container_event(widget, event, param1, param2);
 }
 
 // JanBox
@@ -365,24 +540,28 @@ void jan_box_set_align(JanBox *box, JanAlign align) {
     widget->event_function(widget, JAN_EVENT_ALIGN_CHANGED, NULL, NULL);
 }
 
-void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+void *jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
     JanBox *box = JAN_BOX(widget);
     JanContainer *container = JAN_CONTAINER(widget);
 
     if (event == JAN_EVENT_MEASURE) {
-        int32_t parent_width = (uintptr_t)param1;
-        int32_t parent_height = (uintptr_t)param2;
+        int32_t parent_width = (intptr_t)param1;
+        int32_t parent_height = (intptr_t)param2;
 
         widget->parent_width = parent_width;
         if (widget->width.type != JAN_UNIT_TYPE_WRAP) {
             widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) - jan_unit_to_pixels(widget->padding.right, parent_width) -
                 jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
+        } else {
+            widget->content_rect.width = INT32_MAX;
         }
 
         widget->parent_height = parent_height;
         if (widget->height.type != JAN_UNIT_TYPE_WRAP) {
             widget->content_rect.height = jan_unit_to_pixels(widget->height, parent_height - jan_unit_to_pixels(widget->padding.top, parent_height) - jan_unit_to_pixels(widget->padding.bottom, parent_height) -
                 jan_unit_to_pixels(widget->margin.top, parent_height) - jan_unit_to_pixels(widget->margin.bottom, parent_height));
+        } else {
+            widget->content_rect.height = INT32_MAX;
         }
 
         int32_t sum_width = 0;
@@ -391,30 +570,32 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
         int32_t max_height = 0;
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
-            if (other_widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
-                if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-                    other_widget->width.type = JAN_UNIT_TYPE_WRAP;
+            if (other_widget->visible) {
+                if (other_widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
+                    if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                        other_widget->width.type = JAN_UNIT_TYPE_WRAP;
+                    }
+                    if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                        other_widget->width.value = 100;
+                        other_widget->width.type = JAN_UNIT_TYPE_PERCENT;
+                    }
                 }
-                if (box->orientation == JAN_ORIENTATION_VERTICAL) {
-                    other_widget->width.value = 100;
-                    other_widget->width.type = JAN_UNIT_TYPE_PERCENT;
+                if (other_widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
+                    if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                        other_widget->height.value = 100;
+                        other_widget->height.type = JAN_UNIT_TYPE_PERCENT;
+                    }
+                    if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                        other_widget->height.type = JAN_UNIT_TYPE_WRAP;
+                    }
                 }
-            }
-            if (other_widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
-                if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-                    other_widget->height.value = 100;
-                    other_widget->height.type = JAN_UNIT_TYPE_PERCENT;
-                }
-                if (box->orientation == JAN_ORIENTATION_VERTICAL) {
-                    other_widget->height.type = JAN_UNIT_TYPE_WRAP;
-                }
-            }
 
-            other_widget->event_function(other_widget, JAN_EVENT_MEASURE, JAN_PARAM(widget->content_rect.width), JAN_PARAM(widget->content_rect.height));
-            sum_width += other_widget->margin_rect.width;
-            max_width = MAX(max_width, other_widget->margin_rect.width);
-            sum_height += other_widget->margin_rect.height;
-            max_height = MAX(max_height, other_widget->margin_rect.height);
+                other_widget->event_function(other_widget, JAN_EVENT_MEASURE, JAN_PARAM(widget->content_rect.width), JAN_PARAM(widget->content_rect.height));
+                sum_width += other_widget->margin_rect.width;
+                max_width = MAX(max_width, other_widget->margin_rect.width);
+                sum_height += other_widget->margin_rect.height;
+                max_height = MAX(max_height, other_widget->margin_rect.height);
+            }
         }
 
         if (widget->width.type == JAN_UNIT_TYPE_WRAP) {
@@ -438,12 +619,12 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
         }
         widget->padding_rect.height = jan_unit_to_pixels(widget->padding.top, parent_height) + widget->content_rect.height + jan_unit_to_pixels(widget->padding.bottom, parent_height);
         widget->margin_rect.height = jan_unit_to_pixels(widget->margin.top, parent_height) + widget->padding_rect.height + jan_unit_to_pixels(widget->margin.bottom, parent_height);
-        return;
+        return NULL;
     }
 
     if (event == JAN_EVENT_PLACE) {
-        int32_t x = (uintptr_t)param1;
-        int32_t y = (uintptr_t)param2;
+        int32_t x = (intptr_t)param1;
+        int32_t y = (intptr_t)param2;
 
         widget->margin_rect.x = x;
         widget->margin_rect.y = y;
@@ -456,71 +637,66 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
         int32_t sum_height = 0;
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
-            sum_width += other_widget->margin_rect.width;
-            sum_height += other_widget->margin_rect.height;
+            if (other_widget->visible) {
+                sum_width += other_widget->margin_rect.width;
+                sum_height += other_widget->margin_rect.height;
+            }
         }
 
+        x = widget->content_rect.x;
         if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-            if ((box->align & JAN_ALIGN_HORIZONTAL_LEFT) != 0) {
-                x = widget->content_rect.x;
-            }
             if ((box->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
                 x = MAX(widget->content_rect.x + (widget->content_rect.width - sum_width) / 2, widget->content_rect.x);
             }
             if ((box->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
                 x = MAX(widget->content_rect.x + widget->content_rect.width - sum_width, widget->content_rect.x);
             }
-        } else {
-            x = widget->content_rect.x;
         }
 
+        y = widget->content_rect.y;
         if (box->orientation == JAN_ORIENTATION_VERTICAL) {
-            if ((box->align & JAN_ALIGN_VERTICAL_TOP) != 0) {
-                y = widget->content_rect.y;
-            }
             if ((box->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
                 y = MAX(widget->content_rect.y + (widget->content_rect.height - sum_height) / 2, widget->content_rect.y);
             }
             if ((box->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
                 y = MAX(widget->content_rect.y + widget->content_rect.height - sum_height, widget->content_rect.y);
             }
-        } else {
-            y = widget->content_rect.y;
         }
 
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
-
-            int32_t other_widget_x = x;
-            if (box->orientation == JAN_ORIENTATION_VERTICAL) {
-                if ((box->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
-                    other_widget_x += (widget->content_rect.width - other_widget->margin_rect.width) / 2;
+            if (other_widget->visible) {
+                int32_t other_widget_x = x;
+                if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                    if ((box->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
+                        other_widget_x += (widget->content_rect.width - other_widget->margin_rect.width) / 2;
+                    }
+                    if ((box->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
+                        other_widget_x += widget->content_rect.width - other_widget->margin_rect.width;
+                    }
                 }
-                if ((box->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
-                    other_widget_x += widget->content_rect.width - other_widget->margin_rect.width;
-                }
-            }
 
-            int32_t other_widget_y = y;
-            if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-                if ((box->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
-                    other_widget_y += (widget->content_rect.height - other_widget->margin_rect.height) / 2;
+                int32_t other_widget_y = y;
+                if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                    if ((box->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
+                        other_widget_y += (widget->content_rect.height - other_widget->margin_rect.height) / 2;
+                    }
+                    if ((box->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
+                        other_widget_y += widget->content_rect.height - other_widget->margin_rect.height;
+                    }
                 }
-                if ((box->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
-                    other_widget_y += widget->content_rect.height - other_widget->margin_rect.height;
+
+                other_widget->event_function(other_widget, JAN_EVENT_PLACE, JAN_PARAM(other_widget_x), JAN_PARAM(other_widget_y));
+
+                if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                    x += other_widget->margin_rect.width;
                 }
-            }
-
-            other_widget->event_function(other_widget, JAN_EVENT_PLACE, JAN_PARAM(other_widget_x), JAN_PARAM(other_widget_y));
-
-            if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-                x += other_widget->margin_rect.width;
-            }
-            if (box->orientation == JAN_ORIENTATION_VERTICAL) {
-                y += other_widget->margin_rect.height;
+                if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                    y += other_widget->margin_rect.height;
+                }
             }
         }
-        return;
+        return NULL;
     }
 
     if (event == JAN_EVENT_DRAW && widget->visible) {
@@ -529,18 +705,20 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
 
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
-            HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
-                widget->padding_rect.x + widget->padding_rect.width,
-                widget->padding_rect.y + widget->padding_rect.height);
-            SelectClipRgn(hdc, &padding_region);
-            other_widget->event_function(other_widget, JAN_EVENT_DRAW, hdc, NULL);
-            DeleteObject(padding_region);
-            SelectClipRgn(hdc, NULL);
+            if (other_widget->visible) {
+                HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
+                    widget->padding_rect.x + widget->padding_rect.width,
+                    widget->padding_rect.y + widget->padding_rect.height);
+                SelectClipRgn(hdc, &padding_region);
+                other_widget->event_function(other_widget, JAN_EVENT_DRAW, hdc, NULL);
+                DeleteObject(padding_region);
+                SelectClipRgn(hdc, NULL);
+            }
         }
-        return;
+        return NULL;
     }
 
-    jan_container_event(widget, event, param1, param2);
+    return jan_container_event(widget, event, param1, param2);
 }
 
 // JanLabel
@@ -679,7 +857,7 @@ void jan_label_set_align(JanLabel *label, JanAlign align) {
     widget->event_function(widget, JAN_EVENT_ALIGN_CHANGED, NULL, NULL);
 }
 
-void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
     JanLabel *label = JAN_LABEL(widget);
 
     if (event == JAN_EVENT_FREE) {
@@ -688,8 +866,8 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
     }
 
     if (event == JAN_EVENT_MEASURE) {
-        int32_t parent_width = (uintptr_t)param1;
-        int32_t parent_height = (uintptr_t)param2;
+        int32_t parent_width = (intptr_t)param1;
+        int32_t parent_height = (intptr_t)param2;
 
         widget->parent_width = parent_width;
         if (widget->width.type == JAN_UNIT_TYPE_WRAP) {
@@ -699,7 +877,7 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
             RECT measure_rect = { 0, 0, 0, 0 };
             DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT);
             DeleteObject(font);
-            widget->content_rect.width = MIN((int32_t)(measure_rect.right - measure_rect.left), parent_width);
+            widget->content_rect.width = MIN((int32_t)measure_rect.right - (int32_t)measure_rect.left, parent_width);
         } else {
             widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) - jan_unit_to_pixels(widget->padding.right, parent_width) -
                 jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
@@ -725,7 +903,7 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
         }
         widget->padding_rect.height = jan_unit_to_pixels(widget->padding.top, parent_height) + widget->content_rect.height + jan_unit_to_pixels(widget->padding.bottom, parent_height);
         widget->margin_rect.height = jan_unit_to_pixels(widget->margin.top, parent_height) + widget->padding_rect.height + jan_unit_to_pixels(widget->margin.bottom, parent_height);
-        return;
+        return NULL;
     }
 
     if (event == JAN_EVENT_DRAW && widget->visible) {
@@ -739,9 +917,8 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
         if (label->single_line) {
             int32_t x = widget->content_rect.x;
             int32_t y = widget->content_rect.y;
-            if ((label->align & JAN_ALIGN_HORIZONTAL_LEFT) != 0) {
-                SetTextAlign(hdc, TA_LEFT);
-            }
+
+            SetTextAlign(hdc, TA_LEFT);
             if ((label->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
                 x += widget->content_rect.width / 2;
                 SetTextAlign(hdc, TA_CENTER);
@@ -750,28 +927,28 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
                 x += widget->content_rect.width;
                 SetTextAlign(hdc, TA_RIGHT);
             }
+
             if ((label->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
                 y += (widget->content_rect.height - jan_unit_to_pixels(label->font_size, 0)) / 2;
             }
             if ((label->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
                 y += widget->content_rect.height - jan_unit_to_pixels(label->font_size, 0);
             }
+
             TextOutW(hdc, x, y, label->text, wcslen(label->text));
         } else {
+            uint32_t style = DT_WORDBREAK | DT_LEFT;
             SetTextAlign(hdc, TA_LEFT);
-            RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
-                widget->content_rect.x + widget->content_rect.width,
-                widget->content_rect.y + widget->content_rect.height };
-            uint32_t style = DT_WORDBREAK;
             if ((label->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
                 style |= DT_CENTER;
             }
             if ((label->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
                 style |= DT_RIGHT;
             }
-            if ((label->align & JAN_ALIGN_HORIZONTAL_LEFT) != 0) {
-                style |= DT_LEFT;
-            }
+
+            RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
+                widget->content_rect.x + widget->content_rect.width,
+                widget->content_rect.y + widget->content_rect.height };
             if ((label->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
                 HDC hdc = GetDC(NULL);
                 HFONT font = jan_label_get_hfont(label);
@@ -788,13 +965,14 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
                 content_rect.top += widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
                 DeleteObject(font);
             }
+
             DrawTextW(hdc, label->text, -1, &content_rect, style);
         }
         DeleteObject(font);
-        return;
+        return NULL;
     }
 
-    jan_widget_event(widget, event, param1, param2);
+    return jan_widget_event(widget, event, param1, param2);
 }
 
 // JanButton
@@ -824,7 +1002,7 @@ void jan_button_init(JanButton *button) {
     widget->event_function = jan_button_event;
 }
 
-void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
     JanButton *button = JAN_BUTTON(widget);
     JanLabel *label = JAN_LABEL(widget);
 
@@ -836,17 +1014,26 @@ void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *par
     if (event == JAN_EVENT_MEASURE) {
         jan_label_event(widget, JAN_EVENT_MEASURE, param1, param2);
         SetWindowPos(button->hwnd, NULL, 0, 0, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER | SWP_NOMOVE);
-        return;
+        return NULL;
     }
 
     if (event == JAN_EVENT_PLACE) {
         jan_label_event(widget, JAN_EVENT_PLACE, param1, param2);
         SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-        return;
+        return NULL;
     }
 
     if (event == JAN_EVENT_DRAW) {
-        return;
+        #ifdef JAN_DEBUG
+            HDC hdc = param1;
+            HBRUSH border_brush = CreateSolidBrush(0x000000ff);
+            RECT margin_rect = { widget->margin_rect.x, widget->margin_rect.y,
+                widget->margin_rect.x + widget->margin_rect.width,
+                widget->margin_rect.y + widget->margin_rect.height };
+            FrameRect(hdc, &margin_rect, border_brush);
+            DeleteObject(border_brush);
+        #endif
+        return NULL;
     }
 
     if (event == JAN_EVENT_ID_CHANGED) {
@@ -854,6 +1041,7 @@ void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *par
         button->hwnd = CreateWindowExW(0, L"BUTTON", label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
         SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
+        ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
     }
 
     if (event == JAN_EVENT_VISIBLE_CHANGED) {
@@ -874,7 +1062,7 @@ void jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *par
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
     }
 
-    jan_label_event(widget, event, param1, param2);
+    return jan_label_event(widget, event, param1, param2);
 }
 
 // JanLoader
@@ -882,6 +1070,7 @@ uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
     uint16_t widget_type = *(uint16_t *)data;
     data += sizeof(uint16_t);
     if (widget_type == JAN_TYPE_WIDGET) *widget = jan_widget_new();
+    if (widget_type == JAN_TYPE_STACK) *widget = JAN_WIDGET(jan_stack_new());
     if (widget_type == JAN_TYPE_BOX) *widget = JAN_WIDGET(jan_box_new());
     if (widget_type == JAN_TYPE_LABEL) *widget = JAN_WIDGET(jan_label_new());
     if (widget_type == JAN_TYPE_BUTTON) *widget = JAN_WIDGET(jan_button_new());
@@ -918,7 +1107,7 @@ uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
             data += sizeof(JanColor);
         }
         if (attribute == JAN_ATTRIBUTE_VISIBLE) {
-            jan_widget_set_id(*widget, *(uint8_t *)data);
+            jan_widget_set_visible(*widget, *(uint8_t *)data);
             data += sizeof(uint8_t);
         }
         if (attribute == JAN_ATTRIBUTE_MARGIN) {
@@ -1039,7 +1228,7 @@ uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
         }
 
         // Container attributes
-        if (widget_type == JAN_TYPE_CONTAINER || widget_type == JAN_TYPE_BOX) {
+        if (widget_type == JAN_TYPE_CONTAINER || widget_type == JAN_TYPE_STACK || widget_type == JAN_TYPE_BOX) {
             if (attribute == JAN_ATTRIBUTE_WIDGETS) {
                 uint16_t widgets_size = *(uint16_t *)data;
                 data += sizeof(uint16_t);
@@ -1048,6 +1237,14 @@ uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
                     data = jan_load(data, &other_widget);
                     jan_container_add(JAN_CONTAINER(*widget), other_widget);
                 }
+            }
+        }
+
+        // Stack attributes
+        if (widget_type == JAN_TYPE_STACK) {
+            if (attribute == JAN_ATTRIBUTE_ALIGN) {
+                jan_stack_set_align(JAN_STACK(*widget), *(uint8_t *)data);
+                data += sizeof(uint8_t);
             }
         }
 

@@ -44,11 +44,37 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_COMMAND) {
         uint16_t id = LOWORD(wParam);
+
         if (id == 1) {
+            JanWidget *menuPage = jan_container_find(JAN_CONTAINER(window->root), 100);
+            jan_widget_set_visible(menuPage, false);
+            JanWidget *settingsPage = jan_container_find(JAN_CONTAINER(window->root), 101);
+            jan_widget_set_visible(settingsPage, true);
+
+            // Redraw window
+            window->root->event_function(window->root, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
+            window->root->event_function(window->root, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
+
+        if (id == 2) {
             MessageBoxW(hwnd, L"Made by Bastiaan van der Plaat", L"About", MB_OK);
         }
-        if (id == 2) {
+
+        if (id == 3) {
             DestroyWindow(hwnd);
+        }
+
+        if (id == 4) {
+            JanWidget *menuPage = jan_container_find(JAN_CONTAINER(window->root), 100);
+            jan_widget_set_visible(menuPage, true);
+            JanWidget *settingsPage = jan_container_find(JAN_CONTAINER(window->root), 101);
+            jan_widget_set_visible(settingsPage, false);
+
+            // Redraw window
+            window->root->event_function(window->root, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
+            window->root->event_function(window->root, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
+            InvalidateRect(hwnd, NULL, TRUE);
         }
     }
 
@@ -71,11 +97,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         minMaxInfo->ptMinTrackSize.x = window_rect.right - window_rect.left;
         minMaxInfo->ptMinTrackSize.y = window_rect.bottom - window_rect.top;
         return 0;
-    }
-
-    if (msg == WM_ERASEBKGND) {
-        // Draw no background
-        return TRUE;
     }
 
     if (msg == WM_PAINT) {
@@ -125,6 +146,7 @@ void _start(void) {
     wc.hInstance = GetModuleHandleW(NULL);
     wc.hIcon = LoadIconW(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(RGB(0x11, 0x11, 0x11));
     wc.lpszClassName = window_class_name;
     wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);

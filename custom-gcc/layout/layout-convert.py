@@ -142,6 +142,8 @@ with open (sys.argv[2], 'wb') as file:
     def dumpWidget(widget):
         if widget.tag == 'Widget':
             file.write(struct.pack('<H', constants['JAN_TYPE_WIDGET']))
+        if widget.tag == 'Stack':
+            file.write(struct.pack('<H', constants['JAN_TYPE_STACK']))
         if widget.tag == 'Box':
             file.write(struct.pack('<H', constants['JAN_TYPE_BOX']))
         if widget.tag == 'Label':
@@ -149,7 +151,7 @@ with open (sys.argv[2], 'wb') as file:
         if widget.tag == 'Button':
             file.write(struct.pack('<H', constants['JAN_TYPE_BUTTON']))
 
-        file.write(struct.pack('<H', widget.tag == 'Box' and len(widget.attrib) + 1 or len(widget.attrib)))
+        file.write(struct.pack('<H', (widget.tag == 'Stack' or widget.tag == 'Box') and len(widget.attrib) + 1 or len(widget.attrib)))
         for attribute in widget.attrib:
             value = widget.attrib[attribute]
 
@@ -250,6 +252,12 @@ with open (sys.argv[2], 'wb') as file:
                 file.write(struct.pack('f', unit[0]))
                 file.write(struct.pack('B', unit[1]))
 
+            # Stack attributes
+            if widget.tag == 'Stack':
+                if attribute == 'align':
+                    file.write(struct.pack('<H', constants['JAN_ATTRIBUTE_ALIGN']))
+                    file.write(struct.pack('B', parseAlign(value)))
+
             # Box attributes
             if widget.tag == 'Box':
                 if attribute == 'orientation':
@@ -298,7 +306,7 @@ with open (sys.argv[2], 'wb') as file:
                     file.write(struct.pack('<H', constants['JAN_ATTRIBUTE_ALIGN']))
                     file.write(struct.pack('B', parseAlign(value)))
 
-        if widget.tag == 'Box':
+        if widget.tag == 'Stack' or widget.tag == 'Box':
             file.write(struct.pack('<H', constants['JAN_ATTRIBUTE_WIDGETS']))
             file.write(struct.pack('<H', len(widget)))
             for widget in widget:
