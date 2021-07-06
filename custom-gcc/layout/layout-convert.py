@@ -52,11 +52,17 @@ with open (sys.argv[2], 'wb') as file:
         if value.endswith('vh'):
             return (float(value[:-2]), constants['JAN_UNIT_TYPE_VH'])
 
+        if value.endswith('vmin'):
+            return (float(value[:-4]), constants['JAN_UNIT_TYPE_VMIN'])
+
+        if value.endswith('vmax'):
+            return (float(value[:-4]), constants['JAN_UNIT_TYPE_VMAX'])
+
         if value.endswith('%'):
             return (float(value[:-1]), constants['JAN_UNIT_TYPE_PERCENT'])
 
         if value == 'wrap':
-            return (0, constants['JAN_UNIT_TYPE_UNDEFINED'])
+            return (0, constants['JAN_UNIT_TYPE_WRAP'])
 
         if value == 'match':
             return (100, constants['JAN_UNIT_TYPE_PERCENT'])

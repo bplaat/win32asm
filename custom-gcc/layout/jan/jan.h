@@ -36,14 +36,15 @@ typedef int32_t JanAlign;
 
 // JanUnit
 #define JAN_UNIT_TYPE_UNDEFINED 0
-#define JAN_UNIT_TYPE_PX 1
-#define JAN_UNIT_TYPE_DP 2
-#define JAN_UNIT_TYPE_SP 3
-#define JAN_UNIT_TYPE_VW 4
-#define JAN_UNIT_TYPE_VH 5
-#define JAN_UNIT_TYPE_VMIN 6
-#define JAN_UNIT_TYPE_VMAX 7
-#define JAN_UNIT_TYPE_PERCENT 8
+#define JAN_UNIT_TYPE_WRAP 1
+#define JAN_UNIT_TYPE_PX 2
+#define JAN_UNIT_TYPE_DP 3
+#define JAN_UNIT_TYPE_SP 4
+#define JAN_UNIT_TYPE_VW 5
+#define JAN_UNIT_TYPE_VH 6
+#define JAN_UNIT_TYPE_VMIN 7
+#define JAN_UNIT_TYPE_VMAX 8
+#define JAN_UNIT_TYPE_PERCENT 9
 typedef int32_t JanUnitType;
 
 typedef struct JanUnit {

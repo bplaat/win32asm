@@ -235,22 +235,14 @@ void jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *par
         int32_t parent_height = (uintptr_t)param2;
 
         widget->parent_width = parent_width;
-        if (widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
-            widget->content_rect.width = 0;
-        } else {
-            widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) -
-                jan_unit_to_pixels(widget->padding.right, parent_width) - jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
-        }
+        widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) -
+            jan_unit_to_pixels(widget->padding.right, parent_width) - jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
         widget->padding_rect.width = jan_unit_to_pixels(widget->padding.left, parent_width) + widget->content_rect.width + jan_unit_to_pixels(widget->padding.right, parent_width);
         widget->margin_rect.width = jan_unit_to_pixels(widget->margin.left, parent_width) + widget->padding_rect.width + jan_unit_to_pixels(widget->margin.right, parent_width);
 
         widget->parent_height = parent_height;
-        if (widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
-            widget->content_rect.height = 0;
-        } else {
-            widget->content_rect.height = jan_unit_to_pixels(widget->height, parent_height - jan_unit_to_pixels(widget->padding.top, parent_height) - jan_unit_to_pixels(widget->padding.bottom, parent_height) -
-                jan_unit_to_pixels(widget->margin.top, parent_height) - jan_unit_to_pixels(widget->margin.bottom, parent_height));
-        }
+        widget->content_rect.height = jan_unit_to_pixels(widget->height, parent_height - jan_unit_to_pixels(widget->padding.top, parent_height) - jan_unit_to_pixels(widget->padding.bottom, parent_height) -
+            jan_unit_to_pixels(widget->margin.top, parent_height) - jan_unit_to_pixels(widget->margin.bottom, parent_height));
         widget->padding_rect.height = jan_unit_to_pixels(widget->padding.top, parent_height) + widget->content_rect.height + jan_unit_to_pixels(widget->padding.bottom, parent_height);
         widget->margin_rect.height = jan_unit_to_pixels(widget->margin.top, parent_height) + widget->padding_rect.height + jan_unit_to_pixels(widget->margin.bottom, parent_height);
         return;
@@ -382,13 +374,13 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
         int32_t parent_height = (uintptr_t)param2;
 
         widget->parent_width = parent_width;
-        if (widget->width.type != JAN_UNIT_TYPE_UNDEFINED) {
+        if (widget->width.type != JAN_UNIT_TYPE_WRAP) {
             widget->content_rect.width = jan_unit_to_pixels(widget->width, parent_width - jan_unit_to_pixels(widget->padding.left, parent_width) - jan_unit_to_pixels(widget->padding.right, parent_width) -
                 jan_unit_to_pixels(widget->margin.left, parent_width) - jan_unit_to_pixels(widget->margin.right, parent_width));
         }
 
         widget->parent_height = parent_height;
-        if (widget->height.type != JAN_UNIT_TYPE_UNDEFINED) {
+        if (widget->height.type != JAN_UNIT_TYPE_WRAP) {
             widget->content_rect.height = jan_unit_to_pixels(widget->height, parent_height - jan_unit_to_pixels(widget->padding.top, parent_height) - jan_unit_to_pixels(widget->padding.bottom, parent_height) -
                 jan_unit_to_pixels(widget->margin.top, parent_height) - jan_unit_to_pixels(widget->margin.bottom, parent_height));
         }
@@ -399,13 +391,23 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
         int32_t max_height = 0;
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
-            if (other_widget->width.type == JAN_UNIT_TYPE_UNDEFINED && box->orientation == JAN_ORIENTATION_VERTICAL) {
-                other_widget->width.value = 100;
-                other_widget->width.type = JAN_UNIT_TYPE_PERCENT;
+            if (other_widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
+                if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                    other_widget->width.type = JAN_UNIT_TYPE_WRAP;
+                }
+                if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                    other_widget->width.value = 100;
+                    other_widget->width.type = JAN_UNIT_TYPE_PERCENT;
+                }
             }
-            if (other_widget->height.type == JAN_UNIT_TYPE_UNDEFINED && box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-                other_widget->height.value = 100;
-                other_widget->height.type = JAN_UNIT_TYPE_PERCENT;
+            if (other_widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
+                if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                    other_widget->height.value = 100;
+                    other_widget->height.type = JAN_UNIT_TYPE_PERCENT;
+                }
+                if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                    other_widget->height.type = JAN_UNIT_TYPE_WRAP;
+                }
             }
 
             other_widget->event_function(other_widget, JAN_EVENT_MEASURE, JAN_PARAM(widget->content_rect.width), JAN_PARAM(widget->content_rect.height));
@@ -415,7 +417,7 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
             max_height = MAX(max_height, other_widget->margin_rect.height);
         }
 
-        if (widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
+        if (widget->width.type == JAN_UNIT_TYPE_WRAP) {
             if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
                 widget->content_rect.width = sum_width;
             }
@@ -426,7 +428,7 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
         widget->padding_rect.width = jan_unit_to_pixels(widget->padding.left, parent_width) + widget->content_rect.width + jan_unit_to_pixels(widget->padding.right, parent_width);
         widget->margin_rect.width = jan_unit_to_pixels(widget->margin.left, parent_width) + widget->padding_rect.width + jan_unit_to_pixels(widget->margin.right, parent_width);
 
-        if (widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
+        if (widget->height.type == JAN_UNIT_TYPE_WRAP) {
             if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
                 widget->content_rect.height = max_height;
             }
@@ -445,16 +447,10 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
 
         widget->margin_rect.x = x;
         widget->margin_rect.y = y;
-        x += jan_unit_to_pixels(widget->margin.left, widget->parent_width);
-
-        widget->padding_rect.x = x;
-        y += jan_unit_to_pixels(widget->margin.top, widget->parent_height);
-        widget->padding_rect.y = y;
-
-        x += jan_unit_to_pixels(widget->padding.left, widget->parent_width);
-        widget->content_rect.x = x;
-        y += jan_unit_to_pixels(widget->padding.top, widget->parent_height);
-        widget->content_rect.y = y;
+        widget->padding_rect.x = widget->margin_rect.x + jan_unit_to_pixels(widget->margin.left, widget->parent_width);
+        widget->padding_rect.y = widget->margin_rect.y + jan_unit_to_pixels(widget->margin.top, widget->parent_height);
+        widget->content_rect.x = widget->padding_rect.x + jan_unit_to_pixels(widget->padding.left, widget->parent_width);
+        widget->content_rect.y = widget->padding_rect.y + jan_unit_to_pixels(widget->padding.top, widget->parent_height);
 
         int32_t sum_width = 0;
         int32_t sum_height = 0;
@@ -463,22 +459,59 @@ void jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param2
             sum_width += other_widget->margin_rect.width;
             sum_height += other_widget->margin_rect.height;
         }
-        if ((box->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
-            x = MAX(widget->content_rect.x + (widget->content_rect.width - sum_width) / 2, widget->content_rect.x);
+
+        if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+            if ((box->align & JAN_ALIGN_HORIZONTAL_LEFT) != 0) {
+                x = widget->content_rect.x;
+            }
+            if ((box->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
+                x = MAX(widget->content_rect.x + (widget->content_rect.width - sum_width) / 2, widget->content_rect.x);
+            }
+            if ((box->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
+                x = MAX(widget->content_rect.x + widget->content_rect.width - sum_width, widget->content_rect.x);
+            }
+        } else {
+            x = widget->content_rect.x;
         }
-        if ((box->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
-            x = MAX(widget->content_rect.x + widget->content_rect.width - sum_width, widget->content_rect.x);
-        }
-        if ((box->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
-            y = MAX(widget->content_rect.y + (widget->content_rect.height - sum_height) / 2, widget->content_rect.y);
-        }
-        if ((box->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
-            y = MAX(widget->content_rect.y + widget->content_rect.height - sum_height, widget->content_rect.y);
+
+        if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+            if ((box->align & JAN_ALIGN_VERTICAL_TOP) != 0) {
+                y = widget->content_rect.y;
+            }
+            if ((box->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
+                y = MAX(widget->content_rect.y + (widget->content_rect.height - sum_height) / 2, widget->content_rect.y);
+            }
+            if ((box->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
+                y = MAX(widget->content_rect.y + widget->content_rect.height - sum_height, widget->content_rect.y);
+            }
+        } else {
+            y = widget->content_rect.y;
         }
 
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
-            other_widget->event_function(other_widget, JAN_EVENT_PLACE, JAN_PARAM(x), JAN_PARAM(y));
+
+            int32_t other_widget_x = x;
+            if (box->orientation == JAN_ORIENTATION_VERTICAL) {
+                if ((box->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
+                    other_widget_x += (widget->content_rect.width - other_widget->margin_rect.width) / 2;
+                }
+                if ((box->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
+                    other_widget_x += widget->content_rect.width - other_widget->margin_rect.width;
+                }
+            }
+
+            int32_t other_widget_y = y;
+            if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
+                if ((box->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
+                    other_widget_y += (widget->content_rect.height - other_widget->margin_rect.height) / 2;
+                }
+                if ((box->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
+                    other_widget_y += widget->content_rect.height - other_widget->margin_rect.height;
+                }
+            }
+
+            other_widget->event_function(other_widget, JAN_EVENT_PLACE, JAN_PARAM(other_widget_x), JAN_PARAM(other_widget_y));
 
             if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
                 x += other_widget->margin_rect.width;
@@ -659,7 +692,7 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
         int32_t parent_height = (uintptr_t)param2;
 
         widget->parent_width = parent_width;
-        if (widget->width.type == JAN_UNIT_TYPE_UNDEFINED) {
+        if (widget->width.type == JAN_UNIT_TYPE_WRAP) {
             HDC hdc = GetDC(NULL);
             HFONT font = jan_label_get_hfont(label);
             SelectObject(hdc, font);
@@ -675,7 +708,7 @@ void jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *para
         widget->margin_rect.width = jan_unit_to_pixels(widget->margin.left, parent_width) + widget->padding_rect.width + jan_unit_to_pixels(widget->margin.right, parent_width);
 
         widget->parent_height = parent_height;
-        if (widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
+        if (widget->height.type == JAN_UNIT_TYPE_WRAP) {
             if (label->single_line) {
                 widget->content_rect.height = MIN(jan_unit_to_pixels(label->font_size, 0), parent_height);
             } else {
