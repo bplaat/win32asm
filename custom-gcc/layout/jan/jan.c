@@ -260,7 +260,7 @@ void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *pa
 
         #ifdef JAN_DEBUG
             GpPen *border_pen;
-            GdipCreatePen1(0x40ff0000, 1, UnitPixel, &border_pen);
+            GdipCreatePen1(0x40ff0000, 2, UnitPixel, &border_pen);
             GdipDrawRectangleI(graphics, border_pen, widget->content_rect.x, widget->content_rect.y, widget->content_rect.width, widget->content_rect.height);
             GdipDrawRectangleI(graphics, border_pen, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height);
             GdipDrawRectangleI(graphics, border_pen, widget->margin_rect.x, widget->margin_rect.y, widget->margin_rect.width, widget->margin_rect.height);
@@ -318,7 +318,7 @@ void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *pa
     if (event == JAN_EVENT_GET_MARGIN_RIGHT) {
         return &widget->margin.right;
     }
-    if (event == JAN_EVENT_SET_MARGIN_TOP) {
+    if (event == JAN_EVENT_SET_MARGIN_RIGHT) {
         widget->margin.right = *(JanUnit *)param1;
     }
     if (event == JAN_EVENT_GET_MARGIN_BOTTOM) {
@@ -349,7 +349,7 @@ void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *pa
     if (event == JAN_EVENT_GET_PADDING_RIGHT) {
         return &widget->padding.right;
     }
-    if (event == JAN_EVENT_SET_PADDING_TOP) {
+    if (event == JAN_EVENT_SET_PADDING_RIGHT) {
         widget->padding.right = *(JanUnit *)param1;
     }
     if (event == JAN_EVENT_GET_PADDING_BOTTOM) {
@@ -822,13 +822,7 @@ void *jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
             if (other_widget->visible) {
-                HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
-                    widget->padding_rect.x + widget->padding_rect.width,
-                    widget->padding_rect.y + widget->padding_rect.height);
-                SelectClipRgn(hdc, &padding_region);
                 other_widget->event_function(other_widget, JAN_EVENT_DRAW, hdc, graphics);
-                DeleteObject(padding_region);
-                SelectClipRgn(hdc, NULL);
             }
         }
         return NULL;
@@ -1051,42 +1045,29 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
         SelectObject(hdc, font);
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, label->text_color);
+        SetTextAlign(hdc, TA_LEFT);
+
+        uint32_t style = DT_LEFT;
         if (label->single_line) {
-            int32_t x = widget->content_rect.x;
-            int32_t y = widget->content_rect.y;
-
-            SetTextAlign(hdc, TA_LEFT);
-            if ((label->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
-                x += widget->content_rect.width / 2;
-                SetTextAlign(hdc, TA_CENTER);
-            }
-            if ((label->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
-                x += widget->content_rect.width;
-                SetTextAlign(hdc, TA_RIGHT);
-            }
-
-            if ((label->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
-                y += (widget->content_rect.height - jan_unit_to_pixels(&label->font_size, 0)) / 2;
-            }
-            if ((label->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
-                y += widget->content_rect.height - jan_unit_to_pixels(&label->font_size, 0);
-            }
-
-            TextOutW(hdc, x, y, label->text, wcslen(label->text));
+            style |= DT_SINGLELINE;
         } else {
-            uint32_t style = DT_WORDBREAK | DT_LEFT;
-            SetTextAlign(hdc, TA_LEFT);
-            if ((label->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
-                style |= DT_CENTER;
-            }
-            if ((label->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
-                style |= DT_RIGHT;
-            }
+            style |= DT_WORDBREAK;
+        }
+        if ((label->align & JAN_ALIGN_HORIZONTAL_CENTER) != 0) {
+            style |= DT_CENTER;
+        }
+        if ((label->align & JAN_ALIGN_HORIZONTAL_RIGHT) != 0) {
+            style |= DT_RIGHT;
+        }
 
-            RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
-                widget->content_rect.x + widget->content_rect.width,
-                widget->content_rect.y + widget->content_rect.height };
-            if ((label->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
+        RECT content_rect = { widget->content_rect.x, widget->content_rect.y,
+            widget->content_rect.x + widget->content_rect.width,
+            widget->content_rect.y + widget->content_rect.height };
+
+        if ((label->align & JAN_ALIGN_VERTICAL_CENTER) != 0) {
+            if (label->single_line) {
+                content_rect.top += (widget->content_rect.height - jan_unit_to_pixels(&label->font_size, 0)) / 2;
+            } else {
                 HDC hdc = GetDC(NULL);
                 HFONT font = jan_label_get_hfont(label);
                 SelectObject(hdc, font);
@@ -1094,7 +1075,12 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
                 content_rect.top += (widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK)) / 2;
                 DeleteObject(font);
             }
-            if ((label->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
+        }
+
+        if ((label->align & JAN_ALIGN_VERTICAL_BOTTOM) != 0) {
+            if (label->single_line) {
+                content_rect.top += widget->content_rect.height - jan_unit_to_pixels(&label->font_size, 0);
+            } else {
                 HDC hdc = GetDC(NULL);
                 HFONT font = jan_label_get_hfont(label);
                 SelectObject(hdc, font);
@@ -1102,9 +1088,9 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
                 content_rect.top += widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
                 DeleteObject(font);
             }
-
-            DrawTextW(hdc, label->text, -1, &content_rect, style);
         }
+
+        DrawTextW(hdc, label->text, -1, &content_rect, style);
         DeleteObject(font);
         return NULL;
     }
@@ -1244,7 +1230,7 @@ void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *pa
         #ifdef JAN_DEBUG
             GpGraphics *graphics = param2;
             GpPen *border_pen;
-            GdipCreatePen1(0x40ff0000, 1, UnitPixel, &border_pen);
+            GdipCreatePen1(0x40ff0000, 2, UnitPixel, &border_pen);
             GdipDrawRectangleI(graphics, border_pen, widget->margin_rect.x, widget->margin_rect.y, widget->margin_rect.width, widget->margin_rect.height);
             GdipDeletePen(border_pen);
         #endif

@@ -186,6 +186,7 @@ extern void * __stdcall LockResource(HGLOBAL hResData);
 #define DT_VCENTER 0x00000004
 #define DT_BOTTOM 0x00000008
 #define DT_WORDBREAK 0x00000010
+#define DT_SINGLELINE 0x00000020
 #define DT_CALCRECT 0x00000400
 
 #define LR_DEFAULTCOLOR 0x00000000
