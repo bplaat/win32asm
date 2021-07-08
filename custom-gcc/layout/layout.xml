@@ -24,13 +24,36 @@
     </Box>
 
     <!-- Settings page -->
-    <Box id="101" orientation="vertical" width="match" height="match" align="center" visible="false">
-        <Label width="wrap" text="Settings" fontSize="8vw" marginBottom="16dp" />
-        <Label width="75vmin" align="centerHorizontal" text="Libero, fugit totam, distinctio ducimus ullam laudantium, consectetur beatae dolore itaque voluptatum vel. Voluptates sunt minima, aliquid blanditiis porro facere tempore magnam rem nam inventore molestiae harum totam. Amet deserunt quisquam quam molestiae minus iure, accusantium repellat adipisci, mollitia odit, praesentium sit voluptatem? Maiores nihil incidunt laudantium placeat qui sunt?" marginBottom="16dp" />
-        <Box width="wrap">
-            <Button height="wrap" id="4" text="Back" padding="24dp" margin="16dp" />
-            <Button height="wrap" id="2" visible="true" text="About" padding="24dp" margin="16dp" />
-            <Button height="wrap" id="3" text="Exit" padding="24dp" margin="16dp" />
+    <Stack id="101" width="match" height="match" visible="false">
+        <Box orientation="vertical" width="match" height="match">
+            <Box height="25%">
+                <Label width="25%" height="match" text="1. Red" align="center" fontSize="4vmin" backgroundColor="#F44336" />
+                <Label width="25%" height="match" text="2. Pink" align="center" fontSize="4vmin" backgroundColor="#E91E63" />
+                <Label width="25%" height="match" text="3. Purple" align="center" fontSize="4vmin" backgroundColor="#9C27B0" />
+                <Label width="25%" height="match" text="4. Deep Purple" align="center" fontSize="4vmin" backgroundColor="#673AB7" />
+            </Box>
+            <Box height="25%">
+                <Label width="25%" height="match" text="5. Indigo" align="center" fontSize="4vmin" backgroundColor="#3F51B5" />
+                <Label width="25%" height="match" text="6. Blue" align="center" fontSize="4vmin" backgroundColor="#2196F3" />
+                <Label width="25%" height="match" text="7. Light Blue" align="center" fontSize="4vmin" backgroundColor="#03A9F4" />
+                <Label width="25%" height="match" text="8. Teal" align="center" fontSize="4vmin" backgroundColor="#009688" />
+            </Box>
+            <Box height="25%">
+                <Label width="25%" height="match" text="9. Green" align="center" fontSize="4vmin" backgroundColor="#4CAF50" />
+                <Label width="25%" height="match" text="10. Light Green" align="center" fontSize="4vmin" backgroundColor="#8BC34A" />
+                <Label width="25%" height="match" text="11. Lime" align="center" fontSize="4vmin" backgroundColor="#CDDC39" />
+                <Label width="25%" height="match" text="12. Yellow" align="center" fontSize="4vmin" backgroundColor="#FFEB3B" />
+            </Box>
+            <Box height="25%">
+                <Label width="25%" height="match" text="13. Orange" align="center" fontSize="4vmin" backgroundColor="#FF9800" />
+                <Label width="25%" height="match" text="14. Deep Orange" align="center" fontSize="4vmin" backgroundColor="#FF5722" />
+                <Label width="25%" height="match" text="15. Brown" align="center" fontSize="4vmin" backgroundColor="#795548" />
+                <Label width="25%" height="match" text="16. Blue Grey" align="center" fontSize="4vmin" backgroundColor="#607D8B"/>
+            </Box>
         </Box>
-    </Box>
+
+        <Box width="match" height="match" align="center">
+            <Button height="wrap" id="4" text="Back" padding="8dp 16dp" />
+        </Box>
+    </Stack>
 </Stack>

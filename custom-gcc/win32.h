@@ -363,6 +363,9 @@ typedef struct GdiplusStartupInput {
 typedef struct GpGraphics { uint8_t filler; } GpGraphics;
 typedef struct GpSolidFill { uint8_t filler; } GpSolidFill;
 typedef struct GpBrush { uint8_t filler; } GpBrush;
+typedef struct GpPen { uint8_t filler; } GpPen;
+
+#define UnitPixel 2
 
 #define SmoothingModeAntiAlias 5
 
@@ -372,10 +375,14 @@ extern uint32_t __stdcall GdipCreateFromHDC(HDC hdc, GpGraphics **graphics);
 extern uint32_t __stdcall GdipSetSmoothingMode(GpGraphics *graphics, int32_t smoothingMode);
 extern uint32_t __stdcall GdipGraphicsClear(GpGraphics *graphics, uint32_t color);
 extern uint32_t __stdcall GdipDeleteGraphics(GpGraphics *graphics);
+extern uint32_t __stdcall GdipDrawRectangle(GpGraphics *graphics, GpPen *pen, float x, float y, float width, float height);
+extern uint32_t __stdcall GdipDrawRectangleI(GpGraphics *graphics, GpPen *pen, int32_t x, int32_t y, int32_t width, int32_t height);
 extern uint32_t __stdcall GdipFillRectangle(GpGraphics *graphics, GpBrush *brush, float x, float y, float width, float height);
 extern uint32_t __stdcall GdipFillRectangleI(GpGraphics *graphics, GpBrush *brush, int32_t x, int32_t y, int32_t width, int32_t height);
 extern uint32_t __stdcall GdipCreateSolidFill(uint32_t color, GpSolidFill **brush);
 extern uint32_t __stdcall GdipDeleteBrush(GpBrush *brush);
+extern uint32_t __stdcall GdipCreatePen1(uint32_t color, float width, int32_t unit, GpPen **pen);
+extern uint32_t __stdcall GdipDeletePen(GpPen *pen);
 
 // Shell32
 #define CSIDL_COMMON_APPDATA 0x0023

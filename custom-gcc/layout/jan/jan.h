@@ -57,7 +57,9 @@ typedef struct JanUnit {
     JanUnitType type;
 } JanUnit;
 
-int32_t jan_unit_to_pixels(JanUnit unit, int32_t size);
+int32_t jan_round(float number);
+
+int32_t jan_unit_to_pixels(JanUnit *unit, int32_t size);
 
 // JanOffset
 typedef struct JanOffset {
@@ -85,35 +87,58 @@ void jan_list_free(JanList *list, void (*free_function)(void *item));
 // JanWidget
 #define JAN_WIDGET(ptr) ((JanWidget *)ptr)
 #define JAN_PARAM(param) ((void *)(size_t)param)
-#define JAN_TYPE_WIDGET 1
+#define JAN_TYPE_WIDGET 0
 
-#define JAN_ATTRIBUTE_ID 1
-#define JAN_ATTRIBUTE_WIDTH JAN_ATTRIBUTE_ID + 1
-#define JAN_ATTRIBUTE_HEIGHT JAN_ATTRIBUTE_WIDTH + 1
-#define JAN_ATTRIBUTE_BACKGROUND_COLOR JAN_ATTRIBUTE_HEIGHT + 1
-#define JAN_ATTRIBUTE_VISIBLE JAN_ATTRIBUTE_BACKGROUND_COLOR + 1
-#define JAN_ATTRIBUTE_MARGIN JAN_ATTRIBUTE_VISIBLE + 1
-#define JAN_ATTRIBUTE_MARGIN_TOP JAN_ATTRIBUTE_MARGIN + 1
-#define JAN_ATTRIBUTE_MARGIN_LEFT JAN_ATTRIBUTE_MARGIN_TOP + 1
-#define JAN_ATTRIBUTE_MARGIN_RIGHT JAN_ATTRIBUTE_MARGIN_LEFT + 1
-#define JAN_ATTRIBUTE_MARGIN_BOTTOM JAN_ATTRIBUTE_MARGIN_RIGHT + 1
-#define JAN_ATTRIBUTE_PADDING JAN_ATTRIBUTE_MARGIN_BOTTOM + 1
-#define JAN_ATTRIBUTE_PADDING_TOP JAN_ATTRIBUTE_PADDING + 1
-#define JAN_ATTRIBUTE_PADDING_LEFT JAN_ATTRIBUTE_PADDING_TOP + 1
-#define JAN_ATTRIBUTE_PADDING_RIGHT JAN_ATTRIBUTE_PADDING_LEFT + 1
-#define JAN_ATTRIBUTE_PADDING_BOTTOM JAN_ATTRIBUTE_PADDING_RIGHT + 1
+#define JAN_ATTRIBUTE_ID 0
+#define JAN_ATTRIBUTE_WIDTH 1
+#define JAN_ATTRIBUTE_HEIGHT 2
+#define JAN_ATTRIBUTE_BACKGROUND_COLOR 3
+#define JAN_ATTRIBUTE_VISIBLE 4
+#define JAN_ATTRIBUTE_MARGIN 5
+#define JAN_ATTRIBUTE_MARGIN_TOP 6
+#define JAN_ATTRIBUTE_MARGIN_LEFT 7
+#define JAN_ATTRIBUTE_MARGIN_RIGHT 8
+#define JAN_ATTRIBUTE_MARGIN_BOTTOM 9
+#define JAN_ATTRIBUTE_PADDING 10
+#define JAN_ATTRIBUTE_PADDING_TOP 11
+#define JAN_ATTRIBUTE_PADDING_LEFT 12
+#define JAN_ATTRIBUTE_PADDING_RIGHT 13
+#define JAN_ATTRIBUTE_PADDING_BOTTOM 14
 
-#define JAN_EVENT_FREE 1
-#define JAN_EVENT_MEASURE JAN_EVENT_FREE + 1
-#define JAN_EVENT_PLACE JAN_EVENT_MEASURE + 1
-#define JAN_EVENT_DRAW JAN_EVENT_PLACE + 1
-#define JAN_EVENT_ID_CHANGED JAN_EVENT_DRAW + 1
-#define JAN_EVENT_WIDTH_CHANGED JAN_EVENT_ID_CHANGED + 1
-#define JAN_EVENT_HEIGHT_CHANGED JAN_EVENT_WIDTH_CHANGED + 1
-#define JAN_EVENT_BACKGROUND_COLOR_CHANGED JAN_EVENT_HEIGHT_CHANGED + 1
-#define JAN_EVENT_VISIBLE_CHANGED JAN_EVENT_BACKGROUND_COLOR_CHANGED + 1
-#define JAN_EVENT_MARGIN_CHANGED JAN_EVENT_VISIBLE_CHANGED + 1
-#define JAN_EVENT_PADDING_CHANGED JAN_EVENT_MARGIN_CHANGED + 1
+#define JAN_EVENT_FREE 0
+#define JAN_EVENT_MEASURE 1
+#define JAN_EVENT_PLACE 2
+#define JAN_EVENT_DRAW 3
+#define JAN_EVENT_GET_ID 4
+#define JAN_EVENT_SET_ID 5
+#define JAN_EVENT_GET_WIDTH 6
+#define JAN_EVENT_SET_WIDTH 7
+#define JAN_EVENT_GET_HEIGHT 8
+#define JAN_EVENT_SET_HEIGHT 9
+#define JAN_EVENT_GET_BACKGROUND_COLOR 10
+#define JAN_EVENT_SET_BACKGROUND_COLOR 11
+#define JAN_EVENT_GET_VISIBLE 12
+#define JAN_EVENT_SET_VISIBLE 13
+#define JAN_EVENT_GET_MARGIN 14
+#define JAN_EVENT_SET_MARGIN 15
+#define JAN_EVENT_GET_MARGIN_TOP 16
+#define JAN_EVENT_SET_MARGIN_TOP 17
+#define JAN_EVENT_GET_MARGIN_RIGHT 18
+#define JAN_EVENT_SET_MARGIN_RIGHT 19
+#define JAN_EVENT_GET_MARGIN_BOTTOM 20
+#define JAN_EVENT_SET_MARGIN_BOTTOM 21
+#define JAN_EVENT_GET_MARGIN_LEFT 22
+#define JAN_EVENT_SET_MARGIN_LEFT 23
+#define JAN_EVENT_GET_PADDING 24
+#define JAN_EVENT_SET_PADDING 25
+#define JAN_EVENT_GET_PADDING_TOP 26
+#define JAN_EVENT_SET_PADDING_TOP 27
+#define JAN_EVENT_GET_PADDING_RIGHT 28
+#define JAN_EVENT_SET_PADDING_RIGHT 29
+#define JAN_EVENT_GET_PADDING_BOTTOM 30
+#define JAN_EVENT_SET_PADDING_BOTTOM 31
+#define JAN_EVENT_GET_PADDING_LEFT 32
+#define JAN_EVENT_SET_PADDING_LEFT 33
 
 typedef struct JanWidget {
     uint32_t id;
@@ -139,13 +164,13 @@ uint32_t jan_widget_get_id(JanWidget *widget);
 
 void jan_widget_set_id(JanWidget *widget, uint32_t id);
 
-JanUnit widget_get_width(JanWidget *widget);
+JanUnit *widget_get_width(JanWidget *widget);
 
-void jan_widget_set_width(JanWidget *widget, JanUnit width);
+void jan_widget_set_width(JanWidget *widget, JanUnit *width);
 
-JanUnit widget_get_height(JanWidget *widget);
+JanUnit *widget_get_height(JanWidget *widget);
 
-void jan_widget_set_height(JanWidget *widget, JanUnit height);
+void jan_widget_set_height(JanWidget *widget, JanUnit *height);
 
 JanColor jan_widget_get_background_color(JanWidget *widget);
 
@@ -157,56 +182,62 @@ void jan_widget_set_visible(JanWidget *widget, bool visible);
 
 JanOffset *widget_get_margin(JanWidget *widget);
 
-void jan_widget_set_margin(JanWidget *widget, JanUnit top, JanUnit right, JanUnit bottom, JanUnit left);
+void jan_widget_set_margin(JanWidget *widget, JanUnit *top, JanUnit *right, JanUnit *bottom, JanUnit *left);
 
-JanUnit widget_get_margin_top(JanWidget *widget);
+JanUnit *widget_get_margin_top(JanWidget *widget);
 
-void jan_widget_set_margin_top(JanWidget *widget, JanUnit top);
+void jan_widget_set_margin_top(JanWidget *widget, JanUnit *top);
 
-JanUnit widget_get_margin_right(JanWidget *widget);
+JanUnit *widget_get_margin_right(JanWidget *widget);
 
-void jan_widget_set_margin_right(JanWidget *widget, JanUnit right);
+void jan_widget_set_margin_right(JanWidget *widget, JanUnit *right);
 
-JanUnit widget_get_margin_bottom(JanWidget *widget);
+JanUnit *widget_get_margin_bottom(JanWidget *widget);
 
-void jan_widget_set_margin_bottom(JanWidget *widget, JanUnit bottom);
+void jan_widget_set_margin_bottom(JanWidget *widget, JanUnit *bottom);
 
-JanUnit widget_get_margin_left(JanWidget *widget);
+JanUnit *widget_get_margin_left(JanWidget *widget);
 
-void jan_widget_set_margin_left(JanWidget *widget, JanUnit left);
+void jan_widget_set_margin_left(JanWidget *widget, JanUnit *left);
 
 JanOffset *widget_get_padding(JanWidget *widget);
 
-void jan_widget_set_padding(JanWidget *widget, JanUnit top, JanUnit right, JanUnit bottom, JanUnit left);
+void jan_widget_set_padding(JanWidget *widget, JanUnit *top, JanUnit *right, JanUnit *bottom, JanUnit *left);
 
-JanUnit widget_get_padding_top(JanWidget *widget);
+JanUnit *widget_get_padding_top(JanWidget *widget);
 
-void jan_widget_set_padding_top(JanWidget *widget, JanUnit top);
+void jan_widget_set_padding_top(JanWidget *widget, JanUnit *top);
 
-JanUnit widget_get_padding_right(JanWidget *widget);
+JanUnit *widget_get_padding_right(JanWidget *widget);
 
-void jan_widget_set_padding_right(JanWidget *widget, JanUnit right);
+void jan_widget_set_padding_right(JanWidget *widget, JanUnit *right);
 
-JanUnit widget_get_padding_bottom(JanWidget *widget);
+JanUnit *widget_get_padding_bottom(JanWidget *widget);
 
-void jan_widget_set_padding_bottom(JanWidget *widget, JanUnit bottom);
+void jan_widget_set_padding_bottom(JanWidget *widget, JanUnit *bottom);
 
-JanUnit widget_get_padding_left(JanWidget *widget);
+JanUnit *widget_get_padding_left(JanWidget *widget);
 
-void jan_widget_set_padding_left(JanWidget *widget, JanUnit left);
+void jan_widget_set_padding_left(JanWidget *widget, JanUnit *left);
 
 void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+
+void jan_widget_measure(JanWidget *widget);
+
+void jan_widget_draw(JanWidget *widget, HDC hdc);
+
+void jan_widget_free(JanWidget *widget);
 
 // JanContainer
 #define CONTAINER_WIDGETS_INIT_CAPACITY 4
 
 #define JAN_CONTAINER(ptr) ((JanContainer *)ptr)
-#define JAN_TYPE_CONTAINER JAN_TYPE_WIDGET + 1
+#define JAN_TYPE_CONTAINER 100
 
-#define JAN_ATTRIBUTE_WIDGETS JAN_ATTRIBUTE_PADDING_BOTTOM + 1
+#define JAN_ATTRIBUTE_WIDGETS 100
 
-#define JAN_EVENT_WIDGETS_CHANGED JAN_EVENT_PADDING_CHANGED + 1
-#define JAN_EVENT_FIND JAN_EVENT_WIDGETS_CHANGED + 1
+#define JAN_EVENT_ADD_WIDGET 100
+#define JAN_EVENT_FIND 101
 
 typedef struct JanContainer {
     JanWidget super;
@@ -223,11 +254,12 @@ void jan_container_free(JanWidget *widget);
 
 // JanStack
 #define JAN_STACK(ptr) ((JanStack *)ptr)
-#define JAN_TYPE_STACK JAN_TYPE_CONTAINER + 1
+#define JAN_TYPE_STACK 200
 
-#define JAN_ATTRIBUTE_ALIGN JAN_ATTRIBUTE_WIDGETS + 1
+#define JAN_ATTRIBUTE_ALIGN 200
 
-#define JAN_EVENT_ALIGN_CHANGED JAN_EVENT_FIND + 1
+#define JAN_EVENT_GET_ALIGN 200
+#define JAN_EVENT_SET_ALIGN 201
 
 typedef struct JanStack {
     JanContainer super;
@@ -246,11 +278,12 @@ void *jan_stack_event(JanWidget *widget, uint32_t event, void *param1, void *par
 
 // JanBox
 #define JAN_BOX(ptr) ((JanBox *)ptr)
-#define JAN_TYPE_BOX JAN_TYPE_STACK + 1
+#define JAN_TYPE_BOX 300
 
-#define JAN_ATTRIBUTE_ORIENTATION JAN_ATTRIBUTE_ALIGN + 1
+#define JAN_ATTRIBUTE_ORIENTATION 300
 
-#define JAN_EVENT_ORIENTATION_CHANGED JAN_EVENT_ALIGN_CHANGED + 1
+#define JAN_EVENT_GET_ORIENTATION 300
+#define JAN_EVENT_SET_ORIENTATION 301
 
 typedef struct JanBox {
     JanContainer super;
@@ -276,27 +309,36 @@ void *jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param
 
 // JanLabel
 #define JAN_LABEL(ptr) ((JanLabel *)ptr)
-#define JAN_TYPE_LABEL JAN_TYPE_BOX + 1
+#define JAN_TYPE_LABEL 400
 
-#define JAN_ATTRIBUTE_TEXT JAN_ATTRIBUTE_ALIGN + 1
-#define JAN_ATTRIBUTE_FONT_NAME JAN_ATTRIBUTE_TEXT + 1
-#define JAN_ATTRIBUTE_FONT_WEIGHT JAN_ATTRIBUTE_FONT_NAME + 1
-#define JAN_ATTRIBUTE_FONT_ITALIC JAN_ATTRIBUTE_FONT_WEIGHT + 1
-#define JAN_ATTRIBUTE_FONT_UNDERLINE JAN_ATTRIBUTE_FONT_ITALIC + 1
-#define JAN_ATTRIBUTE_FONT_LINE_THROUGH JAN_ATTRIBUTE_FONT_UNDERLINE + 1
-#define JAN_ATTRIBUTE_FONT_SIZE JAN_ATTRIBUTE_FONT_LINE_THROUGH + 1
-#define JAN_ATTRIBUTE_TEXT_COLOR JAN_ATTRIBUTE_FONT_SIZE + 1
-#define JAN_ATTRIBUTE_SINGLE_LINE JAN_ATTRIBUTE_TEXT_COLOR + 1
+#define JAN_ATTRIBUTE_TEXT 400
+#define JAN_ATTRIBUTE_FONT_NAME 401
+#define JAN_ATTRIBUTE_FONT_WEIGHT 402
+#define JAN_ATTRIBUTE_FONT_ITALIC 403
+#define JAN_ATTRIBUTE_FONT_UNDERLINE 404
+#define JAN_ATTRIBUTE_FONT_LINE_THROUGH 405
+#define JAN_ATTRIBUTE_FONT_SIZE 406
+#define JAN_ATTRIBUTE_TEXT_COLOR 407
+#define JAN_ATTRIBUTE_SINGLE_LINE 408
 
-#define JAN_EVENT_TEXT_CHANGED JAN_EVENT_ORIENTATION_CHANGED + 1
-#define JAN_EVENT_FONT_NAME_CHANGED JAN_EVENT_TEXT_CHANGED + 1
-#define JAN_EVENT_FONT_WEIGHT_CHANGED JAN_EVENT_FONT_NAME_CHANGED + 1
-#define JAN_EVENT_FONT_ITALIC_CHANGED JAN_EVENT_FONT_WEIGHT_CHANGED + 1
-#define JAN_EVENT_FONT_UNDERLINE_CHANGED JAN_EVENT_FONT_ITALIC_CHANGED + 1
-#define JAN_EVENT_FONT_LINE_THROUGH_CHANGED JAN_EVENT_FONT_UNDERLINE_CHANGED + 1
-#define JAN_EVENT_FONT_SIZE_CHANGED JAN_EVENT_FONT_LINE_THROUGH_CHANGED + 1
-#define JAN_EVENT_TEXT_COLOR_CHANGED JAN_EVENT_FONT_SIZE_CHANGED + 1
-#define JAN_EVENT_SINGLE_LINE_CHANGED JAN_EVENT_TEXT_COLOR_CHANGED + 1
+#define JAN_EVENT_GET_TEXT 400
+#define JAN_EVENT_SET_TEXT 401
+#define JAN_EVENT_GET_FONT_NAME 402
+#define JAN_EVENT_SET_FONT_NAME 403
+#define JAN_EVENT_GET_FONT_WEIGHT 404
+#define JAN_EVENT_SET_FONT_WEIGHT 405
+#define JAN_EVENT_GET_FONT_ITALIC 406
+#define JAN_EVENT_SET_FONT_ITALIC 407
+#define JAN_EVENT_GET_FONT_UNDERLINE 408
+#define JAN_EVENT_SET_FONT_UNDERLINE 409
+#define JAN_EVENT_GET_FONT_LINE_THROUGH 410
+#define JAN_EVENT_SET_FONT_LINE_THROUGH 411
+#define JAN_EVENT_GET_FONT_SIZE 412
+#define JAN_EVENT_SET_FONT_SIZE 413
+#define JAN_EVENT_GET_TEXT_COLOR 414
+#define JAN_EVENT_SET_TEXT_COLOR 415
+#define JAN_EVENT_GET_SINGLE_LINE 416
+#define JAN_EVENT_SET_SINGLE_LINE 417
 
 #define JAN_FONT_WEIGHT_NORMAL 400
 #define JAN_FONT_WEIGHT_BOLD 700
@@ -338,9 +380,9 @@ uint32_t jan_label_get_font_weight(JanLabel *label);
 
 void jan_label_set_font_weight(JanLabel *label, uint32_t font_weight);
 
-JanUnit jan_label_get_font_size(JanLabel *label);
+JanUnit *jan_label_get_font_size(JanLabel *label);
 
-void jan_label_set_font_size(JanLabel *label, JanUnit font_size);
+void jan_label_set_font_size(JanLabel *label, JanUnit *font_size);
 
 bool jan_label_get_font_italic(JanLabel *label);
 
@@ -372,7 +414,7 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
 
 // JanButton
 #define JAN_BUTTON(ptr) ((JanButton *)ptr)
-#define JAN_TYPE_BUTTON JAN_TYPE_LABEL + 1
+#define JAN_TYPE_BUTTON 500
 
 typedef struct JanButton {
     JanLabel super;

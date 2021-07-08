@@ -40,7 +40,9 @@ libraries = {
     ],
     'gdiplus.dll': [
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
-        'GdipFillRectangle', 'GdipFillRectangleI', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode'
+        'GdipDrawRectangle', 'GdipDrawRectangleI', 'GdipFillRectangle', 'GdipFillRectangleI',
+        'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode',
+        'GdipCreatePen1', 'GdipDeletePen'
     ]
 }
 

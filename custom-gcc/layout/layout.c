@@ -8,12 +8,12 @@
 #define JAN_DEBUG
 #include "jan/jan.c"
 
-wchar_t *window_class_name = L"window-test";
+wchar_t *window_class_name = L"jan-test";
 
 #ifdef WIN64
-    wchar_t *window_title = L"This is a test window 😍 (64-bit)";
+    wchar_t *window_title = L"This is a Jan Test window 😊 (64-bit)";
 #else
-    wchar_t *window_title = L"This is a test window 😍 (32-bit)";
+    wchar_t *window_title = L"This is a Jan Test window 😊 (32-bit)";
 #endif
 
 #define WINDOW_WIDTH 1280
@@ -54,8 +54,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             jan_widget_set_visible(settingsPage, true);
 
             // Redraw window
-            window->root->event_function(window->root, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
-            window->root->event_function(window->root, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
+            jan_widget_measure(window->root);
             InvalidateRect(hwnd, NULL, TRUE);
         }
 
@@ -74,8 +73,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             jan_widget_set_visible(settingsPage, false);
 
             // Redraw window
-            window->root->event_function(window->root, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
-            window->root->event_function(window->root, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
+            jan_widget_measure(window->root);
             InvalidateRect(hwnd, NULL, TRUE);
         }
     }
@@ -86,8 +84,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         jan_height = HIWORD(lParam);
 
         // Resize widgets
-        window->root->event_function(window->root, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
-        window->root->event_function(window->root, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
+        jan_widget_measure(window->root);
         return 0;
     }
 
@@ -104,27 +101,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
         HDC hdc = BeginPaint(hwnd, &paint_struct);
-
-        // Create back buffer
-        HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, jan_width, jan_height);
-        SelectObject(hdc_buffer, bitmap_buffer);
-
-        // Draw widgets
-        window->root->event_function(window->root, JAN_EVENT_DRAW, hdc_buffer, NULL);
-
-        // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, jan_width, jan_height, hdc_buffer, 0, 0, SRCCOPY);
-        DeleteObject(bitmap_buffer);
-        DeleteDC(hdc_buffer);
-
+        jan_widget_draw(window->root, hdc);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
         // Free window data
-        window->root->event_function(window->root, JAN_EVENT_FREE, NULL, NULL);
+        jan_widget_free(window->root);
         free(window);
 
         // Close process
@@ -140,6 +124,14 @@ void _start(void) {
     icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icc.dwICC = ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icc);
+
+    uint32_t gdiplusToken;
+    GdiplusStartupInput gdiplusStartupInput;
+    gdiplusStartupInput.GdiplusVersion = 1;
+    gdiplusStartupInput.DebugEventCallback = NULL;
+    gdiplusStartupInput.SuppressBackgroundThread = FALSE;
+    gdiplusStartupInput.SuppressExternalCodecs = FALSE;
+    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
@@ -170,5 +162,8 @@ void _start(void) {
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
+
+    GdiplusShutdown(&gdiplusToken);
+
     ExitProcess((int32_t)(uintptr_t)message.wParam);
 }

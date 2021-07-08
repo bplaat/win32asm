@@ -91,7 +91,7 @@ with open (sys.argv[2], 'wb') as file:
         red = int(value[1:3], 16)
         green = int(value[3:5], 16)
         blue = int(value[5:], 16)
-        return red | (green << 8) | (blue << 16)
+        return (0xff << 24) | (red << 16) | (green << 8) | blue
 
     def parseBoolean(value):
         value = value.strip()
