@@ -4,16 +4,23 @@
     <Stack id="100" width="match" height="match" align="bottom">
         <Box orientation="vertical" width="match" height="match">
             <Box height="56dp" backgroundColor="#222222" padding="0 16dp">
-                <Label width="70%" backgroundColor="#E91E63" height="match" text="BassieMusic is de shit ik zeg het je!!!!" align="left|centerVertical" singleLine="true"
+                <Label width="70%" backgroundColor="#E91E63" height="match" text="BassieMusic is de shit ik zeg het je!!!" align="left|centerVertical" singleLine="true"
                     fontName="Comic Sans MS" fontSize="24sp"/>
                 <Button id="1" width="10%" height="match" text="Settings" />
                 <Button id="2" width="10%" height="match" text="About" />
                 <Button id="3" width="10%" height="match" text="Exit" />
             </Box>
             <Box orientation="vertical" padding="16dp">
+                <Box padding="16dp">
+                    <Edit id="200" width="85%" marginRight="16dp" padding="8dp" />
+                    <Button id="201" text="Hey!" width="15%" padding="8dp" />
+                </Box>
+                <ComboBox id="202" margin="16dp" />
+
                 <Label text="Libero, fugit totam, distinctio ducimus ullam laudantium, consectetur beatae dolore itaque voluptatum vel. Voluptates sunt minima, aliquid blanditiis porro facere tempore magnam rem nam inventore molestiae harum totam. Amet deserunt quisquam quam molestiae minus iure, accusantium repellat adipisci, mollitia odit, praesentium sit voluptatem? Maiores nihil incidunt laudantium placeat qui sunt?"/>
                 <Label align="centerHorizontal" text="Lorem ipsum dolor sit amet consectetur adipisicing elit. Odit ab eum deserunt dolor ipsam repellat atque voluptas quod rem corrupti, quam ex impedit porro quisquam pariatur velit quibusdam consectetur perspiciatis unde repudiandae delectus. Animi mollitia similique earum obcaecati expedita dolorem voluptates, magni odio ut aperiam soluta dolorum perspiciatis? Amet, molestias?"/>
                 <Label align="right" text="Libero, fugit totam, distinctio ducimus ullam laudantium, consectetur beatae dolore itaque voluptatum vel. Voluptates sunt minima, aliquid blanditiis porro facere tempore magnam rem nam inventore molestiae harum totam. Amet deserunt quisquam quam molestiae minus iure, accusantium repellat adipisci, mollitia odit, praesentium sit voluptatem? Maiores nihil incidunt laudantium placeat qui sunt?"/>
+
                 <Label height="100dp" align="top|centerHorizontal" text="Ex, repellendus nisi doloribus ut cumque aut similique assumenda rerum possimus quis sint consequuntur excepturi non reiciendis, placeat unde aliquid deserunt sit suscipit nostrum autem dolore esse. Sint maxime consequatur ducimus iusto accusantium, hic harum voluptas vitae illo distinctio numquam minima molestiae maiores, praesentium optio ipsa! Id iusto totam neque!"/>
                 <Label height="100dp" align="center" text="Reiciendis, tempore? Atque, fugit cupiditate. Ea, veritatis. Accusamus qui explicabo possimus fugit totam quod modi necessitatibus. Consequuntur itaque minima quae, sit consectetur labore sequi ratione quaerat quos! Aliquam doloremque expedita corporis voluptates, a cupiditate nemo earum blanditiis? Tempora ipsam adipisci voluptatem tenetur aut, eveniet quis, dolor fuga molestiae porro quaerat."/>
                 <Label height="100dp" align="bottom|centerHorizontal" text="Adipisci, quam tenetur. Eum, totam eveniet voluptates quas magnam dicta tempora iusto hic? Distinctio quis optio reprehenderit incidunt aperiam ea, quasi, consectetur, reiciendis fugiat architecto neque eveniet voluptatibus minima dolorum. Itaque asperiores deserunt facilis, mollitia consequatur ex aut esse laudantium hic commodi dicta. Modi impedit eveniet perferendis repudiandae, velit mollitia."/>

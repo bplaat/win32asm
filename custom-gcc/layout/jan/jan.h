@@ -431,6 +431,42 @@ void jan_button_init(JanButton *button);
 
 void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
 
+// JanEdit
+#define JAN_EDIT(ptr) ((JanEdit *)ptr)
+#define JAN_TYPE_EDIT 600
+
+typedef struct JanEdit {
+    JanLabel super;
+    HWND hwnd;
+    HFONT hfont;
+} JanEdit;
+
+JanEdit *jan_edit_new(void);
+
+void jan_edit_init(JanEdit *edit);
+
+void *jan_edit_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+
+// JanComboBox
+#define JAN_COMBOBOX(ptr) ((JanComboBox *)ptr)
+#define JAN_TYPE_COMBOBOX 700
+
+#define JAN_EVENT_ADD_STRING 700
+
+typedef struct JanComboBox {
+    JanLabel super;
+    HWND hwnd;
+    HFONT hfont;
+} JanComboBox;
+
+JanComboBox *jan_combobox_new(void);
+
+void jan_combobox_init(JanComboBox *combobox);
+
+void jan_comboxbox_add(JanComboBox *combobox, wchar_t *string);
+
+void *jan_combobox_event(JanWidget *widget, uint32_t event, void *param1, void *param2);
+
 // JanLoad
 uint8_t *jan_load(uint8_t *data, JanWidget **widget);
 

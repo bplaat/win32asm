@@ -42,6 +42,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         HRSRC main_layout_resource = FindResourceW(GetModuleHandleW(NULL), (wchar_t *)1, (wchar_t *)RT_RCDATA);
         HGLOBAL main_layout = LoadResource(GetModuleHandleW(NULL), main_layout_resource);
         jan_load(LockResource(main_layout), &window->root);
+
+        // Insert items into combobox
+        JanComboBox *combobox = JAN_COMBOBOX(jan_container_find(JAN_CONTAINER(window->root), 202));
+        jan_comboxbox_add(combobox, L"Ik ben dom!");
+        jan_comboxbox_add(combobox, L"Ik ben stom!");
+        jan_comboxbox_add(combobox, L"Ik ben dinga!");
+        jan_comboxbox_add(combobox, L"Ik ben slim!");
+
         return 0;
     }
 
@@ -49,10 +57,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         uint16_t id = LOWORD(wParam);
 
         if (id == 1) {
-            JanWidget *menuPage = jan_container_find(JAN_CONTAINER(window->root), 100);
-            jan_widget_set_visible(menuPage, false);
-            JanWidget *settingsPage = jan_container_find(JAN_CONTAINER(window->root), 101);
-            jan_widget_set_visible(settingsPage, true);
+            JanWidget *menu_page = jan_container_find(JAN_CONTAINER(window->root), 100);
+            jan_widget_set_visible(menu_page, false);
+            JanWidget *settings_page = jan_container_find(JAN_CONTAINER(window->root), 101);
+            jan_widget_set_visible(settings_page, true);
 
             // Redraw window
             jan_widget_measure(window->root);
@@ -68,14 +76,21 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
 
         if (id == 4) {
-            JanWidget *menuPage = jan_container_find(JAN_CONTAINER(window->root), 100);
-            jan_widget_set_visible(menuPage, true);
-            JanWidget *settingsPage = jan_container_find(JAN_CONTAINER(window->root), 101);
-            jan_widget_set_visible(settingsPage, false);
+            JanWidget *menu_page = jan_container_find(JAN_CONTAINER(window->root), 100);
+            jan_widget_set_visible(menu_page, true);
+            JanWidget *settings_page = jan_container_find(JAN_CONTAINER(window->root), 101);
+            jan_widget_set_visible(settings_page, false);
 
             // Redraw window
             jan_widget_measure(window->root);
             InvalidateRect(hwnd, NULL, TRUE);
+        }
+
+        if (id == 201) {
+            JanEdit *name_edit = JAN_EDIT(jan_container_find(JAN_CONTAINER(window->root), 200));
+            wchar_t string_buffer[128];
+            wsprintfW(string_buffer, L"Hello %s!", jan_label_get_text(JAN_LABEL(name_edit)));
+            MessageBoxW(hwnd, string_buffer, string_buffer, MB_OK);
         }
     }
 
