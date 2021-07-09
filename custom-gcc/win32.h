@@ -157,6 +157,7 @@ extern bool __stdcall WriteConsoleW(HANDLE hConsoleOutput, const void *lpBuffer,
 #define WM_SIZE 0x0005
 #define WM_SETTEXT 0x000C
 #define WM_GETTEXT 0x000D
+#define WM_GETTEXTLENGTH 0x000E
 #define WM_PAINT 0x000F
 #define WM_QUIT 0x0012
 #define WM_ERASEBKGND 0x0014

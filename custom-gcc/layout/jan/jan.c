@@ -692,13 +692,7 @@ void *jan_box_event(JanWidget *widget, uint32_t event, void *param1, void *param
                     }
                 }
                 if (other_widget->height.type == JAN_UNIT_TYPE_UNDEFINED) {
-                    if (box->orientation == JAN_ORIENTATION_HORIZONTAL) {
-                        other_widget->height.value = 100;
-                        other_widget->height.type = JAN_UNIT_TYPE_PERCENT;
-                    }
-                    if (box->orientation == JAN_ORIENTATION_VERTICAL) {
-                        other_widget->height.type = JAN_UNIT_TYPE_WRAP;
-                    }
+                    other_widget->height.type = JAN_UNIT_TYPE_WRAP;
                 }
 
                 other_widget->event_function(other_widget, JAN_EVENT_MEASURE, JAN_PARAM(widget->content_rect.width), JAN_PARAM(widget->content_rect.height));
@@ -1188,9 +1182,10 @@ void jan_button_init(JanButton *button) {
     jan_label_init(label);
     label->single_line = true;
 
-    button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
+    button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
     button->hfont = jan_label_get_hfont(label);
     SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
+    ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
 
     widget->event_function = jan_button_event;
 }
@@ -1230,7 +1225,7 @@ void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *pa
     if (event == JAN_EVENT_SET_ID) {
         jan_label_event(widget, event, param1, param2);
         DestroyWindow(button->hwnd);
-        button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
         SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
         ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
@@ -1264,6 +1259,210 @@ void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *pa
     return jan_label_event(widget, event, param1, param2);
 }
 
+// JanEdit
+wchar_t *jan_edit_class_name = L"EDIT";
+
+JanEdit *jan_edit_new(void) {
+    JanEdit *edit = malloc(sizeof(JanEdit));
+    jan_edit_init(edit);
+    return edit;
+}
+
+void jan_edit_init(JanEdit *edit) {
+    JanLabel *label = JAN_LABEL(edit);
+    JanWidget *widget = JAN_WIDGET(edit);
+    jan_label_init(label);
+    label->single_line = true;
+
+    edit->hwnd = CreateWindowExW(0, jan_edit_class_name, label->text, WS_CHILD | ES_AUTOHSCROLL, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
+    edit->hfont = jan_label_get_hfont(label);
+    SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)TRUE);
+    ShowWindow(edit->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+
+    widget->event_function = jan_edit_event;
+}
+
+void *jan_edit_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+    JanEdit *edit = JAN_EDIT(widget);
+    JanLabel *label = JAN_LABEL(widget);
+
+    if (event == JAN_EVENT_FREE) {
+        DestroyWindow(edit->hwnd);
+        DeleteObject(edit->hfont);
+    }
+
+    if (event == JAN_EVENT_MEASURE) {
+        jan_label_event(widget, JAN_EVENT_MEASURE, param1, param2);
+        SetWindowPos(edit->hwnd, NULL, 0, 0, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER | SWP_NOMOVE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_PLACE) {
+        jan_label_event(widget, JAN_EVENT_PLACE, param1, param2);
+        SetWindowPos(edit->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_DRAW) {
+        #ifdef JAN_DEBUG
+            GpGraphics *graphics = param2;
+            GpPen *border_pen;
+            GdipCreatePen1(0x40ff0000, 2, UnitPixel, &border_pen);
+            GdipDrawRectangleI(graphics, border_pen, widget->margin_rect.x, widget->margin_rect.y, widget->margin_rect.width, widget->margin_rect.height);
+            GdipDeletePen(border_pen);
+        #endif
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_SET_ID) {
+        jan_label_event(widget, event, param1, param2);
+        DestroyWindow(edit->hwnd);
+        edit->hwnd = CreateWindowExW(0, jan_edit_class_name, label->text, WS_CHILD | ES_AUTOHSCROLL, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        SetWindowPos(edit->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
+        SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)TRUE);
+        ShowWindow(edit->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_SET_VISIBLE) {
+        jan_label_event(widget, event, param1, param2);
+        ShowWindow(edit->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_GET_TEXT) {
+        uint32_t text_length = SendMessageW(edit->hwnd, WM_GETTEXTLENGTH, NULL, NULL);
+        wchar_t *string_buffer = malloc((text_length + 1) * sizeof(wchar_t));
+        SendMessageW(edit->hwnd, WM_GETTEXT, (WPARAM)(size_t)(text_length + 1), string_buffer);
+        return string_buffer;
+    }
+
+    if (event == JAN_EVENT_SET_TEXT) {
+        jan_label_event(widget, event, param1, param2);
+        SendMessageW(edit->hwnd, WM_SETTEXT, NULL, label->text);
+        return NULL;
+    }
+
+    if (
+        event == JAN_EVENT_SET_FONT_NAME || event == JAN_EVENT_SET_FONT_WEIGHT ||
+        event == JAN_EVENT_SET_FONT_ITALIC || event == JAN_EVENT_SET_FONT_UNDERLINE ||
+        event == JAN_EVENT_SET_FONT_LINE_THROUGH || event == JAN_EVENT_SET_FONT_SIZE
+    ) {
+        jan_label_event(widget, event, param1, param2);
+        DeleteObject(edit->hfont);
+        edit->hfont = jan_label_get_hfont(label);
+        SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)TRUE);
+        return NULL;
+    }
+
+    return jan_label_event(widget, event, param1, param2);
+}
+
+// JanComboBox
+wchar_t *jan_combobox_class_name = L"COMBOBOX";
+
+JanComboBox *jan_combobox_new(void) {
+    JanComboBox *combobox = malloc(sizeof(JanComboBox));
+    jan_combobox_init(combobox);
+    return combobox;
+}
+
+void jan_combobox_init(JanComboBox *combobox) {
+    JanLabel *label = JAN_LABEL(combobox);
+    JanWidget *widget = JAN_WIDGET(combobox);
+    jan_label_init(label);
+    label->single_line = true;
+
+    combobox->hwnd = CreateWindowExW(0, jan_combobox_class_name, label->text, WS_CHILD | CBS_DROPDOWNLIST | CBS_HASSTRINGS, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
+    combobox->hfont = jan_label_get_hfont(label);
+    SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)TRUE);
+    ShowWindow(combobox->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+
+    widget->event_function = jan_combobox_event;
+}
+
+void jan_comboxbox_add(JanComboBox *combobox, wchar_t *string) {
+    JanWidget *widget = JAN_WIDGET(combobox);
+    widget->event_function(widget, JAN_EVENT_ADD_STRING, string, NULL);
+}
+
+void *jan_combobox_event(JanWidget *widget, uint32_t event, void *param1, void *param2) {
+    JanComboBox *combobox = JAN_COMBOBOX(widget);
+    JanLabel *label = JAN_LABEL(widget);
+
+    if (event == JAN_EVENT_FREE) {
+        DestroyWindow(combobox->hwnd);
+        DeleteObject(combobox->hfont);
+    }
+
+    if (event == JAN_EVENT_MEASURE) {
+        jan_label_event(widget, JAN_EVENT_MEASURE, param1, param2);
+        SetWindowPos(combobox->hwnd, NULL, 0, 0, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER | SWP_NOMOVE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_PLACE) {
+        jan_label_event(widget, JAN_EVENT_PLACE, param1, param2);
+        SetWindowPos(combobox->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_DRAW) {
+        #ifdef JAN_DEBUG
+            GpGraphics *graphics = param2;
+            GpPen *border_pen;
+            GdipCreatePen1(0x40ff0000, 2, UnitPixel, &border_pen);
+            GdipDrawRectangleI(graphics, border_pen, widget->margin_rect.x, widget->margin_rect.y, widget->margin_rect.width, widget->margin_rect.height);
+            GdipDeletePen(border_pen);
+        #endif
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_SET_ID) {
+        jan_label_event(widget, event, param1, param2);
+        DestroyWindow(combobox->hwnd);
+        combobox->hwnd = CreateWindowExW(0, jan_combobox_class_name, label->text, WS_CHILD | CBS_DROPDOWNLIST | CBS_HASSTRINGS, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        SetWindowPos(combobox->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
+        SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)TRUE);
+        ShowWindow(combobox->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_SET_VISIBLE) {
+        jan_label_event(widget, event, param1, param2);
+        ShowWindow(combobox->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_GET_TEXT) {
+        // TODO
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_SET_TEXT) {
+        // TODO
+        return NULL;
+    }
+
+    if (
+        event == JAN_EVENT_SET_FONT_NAME || event == JAN_EVENT_SET_FONT_WEIGHT ||
+        event == JAN_EVENT_SET_FONT_ITALIC || event == JAN_EVENT_SET_FONT_UNDERLINE ||
+        event == JAN_EVENT_SET_FONT_LINE_THROUGH || event == JAN_EVENT_SET_FONT_SIZE
+    ) {
+        jan_label_event(widget, event, param1, param2);
+        DeleteObject(combobox->hfont);
+        combobox->hfont = jan_label_get_hfont(label);
+        SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)TRUE);
+        return NULL;
+    }
+
+    if (event == JAN_EVENT_ADD_STRING) {
+        SendMessageW(combobox->hwnd, CB_ADDSTRING, NULL, param1);
+    }
+
+    return jan_label_event(widget, event, param1, param2);
+}
+
 // JanLoader
 uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
     uint16_t widget_type = *(uint16_t *)data;
@@ -1273,6 +1472,8 @@ uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
     if (widget_type == JAN_TYPE_BOX) *widget = JAN_WIDGET(jan_box_new());
     if (widget_type == JAN_TYPE_LABEL) *widget = JAN_WIDGET(jan_label_new());
     if (widget_type == JAN_TYPE_BUTTON) *widget = JAN_WIDGET(jan_button_new());
+    if (widget_type == JAN_TYPE_EDIT) *widget = JAN_WIDGET(jan_edit_new());
+    if (widget_type == JAN_TYPE_COMBOBOX) *widget = JAN_WIDGET(jan_combobox_new());
 
     uint16_t attributes_count = *(uint16_t *)data;
     data += sizeof(uint16_t);
@@ -1460,7 +1661,7 @@ uint8_t *jan_load(uint8_t *data, JanWidget **widget) {
         }
 
         // Label attributes
-        if (widget_type == JAN_TYPE_BUTTON || widget_type == JAN_TYPE_LABEL) {
+        if (widget_type == JAN_TYPE_LABEL || widget_type == JAN_TYPE_BUTTON || widget_type == JAN_TYPE_EDIT || widget_type == JAN_TYPE_COMBOBOX) {
             if (attribute == JAN_ATTRIBUTE_TEXT) {
                 uint16_t string_size = *(uint16_t *)data;
                 data += sizeof(uint16_t);

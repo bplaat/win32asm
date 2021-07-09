@@ -150,6 +150,10 @@ with open (sys.argv[2], 'wb') as file:
             file.write(struct.pack('<H', constants['JAN_TYPE_LABEL']))
         if widget.tag == 'Button':
             file.write(struct.pack('<H', constants['JAN_TYPE_BUTTON']))
+        if widget.tag == 'Edit':
+            file.write(struct.pack('<H', constants['JAN_TYPE_EDIT']))
+        if widget.tag == 'ComboBox':
+            file.write(struct.pack('<H', constants['JAN_TYPE_COMBOBOX']))
 
         file.write(struct.pack('<H', (widget.tag == 'Stack' or widget.tag == 'Box') and len(widget.attrib) + 1 or len(widget.attrib)))
         for attribute in widget.attrib:
@@ -268,7 +272,7 @@ with open (sys.argv[2], 'wb') as file:
                     file.write(struct.pack('B', parseAlign(value)))
 
             # Label & Button attributes
-            if widget.tag == 'Label' or widget.tag == 'Button':
+            if widget.tag == 'Label' or widget.tag == 'Button' or widget.tag == 'Edit' or widget.tag == 'ComboBox':
                 if attribute == 'text':
                     file.write(struct.pack('<H', constants['JAN_ATTRIBUTE_TEXT']))
                     file.write(struct.pack('<H', len(value)))
