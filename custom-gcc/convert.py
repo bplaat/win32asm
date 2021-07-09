@@ -6,20 +6,22 @@ import re
 arch = sys.argv[1]
 dp = arch == 'x64' and 'dq' or 'dd'
 
+debug = len(sys.argv) >= 5 and sys.argv[4] == 'debug'
+
 libraries = {
     'KERNEL32.DLL': [
         'GetModuleHandleW', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
-        'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep',
-        'GetLastError', 'lstrlenW', 'lstrcpyW', 'lstrcatW',
+        'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep', 'GetLastError',
         'CreateFileW', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle', 'CreateMutexW', 'ReleaseMutex',
-        'GetVersionExW', 'LoadLibraryW', 'GetProcAddress', 'FindResourceW', 'SizeofResource', 'LoadResource', 'LockResource'
+        'GetVersionExW', 'LoadLibraryW', 'GetProcAddress', 'FindResourceW', 'SizeofResource', 'LoadResource',
+        'LockResource', 'GetStdHandle', 'WriteConsoleW'
     ],
     'USER32.DLL': [
         'MessageBoxW', 'PostQuitMessage', 'DefWindowProcW', 'LoadIconW', 'LoadCursorW', 'LoadBitmapW', 'LoadImageW', 'RegisterClassExW',
         'CreateWindowExW', 'ShowWindow', 'UpdateWindow', 'GetMessageW', 'PeekMessageW', 'TranslateMessage', 'DispatchMessageW',
         'GetClientRect', 'GetSystemMetrics', 'AdjustWindowRectEx', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW',
         'SetMenu', 'DestroyWindow', 'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'FrameRect', 'InvalidateRect',
-        'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW', 'IsIconic', 'FindWindowW', 'SetForegroundWindow'
+        'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW', 'wvsprintfW', 'IsIconic', 'FindWindowW', 'SetForegroundWindow'
     ],
     'GDI32.DLL': [
         'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
@@ -231,7 +233,7 @@ _optional_header:
     dd _header_aligned_size + _text_section_aligned_size + _data_section_aligned_size ; SizeOfImage
     dd _header_aligned_size       ; SizeOfHeaders
     dd 0                          ; CheckSum
-    dw 2                          ; Subsystem
+    dw %d                         ; Subsystem
     dw 0                          ; DllCharacteristics
     %s 0x100000                   ; SizeOfStackReserve
     %s 0x1000                     ; SizeOfStackCommit
@@ -298,6 +300,6 @@ _data_section_aligned_size equ $ - _data_section
     (arch == 'x64' and '0x020B' or '0x010B'),
     (arch == 'x64' and '_start' or '__start'),
     (arch != 'x64' and 'dd _data_section - _base ; BaseOfData' or ''),
-    dp, dp, dp, dp, dp,
+    dp, debug and 3 or 2, dp, dp, dp, dp,
     text, data, importTable)
 )

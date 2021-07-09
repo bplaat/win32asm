@@ -250,7 +250,6 @@ void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *pa
 
     if (event == JAN_EVENT_DRAW && widget->visible) {
         GpGraphics *graphics = param2;
-
         if (widget->background_color != 0) {
             GpBrush *background_color_brush;
             GdipCreateSolidFill(widget->background_color, (GpSolidFill **)&background_color_brush);
@@ -369,11 +368,14 @@ void *jan_widget_event(JanWidget *widget, uint32_t event, void *param1, void *pa
 }
 
 void jan_widget_measure(JanWidget *widget) {
+    wprintf(L"[JAN] Measure widgets\n");
     widget->event_function(widget, JAN_EVENT_MEASURE, JAN_PARAM(jan_width), JAN_PARAM(jan_height));
     widget->event_function(widget, JAN_EVENT_PLACE, JAN_PARAM(0), JAN_PARAM(0));
 }
 
 void jan_widget_draw(JanWidget *widget, HDC hdc) {
+    wprintf(L"[JAN] Draw widgets\n");
+
     // Create back buffer
     HDC hdc_buffer = CreateCompatibleDC(hdc);
     HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, jan_width, jan_height);
@@ -590,13 +592,7 @@ void *jan_stack_event(JanWidget *widget, uint32_t event, void *param1, void *par
         for (size_t i = 0; i < container->widgets.size; i++) {
             JanWidget *other_widget = container->widgets.items[i];
             if (other_widget->visible) {
-                HRGN padding_region = CreateRectRgn(widget->padding_rect.x, widget->padding_rect.y,
-                    widget->padding_rect.x + widget->padding_rect.width,
-                    widget->padding_rect.y + widget->padding_rect.height);
-                SelectClipRgn(hdc, &padding_region);
                 other_widget->event_function(other_widget, JAN_EVENT_DRAW, hdc, graphics);
-                DeleteObject(padding_region);
-                SelectClipRgn(hdc, NULL);
             }
         }
         return NULL;
@@ -1068,12 +1064,8 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
             if (label->single_line) {
                 content_rect.top += (widget->content_rect.height - jan_unit_to_pixels(&label->font_size, 0)) / 2;
             } else {
-                HDC hdc = GetDC(NULL);
-                HFONT font = jan_label_get_hfont(label);
-                SelectObject(hdc, font);
                 RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
                 content_rect.top += (widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK)) / 2;
-                DeleteObject(font);
             }
         }
 
@@ -1081,12 +1073,8 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
             if (label->single_line) {
                 content_rect.top += widget->content_rect.height - jan_unit_to_pixels(&label->font_size, 0);
             } else {
-                HDC hdc = GetDC(NULL);
-                HFONT font = jan_label_get_hfont(label);
-                SelectObject(hdc, font);
                 RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
                 content_rect.top += widget->content_rect.height - DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
-                DeleteObject(font);
             }
         }
 
@@ -1179,6 +1167,8 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
 }
 
 // JanButton
+wchar_t *jan_button_class_name = L"BUTTON";
+
 JanButton *jan_button_new(void) {
     JanButton *button = malloc(sizeof(JanButton));
     jan_button_init(button);
@@ -1198,7 +1188,7 @@ void jan_button_init(JanButton *button) {
     jan_label_init(label);
     label->single_line = true;
 
-    button->hwnd = CreateWindowExW(0, L"BUTTON", label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
+    button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
     button->hfont = jan_label_get_hfont(label);
     SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
 
@@ -1240,7 +1230,7 @@ void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *pa
     if (event == JAN_EVENT_SET_ID) {
         jan_label_event(widget, event, param1, param2);
         DestroyWindow(button->hwnd);
-        button->hwnd = CreateWindowExW(0, L"BUTTON", label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
+        button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
         SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
         SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
         ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);

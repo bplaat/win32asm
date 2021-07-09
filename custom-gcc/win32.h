@@ -1,8 +1,10 @@
 #ifndef WIN32_H
 #define WIN32_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 // Types & Macros
 #define HANDLE void *
@@ -63,6 +65,10 @@
 
 #define ERROR_ALREADY_EXISTS 183
 
+#define STD_INPUT_HANDLE -10
+#define STD_OUTPUT_HANDLE -11
+#define STD_ERROR_HANDLE -12
+
 typedef struct {
     uint16_t wYear;
     uint16_t wMonth;
@@ -112,6 +118,8 @@ extern HRSRC __stdcall FindResourceW(HMODULE hModule, wchar_t *lpName, wchar_t *
 extern uint32_t __stdcall SizeofResource(HMODULE hModule, HRSRC hResInfo);
 extern HGLOBAL __stdcall LoadResource(HMODULE hModule, HRSRC hResInfo);
 extern void * __stdcall LockResource(HGLOBAL hResData);
+extern HANDLE __stdcall GetStdHandle(uint32_t nStdHandle);
+extern bool __stdcall WriteConsoleW(HANDLE hConsoleOutput, const void *lpBuffer, uint32_t nNumberOfCharsToWrite, uint32_t *lpNumberOfCharsWritten, void *lpReserved);
 
 // User32
 #define HWND_DESKTOP 0
@@ -287,6 +295,7 @@ extern HWND __stdcall GetDlgItem(HWND hDlg, int32_t nIDDlgItem);
 extern HDC __stdcall GetDC(HWND hWnd);
 extern int32_t __stdcall DrawTextW(HDC hdc, const wchar_t *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
 extern int32_t __cdecl wsprintfW(wchar_t *, wchar_t *, ...);
+extern int32_t __cdecl wvsprintfW(wchar_t *, wchar_t *, va_list arglist);
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
@@ -481,7 +490,7 @@ extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
     size_t wcslen(wchar_t *string) {
         wchar_t *start = string;
         while (*string++ != '\0');
-        return string - start;
+        return string - start - 1;
     }
 #endif
 
@@ -510,6 +519,17 @@ extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
         if (dst == NULL) return NULL;
         wcscpy(dst, src);
         return dst;
+    }
+#endif
+
+#ifdef WIN32_WPRINTF
+    void wprintf(wchar_t *format, ...) {
+        wchar_t string_buffer[256];
+        va_list args;
+        va_start(args, format);
+        wvsprintfW(string_buffer, format, args);
+        va_end(args);
+        WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), string_buffer, wcslen(string_buffer), NULL, NULL);
     }
 #endif
 
