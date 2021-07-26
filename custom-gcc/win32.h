@@ -371,10 +371,10 @@ typedef struct GdiplusStartupInput {
     void (*GdiplusStartupInput)(void *debugEventCallback, bool suppressBackgroundThread, bool suppressExternalCodecs);
 } GdiplusStartupInput;
 
-typedef struct GpGraphics { uint8_t filler; } GpGraphics;
-typedef struct GpSolidFill { uint8_t filler; } GpSolidFill;
-typedef struct GpBrush { uint8_t filler; } GpBrush;
-typedef struct GpPen { uint8_t filler; } GpPen;
+typedef struct GpGraphics GpGraphics;
+typedef struct GpSolidFill GpSolidFill;
+typedef struct GpBrush GpBrush;
+typedef struct GpPen GpPen;
 
 #define UnitPixel 2
 
@@ -456,6 +456,169 @@ extern bool __stdcall PlaySoundW(wchar_t *pszSound, HMODULE hmod, uint32_t fdwSo
 // Advapi
 extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
 
+// Com
+#define SUCCEEDED(hr) ((int32_t)(hr) >= 0)
+#define FAILED(hr) ((int32_t)(hr) < 0)
+#define S_OK ((int32_t)0)
+
+typedef struct GUID {
+    uint32_t Data1;
+    uint16_t Data2;
+    uint16_t Data3;
+    uint8_t Data4[8];
+} GUID;
+
+typedef struct IUnknown IUnknown;
+
+typedef struct IUnknownVtbl {
+    int32_t (__stdcall *QueryInterface)(IUnknown *This, GUID *riid, void **ppvObject);
+    uint32_t (__stdcall *AddRef)(IUnknown *This);
+    uint32_t (__stdcall *Release)(IUnknown *This);
+} IUnknownVtbl;
+
+struct IUnknown {
+    const IUnknownVtbl *lpVtbl;
+};
+
+#define IUnknown_Release(ptr) ((IUnknown *)ptr)->lpVtbl->Release((IUnknown *)ptr);
+
+// Direct2D
+typedef struct D2D1_COLOR_F {
+    float r;
+    float g;
+    float b;
+    float a;
+} D2D1_COLOR_F;
+
+typedef struct D2D1_POINT_2F {
+    float x;
+    float y;
+} D2D1_POINT_2F;
+
+typedef struct D2D1_SIZE_U {
+    uint32_t width;
+    uint32_t height;
+} D2D1_SIZE_U;
+
+typedef struct D2D1_RECT_F {
+    float left;
+    float top;
+    float right;
+    float bottom;
+} D2D1_RECT_F;
+
+#define DXGI_FORMAT_UNKNOWN 0
+#define D2D1_ALPHA_MODE_UNKNOWN 0
+
+typedef struct D2D1_PIXEL_FORMAT {
+  uint32_t format;
+  uint32_t alphaMode;
+} D2D1_PIXEL_FORMAT;
+
+#define D2D1_RENDER_TARGET_TYPE_DEFAULT 0
+
+#define D2D1_RENDER_TARGET_USAGE_NONE 0
+
+#define D2D1_FEATURE_LEVEL_DEFAULT 0
+
+typedef struct D2D1_RENDER_TARGET_PROPERTIES {
+  uint32_t type;
+  D2D1_PIXEL_FORMAT pixelFormat;
+  float dpiX;
+  float dpiY;
+  uint32_t usage;
+  uint32_t minLevel;
+} D2D1_RENDER_TARGET_PROPERTIES;
+
+#define D2D1_PRESENT_OPTIONS_NONE 0
+
+typedef struct D2D1_HWND_RENDER_TARGET_PROPERTIES {
+  HWND hwnd;
+  D2D1_SIZE_U pixelSize;
+  uint32_t presentOptions;
+} D2D1_HWND_RENDER_TARGET_PROPERTIES;
+
+// ID2D1Factory (forward define)
+typedef struct ID2D1Factory ID2D1Factory;
+
+// ID2D1Resource
+typedef struct ID2D1Resource ID2D1Resource;
+
+typedef struct ID2D1ResourceVtbl {
+    IUnknownVtbl Base;
+    void (__stdcall *GetFactory)(ID2D1Resource *This, ID2D1Factory **factory);
+} ID2D1ResourceVtbl;
+
+struct ID2D1Resource {
+    const ID2D1ResourceVtbl *lpVtbl;
+};
+
+// ID2D1RenderTarget
+typedef struct ID2D1Brush ID2D1Brush;
+typedef ID2D1Brush ID2D1SolidColorBrush;
+
+typedef struct ID2D1RenderTarget ID2D1RenderTarget;
+
+typedef struct ID2D1RenderTargetVtbl {
+    ID2D1ResourceVtbl Base;
+    uint8_t padding1[4 * sizeof(void *)];
+
+    int32_t (__stdcall *CreateSolidColorBrush)(ID2D1RenderTarget *This, const D2D1_COLOR_F *color, const void *brushProperties, ID2D1SolidColorBrush **solidColorBrush);
+    uint8_t padding2[6 * sizeof(void *)];
+
+    void (__stdcall *DrawLine)(ID2D1RenderTarget *This, D2D1_POINT_2F point0, D2D1_POINT_2F point1, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
+    void (__stdcall *DrawRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
+    void (__stdcall *FillRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush);
+    uint8_t padding3[29 * sizeof(void *)];
+
+    void (__stdcall *Clear)(ID2D1RenderTarget *This, const D2D1_COLOR_F *clearColor);
+    void (__stdcall *BeginDraw)(ID2D1RenderTarget *This);
+    int32_t (__stdcall *EndDraw)(ID2D1RenderTarget *This, void *tag1, void *tag2);
+    uint8_t padding4[7 * sizeof(void *)];
+} ID2D1RenderTargetVtbl;
+
+#define ID2D1RenderTarget_CreateSolidColorBrush(ptr, a, b, c) ((ID2D1RenderTarget *)ptr)->lpVtbl->CreateSolidColorBrush((ID2D1RenderTarget *)ptr, a, b, c);
+#define ID2D1RenderTarget_DrawLine(ptr, a, b, c, d, e) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawLine((ID2D1RenderTarget *)ptr, a, b, c, d, e);
+#define ID2D1RenderTarget_DrawRectangle(ptr, a, b, c, d) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawRectangle((ID2D1RenderTarget *)ptr, a, b, c, d);
+#define ID2D1RenderTarget_FillRectangle(ptr, a, b) ((ID2D1RenderTarget *)ptr)->lpVtbl->FillRectangle((ID2D1RenderTarget *)ptr, a, b);
+#define ID2D1RenderTarget_Clear(ptr, a) ((ID2D1RenderTarget *)ptr)->lpVtbl->Clear((ID2D1RenderTarget *)ptr, a);
+#define ID2D1RenderTarget_BeginDraw(ptr) ((ID2D1RenderTarget *)ptr)->lpVtbl->BeginDraw((ID2D1RenderTarget *)ptr);
+#define ID2D1RenderTarget_EndDraw(ptr, a, b) ((ID2D1RenderTarget *)ptr)->lpVtbl->EndDraw((ID2D1RenderTarget *)ptr, a, b);
+
+struct ID2D1RenderTarget {
+    const ID2D1RenderTargetVtbl *lpVtbl;
+};
+
+// ID2D1HwndRenderTarget
+typedef struct ID2D1HwndRenderTarget ID2D1HwndRenderTarget;
+
+typedef struct ID2D1HwndRenderTargetVtbl {
+    ID2D1RenderTargetVtbl Base;
+    uint8_t padding1[3 * sizeof(void *)];
+} ID2D1HwndRenderTargetVtbl;
+
+struct ID2D1HwndRenderTarget {
+    const ID2D1HwndRenderTargetVtbl *lpVtbl;
+};
+
+// ID2D1Factory
+typedef struct ID2D1FactoryVtbl {
+    IUnknownVtbl Base;
+    uint8_t padding1[11 * sizeof(void *)];
+    int32_t (__stdcall *CreateHwndRenderTarget)(ID2D1Factory *This, const D2D1_RENDER_TARGET_PROPERTIES *renderTargetProperties, const D2D1_HWND_RENDER_TARGET_PROPERTIES *hwndRenderTargetProperties, ID2D1HwndRenderTarget **hwndRenderTarget);
+    uint8_t padding2[2 * sizeof(void *)];
+} ID2D1FactoryVtbl;
+
+#define ID2D1Factory_CreateHwndRenderTarget(ptr, a, b, c) ((ID2D1Factory *)ptr)->lpVtbl->CreateHwndRenderTarget((ID2D1Factory *)ptr, a, b, c);
+
+struct ID2D1Factory {
+    const ID2D1FactoryVtbl *lpVtbl;
+};
+
+#define D2D1_FACTORY_TYPE_SINGLE_THREADED 0
+
+extern int32_t __stdcall D2D1CreateFactory(uint32_t factoryType, GUID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+
 // Stdlib functions
 #if defined(WIN32_MALLOC) || defined(WIN32_WCSDUP)
     void *malloc(size_t size) {
@@ -478,7 +641,7 @@ extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
 #ifdef WIN32_RAND
     uint32_t rand_seed;
 
-    inline void srand(uint32_t seed) {
+    void srand(uint32_t seed) {
         rand_seed = seed;
     }
 

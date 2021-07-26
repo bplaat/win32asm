@@ -44,6 +44,9 @@ libraries = {
         'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
         'GdipDrawRectangle', 'GdipDrawRectangleI', 'GdipFillRectangle', 'GdipFillRectangleI',
         'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode', 'GdipCreatePen1', 'GdipDeletePen'
+    ],
+    'd2d1.dll': [
+        'D2D1CreateFactory'
     ]
 }
 
@@ -72,6 +75,7 @@ with open(sys.argv[2], 'r') as file:
     output = re.sub(r'\s*\.align (.+)\n', '\n    align \\1, db 0\n', output)
     output = re.sub(r'\s*\.space (.+)\n', '\n    times \\1 db 0\n', output)
     output = output.replace('.ascii', 'db')
+    output = output.replace('.word', 'dw')
     output = output.replace('.long', 'dd')
     output = output.replace('.quad', 'dq')
     output = output.replace(' PTR ', ' ')
