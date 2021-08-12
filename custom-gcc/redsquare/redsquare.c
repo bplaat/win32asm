@@ -1001,9 +1001,11 @@ void _start(void) {
     wc.hIconSm = LoadImageW(wc.hInstance, (wchar_t *)APP_ICON_ID, IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED);
     RegisterClassExW(&wc);
 
-    uint32_t x = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
-    uint32_t y = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
-    RECT window_rect = { x, y, x + WINDOW_WIDTH, y + WINDOW_HEIGHT };
+    RECT window_rect;
+    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
+    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
+    window_rect.right = window_rect.left + WINDOW_WIDTH;
+    window_rect.bottom = window_rect.top + WINDOW_HEIGHT;
     AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
 
     wchar_t *window_title;

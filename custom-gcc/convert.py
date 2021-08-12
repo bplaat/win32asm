@@ -10,29 +10,34 @@ debug = len(sys.argv) >= 5 and sys.argv[4] == 'debug'
 
 libraries = {
     'KERNEL32.DLL': [
-        'GetModuleHandleW', 'ExitProcess', 'GetProcessHeap', 'SetThreadLocale', 'SetThreadUILanguage',
-        'HeapAlloc', 'HeapReAlloc', 'HeapFree', 'GetLocalTime', 'Sleep', 'GetLastError',
-        'CreateFileW', 'ReadFile', 'WriteFile', 'SetFilePointer', 'CloseHandle', 'CreateMutexW', 'ReleaseMutex',
-        'GetVersionExW', 'LoadLibraryW', 'GetProcAddress', 'FindResourceW', 'SizeofResource', 'LoadResource',
-        'LockResource', 'GetStdHandle', 'WriteConsoleW'
+        'CloseHandle', 'CreateFileW', 'CreateMutexW', 'ExitProcess', 'FindResourceW', 'GetLastError', 'GetLocalTime',
+        'GetModuleHandleW', 'GetProcAddress', 'GetProcessHeap', 'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree',
+        'HeapReAlloc', 'LoadLibraryW', 'LoadResource', 'LockResource', 'ReadFile', 'ReleaseMutex', 'SetFilePointer',
+        'SetThreadLocale', 'SetThreadUILanguage', 'SizeofResource', 'Sleep', 'WriteConsoleW', 'WriteFile', 'GetFullPathNameW',
+        'MultiByteToWideChar', 'WideCharToMultiByte', 'GetFileSize', 'FindFirstFileW', 'FindNextFileW', 'FindClose'
     ],
     'USER32.DLL': [
-        'MessageBoxW', 'PostQuitMessage', 'DefWindowProcW', 'LoadIconW', 'LoadCursorW', 'LoadBitmapW', 'LoadImageW', 'RegisterClassExW',
-        'CreateWindowExW', 'ShowWindow', 'UpdateWindow', 'GetMessageW', 'PeekMessageW', 'TranslateMessage', 'DispatchMessageW',
-        'GetClientRect', 'GetSystemMetrics', 'AdjustWindowRectEx', 'SetWindowPos', 'SendMessageW', 'EnumChildWindows', 'SetWindowTextW', 'GetWindowTextW',
-        'SetMenu', 'DestroyWindow', 'SetTimer', 'KillTimer', 'BeginPaint', 'EndPaint', 'FillRect', 'FrameRect', 'InvalidateRect',
-        'MessageBeep', 'LoadStringW', 'GetDlgItem', 'GetDC', 'DrawTextW', 'wsprintfW', 'wvsprintfW', 'IsIconic', 'FindWindowW', 'SetForegroundWindow'
+        'AdjustWindowRectEx', 'BeginPaint', 'CreateWindowExW', 'DefWindowProcW', 'DestroyWindow', 'DispatchMessageW', 'DrawTextW',
+        'EndPaint', 'EnumChildWindows', 'FillRect', 'FindWindowW', 'FrameRect', 'GetWindowRect', 'GetClientRect', 'GetDC', 'GetDlgItem', 'GetMessageW',
+        'GetSystemMetrics', 'GetWindowTextW', 'InvalidateRect', 'IsIconic', 'KillTimer', 'LoadBitmapW', 'LoadCursorW', 'LoadIconW',
+        'LoadImageW', 'LoadStringW', 'MessageBeep', 'MessageBoxW', 'PeekMessageW', 'PostQuitMessage', 'RegisterClassExW', 'SendMessageW',
+        'SetForegroundWindow', 'SetMenu', 'SetTimer', 'SetWindowPos', 'SetWindowTextW', 'ShowWindow', 'TranslateMessage', 'UpdateWindow',
+        'wsprintfW', 'wvsprintfW', 'GetSystemMenu', 'InsertMenuW', 'LoadAcceleratorsW', 'TranslateAcceleratorW', 'SetCapture',
+        'ReleaseCapture', 'MonitorFromWindow', 'GetMonitorInfoW', 'GetWindowPlacement'
     ],
     'GDI32.DLL': [
-        'GetStockObject', 'CreateCompatibleDC', 'CreateCompatibleBitmap', 'CreateSolidBrush', 'SelectObject',
-        'CreateRectRgn', 'SelectClipRgn', 'DeleteObject', 'DeleteDC', 'BitBlt', 'CreateFontW', 'SetBkMode',
-        'SetTextColor', 'SetTextAlign', 'TextOutW'
+        'BitBlt', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC',
+        'DeleteObject', 'GetStockObject', 'SelectClipRgn', 'SelectObject', 'SetBkMode', 'SetTextAlign', 'SetTextColor', 'TextOutW',
+        'ExtTextOutW', 'GetTextExtentPoint32W'
     ],
     'SHELL32.DLL': [
-        'ShellExecuteW', 'SHGetFolderPathW'
+        'DragFinish', 'DragQueryFileW', 'SHGetFolderPathW', 'ShellExecuteW'
     ],
     'COMCTL32.DLL': [
         'InitCommonControlsEx'
+    ],
+    'COMDLG32.DLL': [
+        'GetOpenFileNameW', 'GetSaveFileNameW'
     ],
     'ADVAPI32.DLL': [
         'GetUserNameW'
@@ -41,9 +46,12 @@ libraries = {
         'PlaySoundW'
     ],
     'gdiplus.dll': [
-        'GdiplusStartup', 'GdiplusShutdown', 'GdipCreateFromHDC', 'GdipGraphicsClear', 'GdipDeleteGraphics',
-        'GdipDrawRectangle', 'GdipDrawRectangleI', 'GdipFillRectangle', 'GdipFillRectangleI',
-        'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipSetSmoothingMode', 'GdipCreatePen1', 'GdipDeletePen'
+        'GdipCreateFromHDC', 'GdipCreatePen1', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipDeleteGraphics', 'GdipDeletePen',
+        'GdipDrawRectangle', 'GdipDrawRectangleI', 'GdipFillRectangle', 'GdipFillRectangleI', 'GdipGraphicsClear', 'GdipSetSmoothingMode',
+        'GdiplusShutdown', 'GdiplusStartup'
+    ],
+    'dwmapi.dll': [
+        'DwmExtendFrameIntoClientArea'
     ],
     'd2d1.dll': [
         'D2D1CreateFactory'
