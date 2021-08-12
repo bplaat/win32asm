@@ -203,27 +203,40 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         int32_t y = GET_Y_LPARAM(lParam);
 
         // Window decoration buttons
+        bool new_minimize_hover = window->minimize_hover;
+        bool new_maximize_hover = window->minimize_hover;
+        bool new_close_hover = window->close_hover;
         if (y >= 0 && y < TITLEBAR_HEIGHT) {
-            window->minimize_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH * 3 &&
+            new_minimize_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH * 3 &&
                 x < window->width - TITLEBAR_BUTTON_WIDTH  * 2;
 
-            window->maximize_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH  * 2 &&
+            new_maximize_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH  * 2 &&
                 x < window->width - TITLEBAR_BUTTON_WIDTH  * 1;
 
-            window->close_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH  * 1 &&
+            new_close_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH  * 1 &&
                     x < window->width;
+        } else {
+            new_minimize_hover = false;
+            new_maximize_hover = false;
+            new_close_hover = false;
+        }
+
+        if (
+            new_minimize_hover != window->minimize_hover ||
+            new_maximize_hover != window->maximize_hover ||
+            new_close_hover != window->close_hover
+        ) {
+            window->minimize_hover = new_minimize_hover;
+            window->maximize_hover = new_maximize_hover;
+            window->close_hover = new_close_hover;
 
             if (window->minimize_hover || window->maximize_hover || window->close_hover) {
                 SetCapture(hwnd);
+            } else {
+                ReleaseCapture();
             }
-        } else {
-            window->minimize_hover = false;
-            window->maximize_hover = false;
-            window->close_hover = false;
-            ReleaseCapture();
+            InvalidateRect(hwnd, NULL, false);
         }
-
-        InvalidateRect(hwnd, NULL, false);
         return 0;
     }
 
