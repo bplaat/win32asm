@@ -4,6 +4,109 @@
 #define WIN32_WCSLEN
 #include "win32.h"
 
+// ### Canvas ###
+// A simple back bufferd GDI wrapper with transperancy support
+typedef struct {
+    wchar_t *name;
+    int32_t size;
+} Font;
+
+HFONT Font_Create(Font *font) {
+    return CreateFontW(font->size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
+}
+
+typedef struct {
+    HDC hdc;
+    int32_t width;
+    int32_t height;
+    HDC hdc_buffer;
+    HBITMAP bitmap_buffer;
+} Canvas;
+
+void Canvas_Init(Canvas *canvas, PAINTSTRUCT *ps);
+
+Canvas *Canvas_New(PAINTSTRUCT *ps) {
+    Canvas *canvas = malloc(sizeof(Canvas));
+    Canvas_Init(canvas, ps);
+    return canvas;
+}
+
+void Canvas_Init(Canvas *canvas, PAINTSTRUCT *ps) {
+    canvas->hdc = ps->hdc;
+    canvas->width = ps->rcPaint.right;
+    canvas->height= ps->rcPaint.bottom;
+
+    canvas->hdc_buffer = CreateCompatibleDC(canvas->hdc);
+    canvas->bitmap_buffer = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
+    SelectObject(canvas->hdc_buffer, canvas->bitmap_buffer);
+}
+
+void Canvas_Free(Canvas *canvas) {
+    BitBlt(canvas->hdc, 0, 0, canvas->width, canvas->height, canvas->hdc_buffer, 0, 0, SRCCOPY);
+    DeleteObject(canvas->bitmap_buffer);
+    DeleteDC(canvas->hdc_buffer);
+
+    free(canvas);
+}
+
+void Canvas_FillRect(Canvas *canvas, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t color) {
+    HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
+    if ((color >> 24) == 0xff) {
+        RECT rect = { x, y, x + width, y + height };
+        FillRect(canvas->hdc_buffer, &rect, brush);
+    } else {
+        HDC hdc_buffer = CreateCompatibleDC(canvas->hdc_buffer);
+        HBITMAP bitmap_buffer = CreateCompatibleBitmap(canvas->hdc_buffer, width, height);
+        SelectObject(hdc_buffer, bitmap_buffer);
+
+        RECT rect = { 0, 0, width, height };
+        FillRect(hdc_buffer, &rect, brush);
+
+        BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+        GdiAlphaBlend(canvas->hdc_buffer, x, y, width, height, hdc_buffer, 0, 0, width, height, blend);
+        DeleteObject(bitmap_buffer);
+        DeleteDC(hdc_buffer);
+    }
+    DeleteObject(brush);
+}
+
+void Canvas_FillText(Canvas *canvas, Font *font, int32_t x, int32_t y, wchar_t *text, int32_t length, int32_t align, uint32_t color) {
+    if (length == -1) length = wcslen(text);
+    HFONT hfont = Font_Create(font);
+    SelectObject(canvas->hdc_buffer, hfont);
+    SIZE measure_size;
+    GetTextExtentPoint32W(canvas->hdc_buffer, text, length, &measure_size);
+    int32_t dx = x;
+    if (align == TA_CENTER) dx -= measure_size.cx / 2;
+    if (align == TA_RIGHT) dx -= measure_size.cx;
+
+    if ((color >> 24) == 0xff) {
+        SetBkMode(canvas->hdc_buffer, TRANSPARENT);
+        SetTextColor(canvas->hdc_buffer, color & 0x00ffffff);
+        SetTextAlign(canvas->hdc_buffer, TA_LEFT);
+        TextOutW(canvas->hdc_buffer, dx, y, text, length);
+    } else {
+        HDC hdc_buffer = CreateCompatibleDC(canvas->hdc_buffer);
+        HBITMAP bitmap_buffer = CreateCompatibleBitmap(canvas->hdc_buffer, measure_size.cx, measure_size.cy);
+        SelectObject(hdc_buffer, bitmap_buffer);
+        BitBlt(hdc_buffer, 0, 0, measure_size.cx, measure_size.cy, canvas->hdc_buffer, dx, y, SRCCOPY);
+
+        SelectObject(hdc_buffer, hfont);
+        SetBkMode(hdc_buffer, TRANSPARENT);
+        SetTextColor(hdc_buffer, color & 0x00ffffff);
+        SetTextAlign(hdc_buffer, TA_LEFT);
+        TextOutW(hdc_buffer, 0, 0, text, length);
+
+        BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+        GdiAlphaBlend(canvas->hdc_buffer, dx, y, measure_size.cx, measure_size.cy, hdc_buffer, 0, 0, measure_size.cx, measure_size.cy, blend);
+        DeleteObject(bitmap_buffer);
+        DeleteDC(hdc_buffer);
+    }
+    DeleteObject(hfont);
+}
+
+// ### Window ###
 wchar_t *window_class_name = L"window-borderless";
 
 #ifdef WIN64
@@ -24,7 +127,6 @@ typedef struct {
     int32_t width;
     int32_t height;
     uint32_t background_color;
-    uint32_t hover_background_color;
     bool active;
     bool minimize_hover;
     bool maximize_hover;
@@ -47,11 +149,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
 
         // Generate random background color
-        window->background_color = rand() & 0x007f7f7f;
-        window->hover_background_color = ((window->background_color & 0xff) + 0x17) |
-            ((((window->background_color >> 8) & 0xff) + 0x17) << 8) |
-            ((((window->background_color >> 16) & 0xff) + 0x17) << 16);
-
+        window->background_color = (rand() & 0x007f7f7f) | 0xff000000;
         window->active = true;
         window->minimize_hover = false;
         window->maximize_hover = false;
@@ -247,89 +345,55 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
-        HDC hdc = BeginPaint(hwnd, &paint_struct);
-
-        // Create back buffer
-        HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window->width, window->height);
-        SelectObject(hdc_buffer, bitmap_buffer);
+        BeginPaint(hwnd, &paint_struct);
+        Canvas *canvas = Canvas_New(&paint_struct);
 
         // Draw background color
-        HBRUSH brush = CreateSolidBrush(window->background_color);
-        RECT rect = { 0, 0, window->width, window->height };
-        FillRect(hdc_buffer, &rect, brush);
-        DeleteObject(brush);
+        Canvas_FillRect(canvas, 0, 0, window->width, window->height, window->background_color);
+
+        uint32_t active_text_color = RGB(255, 255, 255);
+        uint32_t inactive_text_color = RGBA(255, 255, 255, 128);
 
         // Draw window decoration buttons
-        int32_t font_size = 18;
-        HFONT font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
-        SelectObject(hdc_buffer, font);
-        SetBkMode(hdc_buffer, TRANSPARENT);
-        SetTextAlign(hdc_buffer, TA_CENTER);
-        SetTextColor(hdc_buffer, window->active ? 0x00ffffff : 0x00aaaaaa);
+        Font button_font = { font_name, 18 };
 
         // Minimize button
         int32_t x = window->width - TITLEBAR_BUTTON_WIDTH * 3;
         if (window->minimize_hover) {
-            HBRUSH brush = CreateSolidBrush(window->hover_background_color);
-            RECT rect = { x, 0, x + TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
-            FillRect(hdc_buffer, &rect, brush);
-            DeleteObject(brush);
+            Canvas_FillRect(canvas, x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT, RGBA(255, 255, 255, 48));
         }
-        wchar_t *text = L"🗕";
-        TextOutW(hdc_buffer, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - font_size) / 2, text, wcslen(text));
+        Canvas_FillText(canvas, &button_font, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - button_font.size) / 2,
+            L"🗕", -1, TA_CENTER, window->active ? active_text_color : inactive_text_color);
         x += TITLEBAR_BUTTON_WIDTH;
 
         // Maximize button
         if (window->maximize_hover) {
-            HBRUSH brush = CreateSolidBrush(window->hover_background_color);
-            RECT rect = { x, 0, x + TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
-            FillRect(hdc_buffer, &rect, brush);
-            DeleteObject(brush);
+            Canvas_FillRect(canvas, x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT, RGBA(255, 255, 255, 48));
         }
         WINDOWPLACEMENT placement;
         GetWindowPlacement(hwnd, &placement);
-        text = placement.showCmd == SW_MAXIMIZE ? L"🗗" : L"🗖";
-        TextOutW(hdc_buffer, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - font_size) / 2, text, wcslen(text));
+        Canvas_FillText(canvas, &button_font, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - button_font.size) / 2,
+            placement.showCmd == SW_MAXIMIZE ? L"🗗" : L"🗖", -1, TA_CENTER, window->active ? active_text_color : inactive_text_color);
         x += TITLEBAR_BUTTON_WIDTH;
 
         // Close button
         if (window->close_hover) {
-            HBRUSH brush = CreateSolidBrush(window->hover_background_color);
-            RECT rect = { x, 0, x + TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
-            FillRect(hdc_buffer, &rect, brush);
-            DeleteObject(brush);
+            Canvas_FillRect(canvas, x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT, RGBA(255, 0, 0, 128));
         }
-        text = L"🗙";
-        TextOutW(hdc_buffer, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - font_size) / 2, text, wcslen(text));
-
-        DeleteObject(font);
+        Canvas_FillText(canvas, &button_font, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - button_font.size) / 2,
+            L"🗙", -1, TA_CENTER, window->active ? active_text_color : inactive_text_color);
 
         // Draw centered text
-        font_size = window->width / 16;
-        font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
-        SelectObject(hdc_buffer, font);
-        SetTextColor(hdc_buffer, 0x00ffffff);
-        TextOutW(hdc_buffer, window->width / 2, (window->height - font_size) / 2, window_title, wcslen(window_title));
-        DeleteObject(font);
+        Font title_font = { font_name, window->width / 16 };
+        Canvas_FillText(canvas, &title_font, window->width / 2, (window->height - title_font.size) / 2, window_title,  -1, TA_CENTER, active_text_color);
 
         // Draw footer text
-        font_size = window->width / 24;
-        font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
-        SelectObject(hdc_buffer, font);
+        Font footer_font = { font_name, window->width / 24 };
         wchar_t string_buffer[64];
         wsprintfW(string_buffer, L"(%dx%d)", window->width, window->height);
-        TextOutW(hdc_buffer, window->width / 2, window->height - font_size - 24, string_buffer, wcslen(string_buffer));
-        DeleteObject(font);
+        Canvas_FillText(canvas, &footer_font, window->width / 2, window->height - footer_font.size - 24, string_buffer, -1, TA_CENTER, active_text_color);
 
-        // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, window->width, window->height, hdc_buffer, 0, 0, SRCCOPY);
-        DeleteObject(bitmap_buffer);
-        DeleteDC(hdc_buffer);
-
+        Canvas_Free(canvas);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }

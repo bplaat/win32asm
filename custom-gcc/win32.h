@@ -487,7 +487,17 @@ extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
 
 #define SRCCOPY 0x00CC0020
 
-#define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16))
+#define AC_SRC_OVER 0x00
+
+#define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | (0xff << 24))
+#define RGBA(r, g, b, a) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | ((a & 0xff) << 24))
+
+typedef struct _BLENDFUNCTION {
+    uint8_t BlendOp;
+    uint8_t BlendFlags;
+    uint8_t SourceConstantAlpha;
+    uint8_t AlphaFormat;
+} BLENDFUNCTION;
 
 extern HGDIOBJ __stdcall GetStockObject(int32_t i);
 extern HDC __stdcall CreateCompatibleDC(HDC hdc);
@@ -510,6 +520,8 @@ extern bool __stdcall TextOutW(HDC hdc, int32_t x, int32_t y, wchar_t *lpString,
 extern bool __stdcall ExtTextOutW(HDC hdc, int32_t x, int32_t y, uint32_t options,
     const RECT *lprect, wchar_t *lpString, uint32_t c, const int32_t *lpDx);
 extern bool __stdcall GetTextExtentPoint32W(HDC hdc, wchar_t *lpString, int32_t c, SIZE *psizl);
+extern bool __stdcall GdiAlphaBlend(HDC hdcDest, int32_t xoriginDest, int32_t yoriginDest, int32_t wDest,
+    int32_t hDest, HDC hdcSrc, int32_t xoriginSrc, int32_t yoriginSrc, int32_t wSrc, int32_t hSrc, BLENDFUNCTION ftn);
 
 // Gdiplus
 typedef struct GdiplusStartupInput {

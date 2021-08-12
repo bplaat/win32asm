@@ -28,7 +28,7 @@ libraries = {
     'GDI32.DLL': [
         'BitBlt', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC',
         'DeleteObject', 'GetStockObject', 'SelectClipRgn', 'SelectObject', 'SetBkMode', 'SetTextAlign', 'SetTextColor', 'TextOutW',
-        'ExtTextOutW', 'GetTextExtentPoint32W'
+        'ExtTextOutW', 'GetTextExtentPoint32W', 'GdiAlphaBlend'
     ],
     'SHELL32.DLL': [
         'DragFinish', 'DragQueryFileW', 'SHGetFolderPathW', 'ShellExecuteW'
