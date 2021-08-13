@@ -46,11 +46,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->background_color.b = (float)(rand() % 128) / 255;
         window->background_color.a = 1;
 
+        // Create Direct2D factory
         GUID ID2D1Factory_guid = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
         if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &ID2D1Factory_guid, NULL, &window->pFactory))) {
             return -1;
         }
-        window->pRenderTarget = NULL;
+
+        // Create Direct2D renderer
+        D2D1_RENDER_TARGET_PROPERTIES renderProps = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
+            { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
+            0, 0, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
+        D2D1_HWND_RENDER_TARGET_PROPERTIES hwndRenderProps = { hwnd, { 0, 0 }, D2D1_PRESENT_OPTIONS_NONE };
+        ID2D1Factory_CreateHwndRenderTarget(window->pFactory, &renderProps, &hwndRenderProps, &window->pRenderTarget);
 
         return 0;
     }
@@ -60,16 +67,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
 
-        // Recreate direct2d renderer
-        if (window->pRenderTarget != NULL) {
-            IUnknown_Release(window->pRenderTarget);
-        }
-        D2D1_RENDER_TARGET_PROPERTIES renderProps = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
-            { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
-            0, 0, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
-        D2D1_HWND_RENDER_TARGET_PROPERTIES hwndRenderProps = { hwnd, { window->width, window->height}, D2D1_PRESENT_OPTIONS_NONE };
-        ID2D1Factory_CreateHwndRenderTarget(window->pFactory, &renderProps, &hwndRenderProps, &window->pRenderTarget);
-
+        // Resize Direct2D renderer
+        D2D1_SIZE_U size = { window->width, window->height };
+        ID2D1HwndRenderTarget_Resize(window->pRenderTarget, &size);
         return 0;
     }
 

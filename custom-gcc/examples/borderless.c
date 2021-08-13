@@ -4,10 +4,13 @@
 #define WIN32_WCSLEN
 #include "win32.h"
 
-// ### Canvas ###
+// ##########################################################################################
+// ######################################### Canvas #########################################
+// ##########################################################################################
 // A simple canvas wrapper with two renderer backends:
 // - Back-buffered GDI wrapper with alpha transperancy support
 // - GPU-accelerated Direct2D renderer with DirectWrite text drawing
+
 typedef struct {
     wchar_t *name;
     float size;
@@ -55,25 +58,11 @@ Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
 
 void Canvas_Init(Canvas *canvas, HWND hwnd, CanvasRenderer renderer) {
     canvas->renderer = renderer;
-    RECT client_rect;
-    GetClientRect(hwnd, &client_rect);
-    canvas->width = client_rect.right;
-    canvas->height= client_rect.bottom;
+    canvas->width = -1;
+    canvas->height = -1;
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         canvas->hdc = GetDC(hwnd);
-
-        canvas->buffer_hdc = CreateCompatibleDC(canvas->hdc);
-        SetBkMode(canvas->buffer_hdc, TRANSPARENT);
-        SetTextAlign(canvas->buffer_hdc, TA_LEFT);
-        canvas->buffer_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
-        SelectObject(canvas->buffer_hdc, canvas->buffer_bitmap);
-
-        canvas->alpha_hdc = CreateCompatibleDC(canvas->hdc);
-        SetBkMode(canvas->alpha_hdc, TRANSPARENT);
-        SetTextAlign(canvas->alpha_hdc, TA_LEFT);
-        canvas->alpha_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
-        SelectObject(canvas->alpha_hdc, canvas->alpha_bitmap);
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
@@ -83,26 +72,11 @@ void Canvas_Init(Canvas *canvas, HWND hwnd, CanvasRenderer renderer) {
         GUID IDWriteFactory_guid = { 0xb859ee5a, 0xd838, 0x4b5b, { 0xa2, 0xe8, 0x1a, 0xdc, 0x7d, 0x93, 0xdb, 0x48 } };
         DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, &IDWriteFactory_guid, &canvas->dwrite_factory);
 
-        D2D1_RENDER_TARGET_PROPERTIES renderProps = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
+        D2D1_RENDER_TARGET_PROPERTIES render_props = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
             { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
             0, 0, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
-        D2D1_HWND_RENDER_TARGET_PROPERTIES hwndRenderProps = { hwnd, { canvas->width, canvas->height}, D2D1_PRESENT_OPTIONS_NONE };
-        ID2D1Factory_CreateHwndRenderTarget(canvas->d2d_factory, &renderProps, &hwndRenderProps, &canvas->render_target);
-    }
-}
-
-void Canvas_BeginDraw(Canvas *canvas) {
-    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        ID2D1RenderTarget_BeginDraw(canvas->render_target);
-    }
-}
-
-void Canvas_EndDraw(Canvas *canvas) {
-    if (canvas->renderer == CANVAS_RENDERER_GDI) {
-        BitBlt(canvas->hdc, 0, 0, canvas->width, canvas->height, canvas->buffer_hdc, 0, 0, SRCCOPY);
-    }
-    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        ID2D1RenderTarget_EndDraw(canvas->render_target, NULL, NULL);
+        D2D1_HWND_RENDER_TARGET_PROPERTIES hwnd_render_props = { hwnd, { 0, 0 }, D2D1_PRESENT_OPTIONS_NONE };
+        ID2D1Factory_CreateHwndRenderTarget(canvas->d2d_factory, &render_props, &hwnd_render_props, &canvas->render_target);
     }
 }
 
@@ -124,6 +98,53 @@ void Canvas_Free(Canvas *canvas) {
     }
 
     free(canvas);
+}
+
+void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI && canvas->width != -1 && canvas->height != -1) {
+        DeleteObject(canvas->alpha_bitmap);
+        DeleteDC(canvas->alpha_hdc);
+
+        DeleteObject(canvas->buffer_bitmap);
+        DeleteDC(canvas->buffer_hdc);
+    }
+
+    canvas->width = width;
+    canvas->height = height;
+
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        canvas->buffer_hdc = CreateCompatibleDC(canvas->hdc);
+        SetBkMode(canvas->buffer_hdc, TRANSPARENT);
+        SetTextAlign(canvas->buffer_hdc, TA_LEFT);
+        canvas->buffer_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
+        SelectObject(canvas->buffer_hdc, canvas->buffer_bitmap);
+
+        canvas->alpha_hdc = CreateCompatibleDC(canvas->hdc);
+        SetBkMode(canvas->alpha_hdc, TRANSPARENT);
+        SetTextAlign(canvas->alpha_hdc, TA_LEFT);
+        canvas->alpha_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
+        SelectObject(canvas->alpha_hdc, canvas->alpha_bitmap);
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        D2D1_SIZE_U size = { canvas->width, canvas->height };
+        ID2D1HwndRenderTarget_Resize(canvas->render_target, &size);
+    }
+}
+
+void Canvas_BeginDraw(Canvas *canvas) {
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        ID2D1RenderTarget_BeginDraw(canvas->render_target);
+    }
+}
+
+void Canvas_EndDraw(Canvas *canvas) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        BitBlt(canvas->hdc, 0, 0, canvas->width, canvas->height, canvas->buffer_hdc, 0, 0, SRCCOPY);
+    }
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        ID2D1RenderTarget_EndDraw(canvas->render_target, NULL, NULL);
+    }
 }
 
 void Canvas_FillRect(Canvas *canvas, Rect *rect, uint32_t color) {
@@ -224,7 +245,10 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, 
     }
 }
 
-// ### Window ###
+// ##########################################################################################
+// ######################################### Window #########################################
+// ##########################################################################################
+
 wchar_t *window_class_name = L"window-borderless";
 
 #ifdef WIN64
@@ -233,7 +257,7 @@ wchar_t *window_class_name = L"window-borderless";
     wchar_t *window_title = L"This is a test borderless window 🤩 (32-bit)";
 #endif
 
-wchar_t *font_name = L"Comic Sans MS";
+wchar_t *font_name = L"Segoe UI";
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
@@ -262,6 +286,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->width = WINDOW_WIDTH;
         window->height = WINDOW_HEIGHT;
 
+        // Create canvas
+        window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DIRECT2D);
+
         // Generate random seed by time
         SYSTEMTIME time;
         GetLocalTime(&time);
@@ -269,7 +296,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Generate random background color and fill other window data
         window->background_color = (rand() & 0x007f7f7f) | 0xff000000;
-        window->canvas = NULL;
         window->active = true;
         window->minimize_hover = false;
         window->maximize_hover = false;
@@ -364,11 +390,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
 
-        // Create new canvas
-        if (window->canvas != NULL) {
-            Canvas_Free(window->canvas);
-        }
-        window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DIRECT2D);
+        // Resize canvas
+        Canvas_Resize(window->canvas, window->width, window->height);
         return 0;
     }
 

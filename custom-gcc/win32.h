@@ -875,8 +875,13 @@ typedef struct ID2D1HwndRenderTarget ID2D1HwndRenderTarget;
 
 typedef struct {
     ID2D1RenderTargetVtbl Base;
-    uint8_t padding1[3 * sizeof(void *)];
+    uint8_t padding1[1 * sizeof(void *)];
+
+    int32_t (__stdcall *Resize)(ID2D1HwndRenderTarget *This, const D2D1_SIZE_U *pixelSize);
+    uint8_t padding2[1 * sizeof(void *)];
 } ID2D1HwndRenderTargetVtbl;
+
+#define ID2D1HwndRenderTarget_Resize(ptr, a) ((ID2D1HwndRenderTarget *)ptr)->lpVtbl->Resize((ID2D1HwndRenderTarget *)ptr, a);
 
 struct ID2D1HwndRenderTarget {
     const ID2D1HwndRenderTargetVtbl *lpVtbl;
