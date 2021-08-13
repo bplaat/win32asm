@@ -31,7 +31,7 @@ wchar_t *settings_file = L"\\redsquare-settings.bin";
 #define SETTINGS_SIGNATURE 0x56415352
 #define SETTINGS_NAME_SIZE 32
 
-typedef union SettingsVersion {
+typedef union {
     struct {
         uint16_t major;
         uint16_t minor;
@@ -41,7 +41,7 @@ typedef union SettingsVersion {
     uint64_t bits;
 } SettingsVersion;
 
-typedef struct SettingsHeader {
+typedef struct {
     uint32_t signature;
     SettingsVersion version;
     uint32_t name_address;
@@ -50,12 +50,12 @@ typedef struct SettingsHeader {
     uint32_t highscores_address;
 } SettingsHeader;
 
-typedef struct HighScore {
+typedef struct {
     wchar_t name[SETTINGS_NAME_SIZE];
     uint32_t score;
 } HighScore;
 
-typedef struct Control {
+typedef struct {
     uint8_t type;
     uint8_t page;
     uint16_t id;
@@ -72,7 +72,7 @@ typedef struct Control {
     uint8_t height_unit;
 } Control;
 
-typedef struct Square {
+typedef struct {
     float x;
     float y;
     float width;

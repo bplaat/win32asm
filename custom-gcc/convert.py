@@ -14,7 +14,7 @@ libraries = {
         'GetModuleHandleW', 'GetProcAddress', 'GetProcessHeap', 'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree',
         'HeapReAlloc', 'LoadLibraryW', 'LoadResource', 'LockResource', 'ReadFile', 'ReleaseMutex', 'SetFilePointer',
         'SetThreadLocale', 'SetThreadUILanguage', 'SizeofResource', 'Sleep', 'WriteConsoleW', 'WriteFile', 'GetFullPathNameW',
-        'MultiByteToWideChar', 'WideCharToMultiByte', 'GetFileSize', 'FindFirstFileW', 'FindNextFileW', 'FindClose'
+        'MultiByteToWideChar', 'WideCharToMultiByte', 'GetFileSize', 'FindFirstFileW', 'FindNextFileW', 'FindClose', 'MulDiv'
     ],
     'USER32.DLL': [
         'AdjustWindowRectEx', 'BeginPaint', 'CreateWindowExW', 'DefWindowProcW', 'DestroyWindow', 'DispatchMessageW', 'DrawTextW',
@@ -28,7 +28,7 @@ libraries = {
     'GDI32.DLL': [
         'BitBlt', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC',
         'DeleteObject', 'GetStockObject', 'SelectClipRgn', 'SelectObject', 'SetBkMode', 'SetTextAlign', 'SetTextColor', 'TextOutW',
-        'ExtTextOutW', 'GetTextExtentPoint32W', 'GdiAlphaBlend'
+        'ExtTextOutW', 'GetTextExtentPoint32W', 'GdiAlphaBlend', 'GetDeviceCaps'
     ],
     'SHELL32.DLL': [
         'DragFinish', 'DragQueryFileW', 'SHGetFolderPathW', 'ShellExecuteW'
@@ -55,6 +55,9 @@ libraries = {
     ],
     'd2d1.dll': [
         'D2D1CreateFactory'
+    ],
+    'dwrite.dll': [
+        'DWriteCreateFactory'
     ]
 }
 
