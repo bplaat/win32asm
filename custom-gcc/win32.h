@@ -162,6 +162,11 @@ extern uint32_t __stdcall GetFileSize(HANDLE hFile, uint32_t *lpFileSizeHigh);
 extern HANDLE __stdcall FindFirstFileW(const wchar_t *lpFileName, WIN32_FIND_DATAW *lpFindFileData);
 extern bool __stdcall FindNextFileW(HANDLE hFindFile, WIN32_FIND_DATAW *lpFindFileData);
 extern bool __stdcall FindClose(HANDLE hFindFile);
+extern int32_t __stdcall MulDiv(
+  int nNumber,
+  int nNumerator,
+  int nDenominator
+);
 
 // User32
 #define GET_X_LPARAM(lParam) ((int32_t)(int16_t)LOWORD(lParam))
@@ -308,6 +313,8 @@ extern bool __stdcall FindClose(HANDLE hFindFile);
 #define HTBOTTOMRIGHT 17
 
 #define MONITOR_DEFAULTTONULL 0x00000000
+
+#define ETO_CLIPPED 0x0004
 
 typedef struct {
     uint32_t cbSize;
@@ -489,10 +496,11 @@ extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
 
 #define AC_SRC_OVER 0x00
 
-#define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | (0xff << 24))
-#define RGBA(r, g, b, a) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | ((a & 0xff) << 24))
+#define LOGPIXELSY 90
 
-typedef struct _BLENDFUNCTION {
+#define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16))
+
+typedef struct {
     uint8_t BlendOp;
     uint8_t BlendFlags;
     uint8_t SourceConstantAlpha;
@@ -522,9 +530,10 @@ extern bool __stdcall ExtTextOutW(HDC hdc, int32_t x, int32_t y, uint32_t option
 extern bool __stdcall GetTextExtentPoint32W(HDC hdc, wchar_t *lpString, int32_t c, SIZE *psizl);
 extern bool __stdcall GdiAlphaBlend(HDC hdcDest, int32_t xoriginDest, int32_t yoriginDest, int32_t wDest,
     int32_t hDest, HDC hdcSrc, int32_t xoriginSrc, int32_t yoriginSrc, int32_t wSrc, int32_t hSrc, BLENDFUNCTION ftn);
+extern int32_t __stdcall GetDeviceCaps(HDC hdc, int index);
 
 // Gdiplus
-typedef struct GdiplusStartupInput {
+typedef struct {
     uint32_t GdiplusVersion;
     void *DebugEventCallback;
     bool SuppressBackgroundThread;
@@ -670,7 +679,7 @@ extern int32_t __stdcall DwmExtendFrameIntoClientArea(HWND hWnd, const MARGINS *
 #define FAILED(hr) ((int32_t)(hr) < 0)
 #define S_OK ((int32_t)0)
 
-typedef struct GUID {
+typedef struct {
     uint32_t Data1;
     uint16_t Data2;
     uint16_t Data3;
@@ -679,7 +688,7 @@ typedef struct GUID {
 
 typedef struct IUnknown IUnknown;
 
-typedef struct IUnknownVtbl {
+typedef struct {
     int32_t (__stdcall *QueryInterface)(IUnknown *This, GUID *riid, void **ppvObject);
     uint32_t (__stdcall *AddRef)(IUnknown *This);
     uint32_t (__stdcall *Release)(IUnknown *This);
@@ -691,25 +700,78 @@ struct IUnknown {
 
 #define IUnknown_Release(ptr) ((IUnknown *)ptr)->lpVtbl->Release((IUnknown *)ptr);
 
+// DirectWrite
+
+// IDWriteTextFormat
+typedef struct IDWriteTextFormat IDWriteTextFormat;
+
+#define DWRITE_TEXT_ALIGNMENT_LEADING 0
+#define DWRITE_TEXT_ALIGNMENT_TRAILING 1
+#define DWRITE_TEXT_ALIGNMENT_CENTER 2
+
+#define DWRITE_PARAGRAPH_ALIGNMENT_NEAR 0
+#define DWRITE_PARAGRAPH_ALIGNMENT_FAR 1
+#define DWRITE_PARAGRAPH_ALIGNMENT_CENTER 2
+
+typedef struct {
+    IUnknownVtbl Base;
+
+    int32_t (__stdcall *SetTextAlignment)(IDWriteTextFormat *This, uint32_t textAlignment);
+    int32_t (__stdcall *SetParagraphAlignment)(IDWriteTextFormat *This, uint32_t paragraphAlignment);
+    uint8_t padding1[23 * sizeof(void *)];
+} IDWriteTextFormatVtbl;
+
+#define IDWriteFactory_SetTextAlignment(ptr, a) ((IDWriteTextFormat *)ptr)->lpVtbl->SetTextAlignment((IDWriteTextFormat *)ptr, a);
+#define IDWriteFactory_SetParagraphAlignment(ptr, a) ((IDWriteTextFormat *)ptr)->lpVtbl->SetParagraphAlignment((IDWriteTextFormat *)ptr, a);
+
+struct IDWriteTextFormat {
+    const IDWriteTextFormatVtbl *lpVtbl;
+};
+
+// IDWriteFactory
+typedef struct IDWriteFactory IDWriteFactory;
+
+#define DWRITE_FONT_WEIGHT_NORMAL 4
+#define DWRITE_FONT_STYLE_NORMAL 0
+#define DWRITE_FONT_STRETCH_NORMAL 5
+
+typedef struct {
+    IUnknownVtbl Base;
+    uint8_t padding1[12 * sizeof(void *)];
+
+    int32_t (__stdcall *CreateTextFormat)(IDWriteFactory *This, const wchar_t *family_name, void *collection, uint32_t weight, uint32_t style, uint32_t stretch, float size, const wchar_t *locale, IDWriteTextFormat **format);
+    uint8_t padding2[8 * sizeof(void *)];
+} IDWriteFactoryVtbl;
+
+#define IDWriteFactory_CreateTextFormat(ptr, a, b, c, d, e, f, g, h) ((IDWriteFactory *)ptr)->lpVtbl->CreateTextFormat((IDWriteFactory *)ptr, a, b, c, d, e, f, g, h);
+
+struct IDWriteFactory {
+    const IDWriteFactoryVtbl *lpVtbl;
+};
+
+#define DWRITE_FACTORY_TYPE_SHARED 0
+
+extern int32_t __stdcall DWriteCreateFactory(uint32_t factoryType, GUID *riid, IDWriteFactory **factory);
+
 // Direct2D
-typedef struct D2D1_COLOR_F {
+typedef struct {
     float r;
     float g;
     float b;
     float a;
 } D2D1_COLOR_F;
 
-typedef struct D2D1_POINT_2F {
+typedef struct {
     float x;
     float y;
 } D2D1_POINT_2F;
 
-typedef struct D2D1_SIZE_U {
+typedef struct {
     uint32_t width;
     uint32_t height;
 } D2D1_SIZE_U;
 
-typedef struct D2D1_RECT_F {
+typedef struct {
     float left;
     float top;
     float right;
@@ -719,7 +781,7 @@ typedef struct D2D1_RECT_F {
 #define DXGI_FORMAT_UNKNOWN 0
 #define D2D1_ALPHA_MODE_UNKNOWN 0
 
-typedef struct D2D1_PIXEL_FORMAT {
+typedef struct {
   uint32_t format;
   uint32_t alphaMode;
 } D2D1_PIXEL_FORMAT;
@@ -730,7 +792,7 @@ typedef struct D2D1_PIXEL_FORMAT {
 
 #define D2D1_FEATURE_LEVEL_DEFAULT 0
 
-typedef struct D2D1_RENDER_TARGET_PROPERTIES {
+typedef struct {
   uint32_t type;
   D2D1_PIXEL_FORMAT pixelFormat;
   float dpiX;
@@ -741,7 +803,7 @@ typedef struct D2D1_RENDER_TARGET_PROPERTIES {
 
 #define D2D1_PRESENT_OPTIONS_NONE 0
 
-typedef struct D2D1_HWND_RENDER_TARGET_PROPERTIES {
+typedef struct {
   HWND hwnd;
   D2D1_SIZE_U pixelSize;
   uint32_t presentOptions;
@@ -753,7 +815,7 @@ typedef struct ID2D1Factory ID2D1Factory;
 // ID2D1Resource
 typedef struct ID2D1Resource ID2D1Resource;
 
-typedef struct ID2D1ResourceVtbl {
+typedef struct {
     IUnknownVtbl Base;
     void (__stdcall *GetFactory)(ID2D1Resource *This, ID2D1Factory **factory);
 } ID2D1ResourceVtbl;
@@ -768,7 +830,13 @@ typedef ID2D1Brush ID2D1SolidColorBrush;
 
 typedef struct ID2D1RenderTarget ID2D1RenderTarget;
 
-typedef struct ID2D1RenderTargetVtbl {
+#define D2D1_DRAW_TEXT_OPTIONS_NONE 0
+#define D2D1_DRAW_TEXT_OPTIONS_CLIP 2
+#define D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT 4
+
+#define DWRITE_MEASURING_MODE_NATURAL 0
+
+typedef struct {
     ID2D1ResourceVtbl Base;
     uint8_t padding1[4 * sizeof(void *)];
 
@@ -778,18 +846,22 @@ typedef struct ID2D1RenderTargetVtbl {
     void (__stdcall *DrawLine)(ID2D1RenderTarget *This, D2D1_POINT_2F point0, D2D1_POINT_2F point1, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
     void (__stdcall *DrawRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
     void (__stdcall *FillRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush);
-    uint8_t padding3[29 * sizeof(void *)];
+    uint8_t padding3[9 * sizeof(void *)];
+
+    void (__stdcall *DrawText)(ID2D1RenderTarget *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat, const D2D1_RECT_F *layoutRect, ID2D1Brush *defaultForegroundBrush, uint32_t options, uint32_t measuringMode);
+    uint8_t padding4[19 * sizeof(void *)];
 
     void (__stdcall *Clear)(ID2D1RenderTarget *This, const D2D1_COLOR_F *clearColor);
     void (__stdcall *BeginDraw)(ID2D1RenderTarget *This);
     int32_t (__stdcall *EndDraw)(ID2D1RenderTarget *This, void *tag1, void *tag2);
-    uint8_t padding4[7 * sizeof(void *)];
+    uint8_t padding5[7 * sizeof(void *)];
 } ID2D1RenderTargetVtbl;
 
 #define ID2D1RenderTarget_CreateSolidColorBrush(ptr, a, b, c) ((ID2D1RenderTarget *)ptr)->lpVtbl->CreateSolidColorBrush((ID2D1RenderTarget *)ptr, a, b, c);
 #define ID2D1RenderTarget_DrawLine(ptr, a, b, c, d, e) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawLine((ID2D1RenderTarget *)ptr, a, b, c, d, e);
 #define ID2D1RenderTarget_DrawRectangle(ptr, a, b, c, d) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawRectangle((ID2D1RenderTarget *)ptr, a, b, c, d);
 #define ID2D1RenderTarget_FillRectangle(ptr, a, b) ((ID2D1RenderTarget *)ptr)->lpVtbl->FillRectangle((ID2D1RenderTarget *)ptr, a, b);
+#define ID2D1RenderTarget_DrawText(ptr, a, b, c, d, e, f, g) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawText((ID2D1RenderTarget *)ptr, a, b, c, d, e, f, g);
 #define ID2D1RenderTarget_Clear(ptr, a) ((ID2D1RenderTarget *)ptr)->lpVtbl->Clear((ID2D1RenderTarget *)ptr, a);
 #define ID2D1RenderTarget_BeginDraw(ptr) ((ID2D1RenderTarget *)ptr)->lpVtbl->BeginDraw((ID2D1RenderTarget *)ptr);
 #define ID2D1RenderTarget_EndDraw(ptr, a, b) ((ID2D1RenderTarget *)ptr)->lpVtbl->EndDraw((ID2D1RenderTarget *)ptr, a, b);
@@ -801,7 +873,7 @@ struct ID2D1RenderTarget {
 // ID2D1HwndRenderTarget
 typedef struct ID2D1HwndRenderTarget ID2D1HwndRenderTarget;
 
-typedef struct ID2D1HwndRenderTargetVtbl {
+typedef struct {
     ID2D1RenderTargetVtbl Base;
     uint8_t padding1[3 * sizeof(void *)];
 } ID2D1HwndRenderTargetVtbl;
@@ -811,7 +883,7 @@ struct ID2D1HwndRenderTarget {
 };
 
 // ID2D1Factory
-typedef struct ID2D1FactoryVtbl {
+typedef struct {
     IUnknownVtbl Base;
     uint8_t padding1[11 * sizeof(void *)];
     int32_t (__stdcall *CreateHwndRenderTarget)(ID2D1Factory *This, const D2D1_RENDER_TARGET_PROPERTIES *renderTargetProperties, const D2D1_HWND_RENDER_TARGET_PROPERTIES *hwndRenderTargetProperties, ID2D1HwndRenderTarget **hwndRenderTarget);

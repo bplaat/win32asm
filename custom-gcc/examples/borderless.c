@@ -5,114 +5,232 @@
 #include "win32.h"
 
 // ### Canvas ###
-// A simple back bufferd GDI wrapper with transperancy support
+// A simple canvas wrapper with two renderer backends:
+// - Back-buffered GDI wrapper with alpha transperancy support
+// - GPU-accelerated Direct2D renderer with DirectWrite text drawing
 typedef struct {
     wchar_t *name;
-    int32_t size;
+    float size;
 } Font;
 
-HFONT Font_Create(Font *font) {
-    return CreateFontW(font->size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
-}
-
 typedef struct {
-    HDC hdc;
+    int32_t x;
+    int32_t y;
     int32_t width;
     int32_t height;
-    HDC hdc_buffer;
-    HBITMAP bitmap_buffer;
+} Rect;
+
+#undef RGB
+#define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | (0xff << 24))
+#define RGBA(r, g, b, a) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | ((a & 0xff) << 24))
+
+typedef enum {
+    CANVAS_RENDERER_GDI,
+    CANVAS_RENDERER_DIRECT2D
+} CanvasRenderer;
+
+typedef struct {
+    CanvasRenderer renderer;
+    int32_t width;
+    int32_t height;
+
+    HDC hdc;
+    HDC buffer_hdc;
+    HBITMAP buffer_bitmap;
+    HDC alpha_hdc;
+    HBITMAP alpha_bitmap;
+
+    ID2D1Factory *d2d_factory;
+    IDWriteFactory *dwrite_factory;
+    ID2D1HwndRenderTarget *render_target;
 } Canvas;
 
-void Canvas_Init(Canvas *canvas, PAINTSTRUCT *ps);
+void Canvas_Init(Canvas *canvas, HWND hwnd, CanvasRenderer renderer);
 
-Canvas *Canvas_New(PAINTSTRUCT *ps) {
+Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
     Canvas *canvas = malloc(sizeof(Canvas));
-    Canvas_Init(canvas, ps);
+    Canvas_Init(canvas, hwnd, renderer);
     return canvas;
 }
 
-void Canvas_Init(Canvas *canvas, PAINTSTRUCT *ps) {
-    canvas->hdc = ps->hdc;
-    canvas->width = ps->rcPaint.right;
-    canvas->height= ps->rcPaint.bottom;
+void Canvas_Init(Canvas *canvas, HWND hwnd, CanvasRenderer renderer) {
+    canvas->renderer = renderer;
+    RECT client_rect;
+    GetClientRect(hwnd, &client_rect);
+    canvas->width = client_rect.right;
+    canvas->height= client_rect.bottom;
 
-    canvas->hdc_buffer = CreateCompatibleDC(canvas->hdc);
-    canvas->bitmap_buffer = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
-    SelectObject(canvas->hdc_buffer, canvas->bitmap_buffer);
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        canvas->hdc = GetDC(hwnd);
+
+        canvas->buffer_hdc = CreateCompatibleDC(canvas->hdc);
+        SetBkMode(canvas->buffer_hdc, TRANSPARENT);
+        SetTextAlign(canvas->buffer_hdc, TA_LEFT);
+        canvas->buffer_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
+        SelectObject(canvas->buffer_hdc, canvas->buffer_bitmap);
+
+        canvas->alpha_hdc = CreateCompatibleDC(canvas->hdc);
+        SetBkMode(canvas->alpha_hdc, TRANSPARENT);
+        SetTextAlign(canvas->alpha_hdc, TA_LEFT);
+        canvas->alpha_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
+        SelectObject(canvas->alpha_hdc, canvas->alpha_bitmap);
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        GUID ID2D1Factory_guid = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
+        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &ID2D1Factory_guid, NULL, &canvas->d2d_factory);
+
+        GUID IDWriteFactory_guid = { 0xb859ee5a, 0xd838, 0x4b5b, { 0xa2, 0xe8, 0x1a, 0xdc, 0x7d, 0x93, 0xdb, 0x48 } };
+        DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, &IDWriteFactory_guid, &canvas->dwrite_factory);
+
+        D2D1_RENDER_TARGET_PROPERTIES renderProps = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
+            { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
+            0, 0, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
+        D2D1_HWND_RENDER_TARGET_PROPERTIES hwndRenderProps = { hwnd, { canvas->width, canvas->height}, D2D1_PRESENT_OPTIONS_NONE };
+        ID2D1Factory_CreateHwndRenderTarget(canvas->d2d_factory, &renderProps, &hwndRenderProps, &canvas->render_target);
+    }
+}
+
+void Canvas_BeginDraw(Canvas *canvas) {
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        ID2D1RenderTarget_BeginDraw(canvas->render_target);
+    }
+}
+
+void Canvas_EndDraw(Canvas *canvas) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        BitBlt(canvas->hdc, 0, 0, canvas->width, canvas->height, canvas->buffer_hdc, 0, 0, SRCCOPY);
+    }
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        ID2D1RenderTarget_EndDraw(canvas->render_target, NULL, NULL);
+    }
 }
 
 void Canvas_Free(Canvas *canvas) {
-    BitBlt(canvas->hdc, 0, 0, canvas->width, canvas->height, canvas->hdc_buffer, 0, 0, SRCCOPY);
-    DeleteObject(canvas->bitmap_buffer);
-    DeleteDC(canvas->hdc_buffer);
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        DeleteObject(canvas->alpha_bitmap);
+        DeleteDC(canvas->alpha_hdc);
+
+        DeleteObject(canvas->buffer_bitmap);
+        DeleteDC(canvas->buffer_hdc);
+
+        DeleteDC(canvas->hdc);
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        IUnknown_Release(canvas->render_target);
+        IUnknown_Release(canvas->dwrite_factory);
+        IUnknown_Release(canvas->d2d_factory);
+    }
 
     free(canvas);
 }
 
-void Canvas_FillRect(Canvas *canvas, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t color) {
-    HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
-    if ((color >> 24) == 0xff) {
-        RECT rect = { x, y, x + width, y + height };
-        FillRect(canvas->hdc_buffer, &rect, brush);
-    } else {
-        HDC hdc_buffer = CreateCompatibleDC(canvas->hdc_buffer);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(canvas->hdc_buffer, width, height);
-        SelectObject(hdc_buffer, bitmap_buffer);
-
-        RECT rect = { 0, 0, width, height };
-        FillRect(hdc_buffer, &rect, brush);
-
-        BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-        GdiAlphaBlend(canvas->hdc_buffer, x, y, width, height, hdc_buffer, 0, 0, width, height, blend);
-        DeleteObject(bitmap_buffer);
-        DeleteDC(hdc_buffer);
+void Canvas_FillRect(Canvas *canvas, Rect *rect, uint32_t color) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
+        if ((color >> 24) == 0xff) {
+            RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+            FillRect(canvas->buffer_hdc, &real_rect, brush);
+        } else {
+            RECT real_rect = { 0, 0, rect->width, rect->height };
+            FillRect(canvas->alpha_hdc, &real_rect, brush);
+            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+            GdiAlphaBlend(canvas->buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->alpha_hdc, 0, 0, rect->width, rect->height, blend);
+        }
+        DeleteObject(brush);
     }
-    DeleteObject(brush);
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        D2D1_COLOR_F color_float = {
+            (float)(color & 0xff) / 255,
+            (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255,
+            (float)((color >> 24) & 0xff) / 255
+        };
+        ID2D1Brush *brush;
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
+        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+        ID2D1RenderTarget_FillRectangle(canvas->render_target, &real_rect, brush);
+        IUnknown_Release(brush);
+    }
 }
 
-void Canvas_FillText(Canvas *canvas, Font *font, int32_t x, int32_t y, wchar_t *text, int32_t length, int32_t align, uint32_t color) {
+void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, Font *font, uint32_t align, uint32_t color) {
     if (length == -1) length = wcslen(text);
-    HFONT hfont = Font_Create(font);
-    SelectObject(canvas->hdc_buffer, hfont);
-    SIZE measure_size;
-    GetTextExtentPoint32W(canvas->hdc_buffer, text, length, &measure_size);
-    int32_t dx = x;
-    if (align == TA_CENTER) dx -= measure_size.cx / 2;
-    if (align == TA_RIGHT) dx -= measure_size.cx;
 
-    if ((color >> 24) == 0xff) {
-        SetBkMode(canvas->hdc_buffer, TRANSPARENT);
-        SetTextColor(canvas->hdc_buffer, color & 0x00ffffff);
-        SetTextAlign(canvas->hdc_buffer, TA_LEFT);
-        TextOutW(canvas->hdc_buffer, dx, y, text, length);
-    } else {
-        HDC hdc_buffer = CreateCompatibleDC(canvas->hdc_buffer);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(canvas->hdc_buffer, measure_size.cx, measure_size.cy);
-        SelectObject(hdc_buffer, bitmap_buffer);
-        BitBlt(hdc_buffer, 0, 0, measure_size.cx, measure_size.cy, canvas->hdc_buffer, dx, y, SRCCOPY);
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        HFONT hfont = CreateFontW(-MulDiv(font->size, GetDeviceCaps(canvas->hdc, LOGPIXELSY), 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
+        SelectObject(canvas->buffer_hdc, hfont);
 
-        SelectObject(hdc_buffer, hfont);
-        SetBkMode(hdc_buffer, TRANSPARENT);
-        SetTextColor(hdc_buffer, color & 0x00ffffff);
-        SetTextAlign(hdc_buffer, TA_LEFT);
-        TextOutW(hdc_buffer, 0, 0, text, length);
+        SIZE measure_size;
+        if (
+            (color >> 24) != 0xff || (align & DT_CENTER) != 0 || (align & DT_RIGHT) != 0 ||
+            (align & DT_VCENTER) != 0 || (align & DT_BOTTOM) != 0
+        ) {
+            GetTextExtentPoint32W(canvas->buffer_hdc, text, length, &measure_size);
+            if (measure_size.cx > canvas->width) measure_size.cx = canvas->width;
+            if (measure_size.cy > canvas->height) measure_size.cy = canvas->height;
+        }
+        int32_t real_x = rect->x;
+        if ((align & DT_CENTER) != 0) real_x += (rect->width - measure_size.cx) / 2;
+        if ((align & DT_RIGHT) != 0) real_x += rect->width - measure_size.cx;
+        int32_t real_y = rect->y;
+        if ((align & DT_VCENTER) != 0) real_y += (rect->height - measure_size.cy) / 2;
+        if ((align & DT_BOTTOM) != 0) real_y += rect->height - measure_size.cy;
 
-        BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-        GdiAlphaBlend(canvas->hdc_buffer, dx, y, measure_size.cx, measure_size.cy, hdc_buffer, 0, 0, measure_size.cx, measure_size.cy, blend);
-        DeleteObject(bitmap_buffer);
-        DeleteDC(hdc_buffer);
+        if ((color >> 24) == 0xff) {
+            SetTextColor(canvas->buffer_hdc, color & 0x00ffffff);
+            RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+            ExtTextOutW(canvas->buffer_hdc, real_x, real_y, ETO_CLIPPED, &real_rect, text, length, NULL);
+        } else {
+            BitBlt(canvas->alpha_hdc, 0, 0, measure_size.cx, measure_size.cy, canvas->buffer_hdc, real_x, real_y, SRCCOPY);
+            SelectObject(canvas->alpha_hdc, hfont);
+            SetTextColor(canvas->alpha_hdc, color & 0x00ffffff);
+            RECT real_rect = { 0, 0, rect->width, rect->height };
+            ExtTextOutW(canvas->alpha_hdc, 0, 0, ETO_CLIPPED, &real_rect, text, length, NULL);
+            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+            GdiAlphaBlend(canvas->buffer_hdc, real_x, real_y, measure_size.cx, measure_size.cy, canvas->alpha_hdc, 0, 0, measure_size.cx, measure_size.cy, blend);
+        }
+        DeleteObject(hfont);
     }
-    DeleteObject(hfont);
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        D2D1_COLOR_F color_float = {
+            (float)(color & 0xff) / 255,
+            (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255,
+            (float)((color >> 24) & 0xff) / 255
+        };
+        ID2D1Brush *brush;
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
+
+        IDWriteTextFormat *text_format;
+        IDWriteFactory_CreateTextFormat(canvas->dwrite_factory, font->name, NULL,
+            DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+            (font->size / 72) * 96, L"", &text_format);
+        if ((align & DT_CENTER) != 0) IDWriteFactory_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
+        if ((align & DT_RIGHT) != 0) IDWriteFactory_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
+        if ((align & DT_VCENTER) != 0) IDWriteFactory_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        if ((align & DT_BOTTOM) != 0) IDWriteFactory_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+
+        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+        ID2D1RenderTarget_DrawText(canvas->render_target, text, length, text_format,
+            &real_rect, brush, D2D1_DRAW_TEXT_OPTIONS_CLIP | D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT, DWRITE_MEASURING_MODE_NATURAL);
+
+        IUnknown_Release(text_format);
+        IUnknown_Release(brush);
+    }
 }
 
 // ### Window ###
 wchar_t *window_class_name = L"window-borderless";
 
 #ifdef WIN64
-    wchar_t *window_title = L"This is a test borderless window 😍 (64-bit)";
+    wchar_t *window_title = L"This is a test borderless window 🤩 (64-bit)";
 #else
-    wchar_t *window_title = L"This is a test borderless window 😍 (32-bit)";
+    wchar_t *window_title = L"This is a test borderless window 🤩 (32-bit)";
 #endif
 
 wchar_t *font_name = L"Comic Sans MS";
@@ -126,6 +244,7 @@ wchar_t *font_name = L"Comic Sans MS";
 typedef struct {
     int32_t width;
     int32_t height;
+    Canvas *canvas;
     uint32_t background_color;
     bool active;
     bool minimize_hover;
@@ -148,8 +267,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         GetLocalTime(&time);
         srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
 
-        // Generate random background color
+        // Generate random background color and fill other window data
         window->background_color = (rand() & 0x007f7f7f) | 0xff000000;
+        window->canvas = NULL;
         window->active = true;
         window->minimize_hover = false;
         window->maximize_hover = false;
@@ -243,6 +363,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Save new window size
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
+
+        // Create new canvas
+        if (window->canvas != NULL) {
+            Canvas_Free(window->canvas);
+        }
+        window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DIRECT2D);
         return 0;
     }
 
@@ -346,60 +472,70 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
         BeginPaint(hwnd, &paint_struct);
-        Canvas *canvas = Canvas_New(&paint_struct);
+        Canvas_BeginDraw(window->canvas);
 
         // Draw background color
-        Canvas_FillRect(canvas, 0, 0, window->width, window->height, window->background_color);
+        Rect background_rect = { 0, 0, window->width, window->height };
+        Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
         uint32_t active_text_color = RGB(255, 255, 255);
         uint32_t inactive_text_color = RGBA(255, 255, 255, 128);
 
         // Draw window decoration buttons
-        Font button_font = { font_name, 18 };
+        Font button_font = { font_name, 12 };
 
         // Minimize button
         int32_t x = window->width - TITLEBAR_BUTTON_WIDTH * 3;
         if (window->minimize_hover) {
-            Canvas_FillRect(canvas, x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT, RGBA(255, 255, 255, 48));
+            Rect minimize_button_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+            Canvas_FillRect(window->canvas, &minimize_button_rect, RGBA(255, 255, 255, 48));
         }
-        Canvas_FillText(canvas, &button_font, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - button_font.size) / 2,
-            L"🗕", -1, TA_CENTER, window->active ? active_text_color : inactive_text_color);
+        Rect minimize_text_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+        Canvas_DrawText(window->canvas, L"🗕", -1, &minimize_text_rect, &button_font,
+            DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
         x += TITLEBAR_BUTTON_WIDTH;
 
         // Maximize button
         if (window->maximize_hover) {
-            Canvas_FillRect(canvas, x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT, RGBA(255, 255, 255, 48));
+            Rect maximize_button_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+            Canvas_FillRect(window->canvas, &maximize_button_rect, RGBA(255, 255, 255, 48));
         }
         WINDOWPLACEMENT placement;
         GetWindowPlacement(hwnd, &placement);
-        Canvas_FillText(canvas, &button_font, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - button_font.size) / 2,
-            placement.showCmd == SW_MAXIMIZE ? L"🗗" : L"🗖", -1, TA_CENTER, window->active ? active_text_color : inactive_text_color);
+        Rect maximize_text_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+        Canvas_DrawText(window->canvas, placement.showCmd == SW_MAXIMIZE ? L"🗗" : L"🗖", -1, &maximize_text_rect, &button_font,
+            DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
         x += TITLEBAR_BUTTON_WIDTH;
 
         // Close button
         if (window->close_hover) {
-            Canvas_FillRect(canvas, x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT, RGBA(255, 0, 0, 128));
+            Rect close_button_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+            Canvas_FillRect(window->canvas, &close_button_rect, RGBA(255, 0, 0, 128));
         }
-        Canvas_FillText(canvas, &button_font, x + TITLEBAR_BUTTON_WIDTH / 2, (TITLEBAR_HEIGHT - button_font.size) / 2,
-            L"🗙", -1, TA_CENTER, window->active ? active_text_color : inactive_text_color);
+        Rect close_text_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+        Canvas_DrawText(window->canvas, L"🗙", -1, &close_text_rect, &button_font,
+            DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
 
         // Draw centered text
-        Font title_font = { font_name, window->width / 16 };
-        Canvas_FillText(canvas, &title_font, window->width / 2, (window->height - title_font.size) / 2, window_title,  -1, TA_CENTER, active_text_color);
+        Font title_font = { font_name, (float)window->width / 32 };
+        Rect title_rect = { 0, (window->height - title_font.size * 2) / 2, window->width, title_font.size * 2 };
+        Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, DT_CENTER, active_text_color);
 
         // Draw footer text
-        Font footer_font = { font_name, window->width / 24 };
+        Font footer_font = { font_name, (float)window->width / 42 };
+        Rect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
         wchar_t string_buffer[64];
-        wsprintfW(string_buffer, L"(%dx%d)", window->width, window->height);
-        Canvas_FillText(canvas, &footer_font, window->width / 2, window->height - footer_font.size - 24, string_buffer, -1, TA_CENTER, active_text_color);
+        wsprintfW(string_buffer, L"Window size: %dx%d", window->width, window->height);
+        Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, DT_CENTER, active_text_color);
 
-        Canvas_Free(canvas);
+        Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
         // Free window data
+        Canvas_Free(window->canvas);
         free(window);
 
         // Close process
