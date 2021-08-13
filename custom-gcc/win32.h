@@ -242,6 +242,7 @@ extern int32_t __stdcall MulDiv(
 #define WM_MOUSEHWHEEL 0x020E
 #define WM_DROPFILES 0x0233
 #define WM_MOUSELEAVE 0x02A3
+#define WM_DPICHANGED 0x02E0
 #define WM_USER 0x0400
 
 #define VK_BACK 0x08
@@ -267,6 +268,7 @@ extern int32_t __stdcall MulDiv(
 #define SWP_NOSIZE 0x0001
 #define SWP_NOMOVE 0x0002
 #define SWP_NOZORDER 0x0004
+#define SWP_NOACTIVATE  0x0010
 
 #define GWL_HINSTANCE -6
 #define GWLP_USERDATA -21
@@ -458,6 +460,7 @@ extern bool __stdcall ReleaseCapture(void);
 extern HMONITOR __stdcall MonitorFromWindow(HWND hwnd, uint32_t dwFlags);
 extern bool __stdcall GetMonitorInfoW(HMONITOR hMonitor, MONITORINFO *lpmi);
 extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
+extern bool __stdcall SetProcessDPIAware();
 #ifdef WIN64
     extern void * __stdcall SetWindowLongPtrW(HWND hWnd, int32_t nIndex, void *dwNewLong);
     extern void * __stdcall GetWindowLongPtrW(HWND hWnd, int32_t nIndex);
@@ -904,6 +907,13 @@ struct ID2D1Factory {
 #define D2D1_FACTORY_TYPE_SINGLE_THREADED 0
 
 extern int32_t __stdcall D2D1CreateFactory(uint32_t factoryType, GUID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+
+// Multimon, Windows 8.1 DPI shit...
+#define MONITOR_DEFAULTTONEAREST 0x00000002
+
+#define MDT_EFFECTIVE_DPI 0
+
+#define PROCESS_PER_MONITOR_DPI_AWARE 2
 
 // Stdlib functions
 #if defined(WIN32_MALLOC) || defined(WIN32_WCSDUP)
