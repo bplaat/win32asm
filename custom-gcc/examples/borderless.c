@@ -7,9 +7,49 @@
 // ##########################################################################################
 // ######################################### Canvas #########################################
 // ##########################################################################################
-// A simple canvas wrapper with two renderer backends:
-// - Back-buffered GDI wrapper with alpha transperancy support
-// - GPU-accelerated Direct2D renderer with DirectWrite text drawing
+// Some DPI aware functions and a simple canvas wrapper with two renderer backends:
+// - A back-buffered GDI wrapper with alpha transperancy support
+// - A GPU-accelerated Direct2D renderer with DirectWrite text drawing
+
+typedef int32_t (__stdcall *_SetProcessDpiAwareness)(uint32_t value);
+
+void SetDPIAware(void) {
+    HMODULE hshcore = LoadLibraryW(L"shcore");
+    if (hshcore) {
+        #ifdef __GNUC__
+            __extension__
+        #endif
+        _SetProcessDpiAwareness SetProcessDpiAwareness = GetProcAddress(hshcore, "SetProcessDpiAwareness");
+        if (SetProcessDpiAwareness) {
+            SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+        }
+    } else {
+        SetProcessDPIAware();
+    }
+}
+
+typedef int32_t (__stdcall *_GetDpiForMonitor)(HMONITOR hmonitor, int dpiType, uint32_t *dpiX, uint32_t *dpiY);
+
+int32_t GetWindowDPI(HWND hwnd) {
+    HMODULE hShcore = LoadLibraryW(L"shcore");
+    if (hShcore) {
+        #ifdef __GNUC__
+            __extension__
+        #endif
+        _GetDpiForMonitor GetDpiForMonitor = GetProcAddress(hShcore, "GetDpiForMonitor");
+        if (GetDpiForMonitor) {
+            HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            uint32_t uiDpiX, uiDpiY;
+            GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &uiDpiX, &uiDpiY);
+            return uiDpiY;
+        }
+    }
+
+    HDC hdc = GetDC(hwnd);
+    int32_t dpi = GetDeviceCaps(hdc, LOGPIXELSY);
+    DeleteDC(hdc);
+    return dpi;
+}
 
 typedef struct {
     wchar_t *name;
@@ -74,7 +114,7 @@ void Canvas_Init(Canvas *canvas, HWND hwnd, CanvasRenderer renderer) {
 
         D2D1_RENDER_TARGET_PROPERTIES render_props = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
             { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
-            0, 0, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
+            96, 96, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
         D2D1_HWND_RENDER_TARGET_PROPERTIES hwnd_render_props = { hwnd, { 0, 0 }, D2D1_PRESENT_OPTIONS_NONE };
         ID2D1Factory_CreateHwndRenderTarget(canvas->d2d_factory, &render_props, &hwnd_render_props, &canvas->render_target);
     }
@@ -181,7 +221,7 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, 
     if (length == -1) length = wcslen(text);
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
-        HFONT hfont = CreateFontW(-MulDiv(font->size, GetDeviceCaps(canvas->hdc, LOGPIXELSY), 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+        HFONT hfont = CreateFontW(-MulDiv(font->size, 96, 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
         SelectObject(canvas->buffer_hdc, hfont);
 
@@ -262,14 +302,15 @@ wchar_t *font_name = L"Segoe UI";
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define WINDOW_STYLE (WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU)
-#define TITLEBAR_HEIGHT 32
-#define TITLEBAR_BUTTON_WIDTH 48
 
 typedef struct {
     int32_t width;
     int32_t height;
+    int32_t dpi;
     Canvas *canvas;
     uint32_t background_color;
+    int32_t titlebar_height;
+    int32_t titlebar_button_width;
     bool active;
     bool minimize_hover;
     bool maximize_hover;
@@ -283,8 +324,16 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Create window data
         window = malloc(sizeof(WindowData));
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-        window->width = WINDOW_WIDTH;
-        window->height = WINDOW_HEIGHT;
+
+        // Resize window when dpi is not 96
+        window->dpi = GetWindowDPI(hwnd);
+        if (window->dpi != 96) {
+            window->width = MulDiv(WINDOW_WIDTH, window->dpi, 96);
+            window->height = MulDiv(WINDOW_HEIGHT, window->dpi, 96);
+            SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - window->width) / 2,
+                (GetSystemMetrics(SM_CYSCREEN) - window->height) / 2,
+                window->width, window->height, SWP_NOZORDER | SWP_NOACTIVATE);
+        }
 
         // Create canvas
         window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DIRECT2D);
@@ -376,7 +425,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         if (x >= window_rect.left && y >= window_rect.top && x < window_rect.right && y < window_rect.bottom) {
             x -= window_rect.left;
             y -= window_rect.top;
-            if (y < TITLEBAR_HEIGHT && x < window->width - TITLEBAR_BUTTON_WIDTH * 3) {
+            if (y < window->titlebar_height && x < window->width - window->titlebar_button_width * 3) {
                 return HTCAPTION;
             }
             return HTCLIENT;
@@ -385,10 +434,23 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         return HTNOWHERE;
     }
 
+    if (msg == WM_DPICHANGED) {
+        window->dpi = HIWORD(wParam);
+
+        RECT *new_size = lParam;
+        SetWindowPos(hwnd, NULL, new_size->left, new_size->top, new_size->right - new_size->left,
+            new_size->bottom - new_size->top, SWP_NOZORDER | SWP_NOACTIVATE);
+        return 0;
+    }
+
     if (msg == WM_SIZE) {
         // Save new window size
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
+
+        // Resize some controls
+        window->titlebar_height = MulDiv(32, window->dpi, 96);
+        window->titlebar_button_width = MulDiv(48, window->dpi, 96);
 
         // Resize canvas
         Canvas_Resize(window->canvas, window->width, window->height);
@@ -408,10 +470,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         int32_t y = GET_Y_LPARAM(lParam);
 
         // Window decoration buttons
-        if (y >= 0 && y < TITLEBAR_HEIGHT) {
+        if (y >= 0 && y < window->titlebar_height) {
             if (
-                x >= window->width - TITLEBAR_BUTTON_WIDTH * 3 &&
-                x < window->width - TITLEBAR_BUTTON_WIDTH  * 2
+                x >= window->width - window->titlebar_button_width * 3 &&
+                x < window->width - window->titlebar_button_width  * 2
             ) {
                 ShowWindow(hwnd, SW_MINIMIZE);
                 window->minimize_hover = false;
@@ -419,8 +481,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             }
 
             if (
-                x >= window->width - TITLEBAR_BUTTON_WIDTH  * 2 &&
-                x < window->width - TITLEBAR_BUTTON_WIDTH  * 1
+                x >= window->width - window->titlebar_button_width  * 2 &&
+                x < window->width - window->titlebar_button_width  * 1
             ) {
                 WINDOWPLACEMENT placement;
                 GetWindowPlacement(hwnd, &placement);
@@ -434,7 +496,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             }
 
             if (
-                x >= window->width - TITLEBAR_BUTTON_WIDTH  * 1 &&
+                x >= window->width - window->titlebar_button_width  * 1 &&
                 x < window->width
             ) {
                 DestroyWindow(hwnd);
@@ -453,14 +515,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         bool new_minimize_hover = window->minimize_hover;
         bool new_maximize_hover = window->minimize_hover;
         bool new_close_hover = window->close_hover;
-        if (y >= 0 && y < TITLEBAR_HEIGHT) {
-            new_minimize_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH * 3 &&
-                x < window->width - TITLEBAR_BUTTON_WIDTH  * 2;
+        if (y >= 0 && y < window->titlebar_height) {
+            new_minimize_hover = x >= window->width - window->titlebar_button_width * 3 &&
+                x < window->width - window->titlebar_button_width  * 2;
 
-            new_maximize_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH  * 2 &&
-                x < window->width - TITLEBAR_BUTTON_WIDTH  * 1;
+            new_maximize_hover = x >= window->width - window->titlebar_button_width  * 2 &&
+                x < window->width - window->titlebar_button_width  * 1;
 
-            new_close_hover = x >= window->width - TITLEBAR_BUTTON_WIDTH  * 1 &&
+            new_close_hover = x >= window->width - window->titlebar_button_width  * 1 &&
                     x < window->width;
         } else {
             new_minimize_hover = false;
@@ -505,37 +567,37 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         uint32_t inactive_text_color = RGBA(255, 255, 255, 128);
 
         // Draw window decoration buttons
-        Font button_font = { font_name, 12 };
+        Font button_font = { font_name, (float)window->titlebar_height / 3 };
 
         // Minimize button
-        int32_t x = window->width - TITLEBAR_BUTTON_WIDTH * 3;
+        int32_t x = window->width - window->titlebar_button_width * 3;
         if (window->minimize_hover) {
-            Rect minimize_button_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+            Rect minimize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
             Canvas_FillRect(window->canvas, &minimize_button_rect, RGBA(255, 255, 255, 48));
         }
-        Rect minimize_text_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+        Rect minimize_text_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
         Canvas_DrawText(window->canvas, L"🗕", -1, &minimize_text_rect, &button_font,
             DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
-        x += TITLEBAR_BUTTON_WIDTH;
+        x += window->titlebar_button_width;
 
         // Maximize button
         if (window->maximize_hover) {
-            Rect maximize_button_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+            Rect maximize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
             Canvas_FillRect(window->canvas, &maximize_button_rect, RGBA(255, 255, 255, 48));
         }
         WINDOWPLACEMENT placement;
         GetWindowPlacement(hwnd, &placement);
-        Rect maximize_text_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+        Rect maximize_text_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
         Canvas_DrawText(window->canvas, placement.showCmd == SW_MAXIMIZE ? L"🗗" : L"🗖", -1, &maximize_text_rect, &button_font,
             DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
-        x += TITLEBAR_BUTTON_WIDTH;
+        x += window->titlebar_button_width;
 
         // Close button
         if (window->close_hover) {
-            Rect close_button_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+            Rect close_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
             Canvas_FillRect(window->canvas, &close_button_rect, RGBA(255, 0, 0, 128));
         }
-        Rect close_text_rect = { x, 0, TITLEBAR_BUTTON_WIDTH, TITLEBAR_HEIGHT };
+        Rect close_text_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
         Canvas_DrawText(window->canvas, L"🗙", -1, &close_text_rect, &button_font,
             DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
 
@@ -548,7 +610,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         Font footer_font = { font_name, (float)window->width / 42 };
         Rect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
         wchar_t string_buffer[64];
-        wsprintfW(string_buffer, L"Window size: %dx%d", window->width, window->height);
+        wsprintfW(string_buffer, L"Window size: %dx%d at %d dpi", window->width, window->height, window->dpi);
         Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, DT_CENTER, active_text_color);
 
         Canvas_EndDraw(window->canvas);
@@ -570,6 +632,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
+    SetDPIAware();
+
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -581,16 +645,10 @@ void _start(void) {
     wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);
 
-    RECT window_rect;
-    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
-    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
-    window_rect.right = window_rect.left + WINDOW_WIDTH;
-    window_rect.bottom = window_rect.top + WINDOW_HEIGHT;
-
-    HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
-        WINDOW_STYLE, window_rect.left, window_rect.top,
-        window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
-        NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = CreateWindowExW(0, window_class_name, window_title, WINDOW_STYLE,
+        (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2,
+        (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2,
+        WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL, wc.hInstance, NULL);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 

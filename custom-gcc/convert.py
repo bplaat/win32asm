@@ -23,7 +23,7 @@ libraries = {
         'LoadImageW', 'LoadStringW', 'MessageBeep', 'MessageBoxW', 'PeekMessageW', 'PostQuitMessage', 'RegisterClassExW', 'SendMessageW',
         'SetForegroundWindow', 'SetMenu', 'SetTimer', 'SetWindowPos', 'SetWindowTextW', 'ShowWindow', 'TranslateMessage', 'UpdateWindow',
         'wsprintfW', 'wvsprintfW', 'GetSystemMenu', 'InsertMenuW', 'LoadAcceleratorsW', 'TranslateAcceleratorW', 'SetCapture',
-        'ReleaseCapture', 'MonitorFromWindow', 'GetMonitorInfoW', 'GetWindowPlacement'
+        'ReleaseCapture', 'MonitorFromWindow', 'GetMonitorInfoW', 'GetWindowPlacement', 'SetProcessDPIAware'
     ],
     'GDI32.DLL': [
         'BitBlt', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC',
