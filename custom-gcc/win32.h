@@ -545,6 +545,7 @@ extern bool __stdcall MoveToEx(HDC hdc, int32_t x, int32_t y, POINT *lppt);
 extern bool __stdcall LineTo(HDC hdc, int32_t x, int32_t y);
 extern bool __stdcall FillPath(HDC hdc);
 extern bool __stdcall EndPath(HDC hdc);
+extern HBITMAP __stdcall CreateBitmap(int32_t nWidth, int32_t nHeight, uint32_t nPlanes,  uint32_t nBitCount, const void *lpBits);
 
 // Gdiplus
 typedef struct {

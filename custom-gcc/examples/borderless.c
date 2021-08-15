@@ -281,11 +281,11 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, 
     }
 }
 
-float Canvas_ParsePathFloat(wchar_t **string) {
+float Canvas_ParsePathFloat(char **string) {
     float number = 0;
     bool negative = false;
     int32_t precision = 0;
-    wchar_t *c = *string;
+    char *c = *string;
     while (*c != '\0' && ((*c == '-' && !negative) || *c == '.' || (*c >= '0' && *c <= '9'))) {
         if (*c == '-') {
             negative = true;
@@ -306,9 +306,9 @@ float Canvas_ParsePathFloat(wchar_t **string) {
     return negative ? -number : number;
 }
 
-void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t viewport_height, wchar_t *path, uint32_t color) {
+void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t viewport_height, char *path, uint32_t color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
-        int32_t smooth_scale = 2; // Experimental smoothing feature gives dark border artifacts
+        int32_t smooth_scale = 1; // Experimental smoothing feature gives dark border artifacts
         StretchBlt(canvas->alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, canvas->buffer_hdc, rect->x, rect->y, rect->width, rect->height, SRCCOPY);
         HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
         SelectObject(canvas->alpha_hdc, brush);
@@ -317,7 +317,7 @@ void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t
         float y = 0;
         float scale_x = (float)(rect->width * smooth_scale) / viewport_width;
         float scale_y = (float)(rect->height * smooth_scale) / viewport_height;
-        wchar_t *c = path;
+        char *c = path;
         while (*c != '\0') {
             if (*c == 'M') {
                 c++;
@@ -387,7 +387,7 @@ void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t
         float scale_x = (float)rect->width / viewport_width;
         float scale_y = (float)rect->height / viewport_height;
         bool open = false;
-        wchar_t *c = path;
+        char *c = path;
         while (*c != '\0') {
             if (*c == 'M') {
                 c++;
@@ -807,7 +807,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
         Rect menu_icon_rect = { (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Canvas_FillPath(window->canvas, &menu_icon_rect, 24, 24, L"M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", window->active ? active_text_color : inactive_text_color);
+        Canvas_FillPath(window->canvas, &menu_icon_rect, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", window->active ? active_text_color : inactive_text_color);
 
         // Minimize button
         int32_t x = window->width - window->titlebar_button_width * 3;
@@ -817,7 +817,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
         Rect minimize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Canvas_FillPath(window->canvas, &minimize_icon_rect, 24, 24, L"M20,14H4V10H20", window->active ? active_text_color : inactive_text_color);
+        Canvas_FillPath(window->canvas, &minimize_icon_rect, 24, 24, "M20,14H4V10H20", window->active ? active_text_color : inactive_text_color);
         x += window->titlebar_button_width;
 
         // Maximize button
@@ -830,8 +830,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         Rect maximize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
         Canvas_FillPath(window->canvas, &maximize_icon_rect, 24, 24,
-            placement.showCmd == SW_MAXIMIZE ? L"M4,8H8V4H20V16H16V20H4V8M16,8V14H18V6H10V8H16M6,12V18H14V12H6Z" :
-            L"M4,4H20V20H4V4M6,8V18H18V8H6Z", window->active ? active_text_color : inactive_text_color);
+            placement.showCmd == SW_MAXIMIZE ? "M4,8H8V4H20V16H16V20H4V8M16,8V14H18V6H10V8H16M6,12V18H14V12H6Z" :
+            "M4,4H20V20H4V4M6,8V18H18V8H6Z", window->active ? active_text_color : inactive_text_color);
         x += window->titlebar_button_width;
 
         // Close button
@@ -841,7 +841,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
         Rect close_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Canvas_FillPath(window->canvas, &close_icon_rect, 24, 24, L"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+        Canvas_FillPath(window->canvas, &close_icon_rect, 24, 24, "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
             window->active ? active_text_color : inactive_text_color);
 
         // Draw centered text
