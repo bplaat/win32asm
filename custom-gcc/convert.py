@@ -10,25 +10,26 @@ debug = len(sys.argv) >= 5 and sys.argv[4] == 'debug'
 
 libraries = {
     'KERNEL32.DLL': [
-        'CloseHandle', 'CreateFileW', 'CreateMutexW', 'ExitProcess', 'FindResourceW', 'GetLastError', 'GetLocalTime',
-        'GetModuleHandleW', 'GetProcAddress', 'GetProcessHeap', 'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree',
-        'HeapReAlloc', 'LoadLibraryW', 'LoadResource', 'LockResource', 'ReadFile', 'ReleaseMutex', 'SetFilePointer',
-        'SetThreadLocale', 'SetThreadUILanguage', 'SizeofResource', 'Sleep', 'WriteConsoleW', 'WriteFile', 'GetFullPathNameW',
-        'MultiByteToWideChar', 'WideCharToMultiByte', 'GetFileSize', 'FindFirstFileW', 'FindNextFileW', 'FindClose', 'MulDiv'
+        'CloseHandle', 'CreateFileW', 'CreateMutexW', 'ExitProcess', 'FindClose', 'FindFirstFileW', 'FindNextFileW', 'FindResourceW',
+        'GetFileSize', 'GetFullPathNameW', 'GetLastError', 'GetLocalTime', 'GetModuleHandleW', 'GetProcAddress', 'GetProcessHeap',
+        'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree', 'HeapReAlloc', 'LoadLibraryW', 'LoadResource', 'LockResource',
+        'MulDiv', 'MultiByteToWideChar', 'ReadFile', 'ReleaseMutex', 'SetFilePointer', 'SetThreadLocale', 'SetThreadUILanguage',
+        'SizeofResource', 'Sleep', 'WideCharToMultiByte', 'WriteConsoleW', 'WriteFile'
     ],
     'USER32.DLL': [
         'AdjustWindowRectEx', 'BeginPaint', 'CreateWindowExW', 'DefWindowProcW', 'DestroyWindow', 'DispatchMessageW', 'DrawTextW',
-        'EndPaint', 'EnumChildWindows', 'FillRect', 'FindWindowW', 'FrameRect', 'GetWindowRect', 'GetClientRect', 'GetDC', 'GetDlgItem', 'GetMessageW',
-        'GetSystemMetrics', 'GetWindowTextW', 'InvalidateRect', 'IsIconic', 'KillTimer', 'LoadBitmapW', 'LoadCursorW', 'LoadIconW',
-        'LoadImageW', 'LoadStringW', 'MessageBeep', 'MessageBoxW', 'PeekMessageW', 'PostQuitMessage', 'RegisterClassExW', 'SendMessageW',
-        'SetForegroundWindow', 'SetMenu', 'SetTimer', 'SetWindowPos', 'SetWindowTextW', 'ShowWindow', 'TranslateMessage', 'UpdateWindow',
-        'wsprintfW', 'wvsprintfW', 'GetSystemMenu', 'InsertMenuW', 'LoadAcceleratorsW', 'TranslateAcceleratorW', 'SetCapture',
-        'ReleaseCapture', 'MonitorFromWindow', 'GetMonitorInfoW', 'GetWindowPlacement', 'SetProcessDPIAware'
+        'EndPaint', 'EnumChildWindows', 'FillRect', 'FindWindowW', 'FrameRect', 'GetClientRect', 'GetDC', 'GetDlgItem', 'GetMessageW',
+        'GetMonitorInfoW', 'GetSystemMenu', 'GetSystemMetrics', 'GetWindowPlacement', 'GetWindowRect', 'GetWindowTextW', 'InsertMenuW',
+        'InvalidateRect', 'IsIconic', 'KillTimer', 'LoadAcceleratorsW', 'LoadBitmapW', 'LoadCursorW', 'LoadIconW', 'LoadImageW',
+        'LoadStringW', 'MessageBeep', 'MessageBoxW', 'MonitorFromWindow', 'PeekMessageW', 'PostQuitMessage', 'RegisterClassExW',
+        'ReleaseCapture', 'SendMessageW', 'SetCapture', 'SetForegroundWindow', 'SetMenu', 'SetProcessDPIAware', 'SetTimer', 'SetWindowPos',
+        'SetWindowTextW', 'ShowWindow', 'TranslateAcceleratorW', 'TranslateMessage', 'UpdateWindow', 'wsprintfW', 'wvsprintfW'
     ],
     'GDI32.DLL': [
-        'BitBlt', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC',
-        'DeleteObject', 'GetStockObject', 'SelectClipRgn', 'SelectObject', 'SetBkMode', 'SetTextAlign', 'SetTextColor', 'TextOutW',
-        'ExtTextOutW', 'GetTextExtentPoint32W', 'GdiAlphaBlend', 'GetDeviceCaps'
+        'BeginPath', 'BitBlt', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreatePen', 'CreateRectRgn',
+        'CreateSolidBrush', 'DeleteDC', 'DeleteObject', 'EndPath', 'ExtTextOutW', 'FillPath', 'GdiAlphaBlend', 'GetDeviceCaps',
+        'GetStockObject', 'GetTextExtentPoint32W', 'LineTo', 'MoveToEx', 'SelectClipRgn', 'SelectObject', 'SetBkMode',
+        'SetStretchBltMode', 'SetTextAlign', 'SetTextColor', 'StretchBlt', 'TextOutW'
     ],
     'SHELL32.DLL': [
         'DragFinish', 'DragQueryFileW', 'SHGetFolderPathW', 'ShellExecuteW'

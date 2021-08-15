@@ -66,6 +66,8 @@ typedef struct {
 #undef RGB
 #define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | (0xff << 24))
 #define RGBA(r, g, b, a) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | ((a & 0xff) << 24))
+#define HEX(x) (((x >> 16) & 0xff) | (((x >> 8) & 0xff) << 8) | ((x & 0xff) << 16) | (0xff << 24))
+#define HEXA(x) (((x >> 24) & 0xff) | (((x >> 16) & 0xff) << 8) | (((x >> 8) & 0xff) << 16) | ((x & 0xff) << 24))
 
 typedef enum {
     CANVAS_RENDERER_GDI,
@@ -156,13 +158,15 @@ void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
         canvas->buffer_hdc = CreateCompatibleDC(canvas->hdc);
         SetBkMode(canvas->buffer_hdc, TRANSPARENT);
         SetTextAlign(canvas->buffer_hdc, TA_LEFT);
+        SetStretchBltMode(canvas->buffer_hdc, STRETCH_HALFTONE);
         canvas->buffer_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
         SelectObject(canvas->buffer_hdc, canvas->buffer_bitmap);
 
         canvas->alpha_hdc = CreateCompatibleDC(canvas->hdc);
         SetBkMode(canvas->alpha_hdc, TRANSPARENT);
         SetTextAlign(canvas->alpha_hdc, TA_LEFT);
-        canvas->alpha_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width, canvas->height);
+        SetStretchBltMode(canvas->alpha_hdc, STRETCH_HALFTONE);
+        canvas->alpha_bitmap = CreateCompatibleBitmap(canvas->hdc, canvas->width * 2, canvas->height * 2);
         SelectObject(canvas->alpha_hdc, canvas->alpha_bitmap);
     }
 
@@ -203,12 +207,8 @@ void Canvas_FillRect(Canvas *canvas, Rect *rect, uint32_t color) {
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        D2D1_COLOR_F color_float = {
-            (float)(color & 0xff) / 255,
-            (float)((color >> 8) & 0xff) / 255,
-            (float)((color >> 16) & 0xff) / 255,
-            (float)((color >> 24) & 0xff) / 255
-        };
+        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
         ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
         D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
@@ -258,12 +258,8 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, 
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        D2D1_COLOR_F color_float = {
-            (float)(color & 0xff) / 255,
-            (float)((color >> 8) & 0xff) / 255,
-            (float)((color >> 16) & 0xff) / 255,
-            (float)((color >> 24) & 0xff) / 255
-        };
+        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
         ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
 
@@ -271,10 +267,10 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, 
         IDWriteFactory_CreateTextFormat(canvas->dwrite_factory, font->name, NULL,
             DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
             (font->size / 72) * 96, L"", &text_format);
-        if ((align & DT_CENTER) != 0) IDWriteFactory_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
-        if ((align & DT_RIGHT) != 0) IDWriteFactory_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
-        if ((align & DT_VCENTER) != 0) IDWriteFactory_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-        if ((align & DT_BOTTOM) != 0) IDWriteFactory_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+        if ((align & DT_CENTER) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
+        if ((align & DT_RIGHT) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
+        if ((align & DT_VCENTER) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        if ((align & DT_BOTTOM) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
 
         D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
         ID2D1RenderTarget_DrawText(canvas->render_target, text, length, text_format,
@@ -282,6 +278,211 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, 
 
         IUnknown_Release(text_format);
         IUnknown_Release(brush);
+    }
+}
+
+float Canvas_ParsePathFloat(wchar_t **string) {
+    float number = 0;
+    bool negative = false;
+    int32_t precision = 0;
+    wchar_t *c = *string;
+    while (*c != '\0' && ((*c == '-' && !negative) || *c == '.' || (*c >= '0' && *c <= '9'))) {
+        if (*c == '-') {
+            negative = true;
+            c++;
+        } else if (*c == '.') {
+            precision = 10;
+            c++;
+        } else {
+            if (precision > 0) {
+                number += (float)(*c++ - '0') / precision;
+                precision *= 10;
+            } else {
+                number = number * 10 + (*c++ - '0');
+            }
+        }
+    }
+    *string = c;
+    return negative ? -number : number;
+}
+
+void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t viewport_height, wchar_t *path, uint32_t color) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        int32_t smooth_scale = 2; // Experimental smoothing feature gives dark border artifacts
+        StretchBlt(canvas->alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, canvas->buffer_hdc, rect->x, rect->y, rect->width, rect->height, SRCCOPY);
+        HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
+        SelectObject(canvas->alpha_hdc, brush);
+        BeginPath(canvas->alpha_hdc);
+        float x = 0;
+        float y = 0;
+        float scale_x = (float)(rect->width * smooth_scale) / viewport_width;
+        float scale_y = (float)(rect->height * smooth_scale) / viewport_height;
+        wchar_t *c = path;
+        while (*c != '\0') {
+            if (*c == 'M') {
+                c++;
+                x = Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y = Canvas_ParsePathFloat(&c);
+                MoveToEx(canvas->alpha_hdc, x * scale_x, y * scale_y, NULL);
+            } else if (*c == 'm') {
+                c++;
+                x += Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y += Canvas_ParsePathFloat(&c);
+                MoveToEx(canvas->alpha_hdc, x * scale_x, y * scale_y, NULL);
+            } else if (*c == 'L') {
+                c++;
+                x = Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y = Canvas_ParsePathFloat(&c);
+                LineTo(canvas->alpha_hdc, x * scale_x, y * scale_y);
+            } else if (*c == 'l') {
+                c++;
+                x += Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y += Canvas_ParsePathFloat(&c);
+                LineTo(canvas->alpha_hdc, x * scale_x, y * scale_y);
+            } else if (*c == 'H') {
+                c++;
+                x = Canvas_ParsePathFloat(&c);
+                LineTo(canvas->alpha_hdc, x * scale_x, y * scale_y);
+            } else if (*c == 'h') {
+                c++;
+                x += Canvas_ParsePathFloat(&c);
+                LineTo(canvas->alpha_hdc, x * scale_x, y * scale_y);
+            } else if (*c == 'V') {
+                c++;
+                y = Canvas_ParsePathFloat(&c);
+                LineTo(canvas->alpha_hdc, x * scale_x, y * scale_y);
+            } else if (*c == 'v') {
+                c++;
+                y += Canvas_ParsePathFloat(&c);
+                LineTo(canvas->alpha_hdc, x * scale_x, y * scale_y);
+            } else if (*c == 'Z' || *c == 'z') {
+                c++;
+            }
+        }
+        EndPath(canvas->alpha_hdc);
+        FillPath(canvas->alpha_hdc);
+        DeleteObject(brush);
+        if ((color >> 24) == 0xff) {
+            StretchBlt(canvas->buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, SRCCOPY);
+        } else {
+            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+            GdiAlphaBlend(canvas->buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, blend);
+        }
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        ID2D1PathGeometry *path_geometry;
+        ID2D1Factory_CreatePathGeometry(canvas->d2d_factory, &path_geometry);
+
+        ID2D1GeometrySink *sink;
+        ID2D1PathGeometry_Open(path_geometry, &sink);
+        ID2D1SimplifiedGeometrySink_SetFillMode(sink, D2D1_FILL_MODE_WINDING);
+
+        float x = 0;
+        float y = 0;
+        float scale_x = (float)rect->width / viewport_width;
+        float scale_y = (float)rect->height / viewport_height;
+        bool open = false;
+        wchar_t *c = path;
+        while (*c != '\0') {
+            if (*c == 'M') {
+                c++;
+                x = Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y = Canvas_ParsePathFloat(&c);
+                if (open) {
+                    ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
+                }
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1SimplifiedGeometrySink_BeginFigure(sink, point, D2D1_FIGURE_BEGIN_FILLED);
+                open = true;
+            } else if (*c == 'm') {
+                c++;
+                x += Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y += Canvas_ParsePathFloat(&c);
+                if (open) {
+                    ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
+                }
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1SimplifiedGeometrySink_BeginFigure(sink, point, D2D1_FIGURE_BEGIN_FILLED);
+                open = true;
+            } else if (*c == 'L') {
+                c++;
+                x = Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y = Canvas_ParsePathFloat(&c);
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1GeometrySink_AddLine(sink, point);
+            } else if (*c == 'l') {
+                c++;
+                x += Canvas_ParsePathFloat(&c);
+                if (*c == ',') c++;
+                y += Canvas_ParsePathFloat(&c);
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1GeometrySink_AddLine(sink, point);
+            } else if (*c == 'H') {
+                c++;
+                x = Canvas_ParsePathFloat(&c);
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1GeometrySink_AddLine(sink, point);
+            } else if (*c == 'h') {
+                c++;
+                x += Canvas_ParsePathFloat(&c);
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1GeometrySink_AddLine(sink, point);
+            } else if (*c == 'V') {
+                c++;
+                y = Canvas_ParsePathFloat(&c);
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1GeometrySink_AddLine(sink, point);
+            } else if (*c == 'v') {
+                c++;
+                y += Canvas_ParsePathFloat(&c);
+                D2D1_POINT_2F point;
+                point.x = rect->x + x * scale_x;
+                point.y = rect->y + y * scale_y;
+                ID2D1GeometrySink_AddLine(sink, point);
+            } else if (*c == 'Z' || *c == 'z') {
+                c++;
+                if (open) {
+                    ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
+                    open = false;
+                }
+            }
+        }
+        if (open) {
+            ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
+        }
+        ID2D1SimplifiedGeometrySink_Close(sink);
+        IUnknown_Release(sink);
+
+        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
+        ID2D1Brush *brush;
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
+
+        ID2D1RenderTarget_FillGeometry(canvas->render_target, (ID2D1Geometry *)path_geometry, brush, NULL);
+        IUnknown_Release(brush);
+        IUnknown_Release(path_geometry);
     }
 }
 
@@ -311,10 +512,13 @@ typedef struct {
     uint32_t background_color;
     int32_t titlebar_height;
     int32_t titlebar_button_width;
+    int32_t titlebar_icon_size;
     bool active;
+    bool menu_hover;
     bool minimize_hover;
     bool maximize_hover;
     bool close_hover;
+    bool renderer;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -336,7 +540,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
 
         // Create canvas
-        window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DIRECT2D);
+        window->renderer = true;
+        window->canvas = Canvas_New(hwnd, window->renderer ? CANVAS_RENDERER_DIRECT2D : CANVAS_RENDERER_GDI);
 
         // Generate random seed by time
         SYSTEMTIME time;
@@ -349,6 +554,18 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->minimize_hover = false;
         window->maximize_hover = false;
         window->close_hover = false;
+
+        // Toggle renderer every half second
+        SetTimer(hwnd, 0, 500, NULL);
+        return 0;
+    }
+
+    if (msg == WM_TIMER) {
+        Canvas_Free(window->canvas);
+        window->renderer = !window->renderer;
+        window->canvas = Canvas_New(hwnd, window->renderer ? CANVAS_RENDERER_DIRECT2D : CANVAS_RENDERER_GDI);
+        Canvas_Resize(window->canvas, window->width, window->height);
+        InvalidateRect(hwnd, NULL, false);
         return 0;
     }
 
@@ -425,8 +642,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         if (x >= window_rect.left && y >= window_rect.top && x < window_rect.right && y < window_rect.bottom) {
             x -= window_rect.left;
             y -= window_rect.top;
-            if (y < window->titlebar_height && x < window->width - window->titlebar_button_width * 3) {
-                return HTCAPTION;
+            if (y < window->titlebar_height) {
+                if (x >= window->titlebar_button_width && x < window->width - window->titlebar_button_width * 3) {
+                    return HTCAPTION;
+                }
             }
             return HTCLIENT;
         }
@@ -451,6 +670,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Resize some controls
         window->titlebar_height = MulDiv(32, window->dpi, 96);
         window->titlebar_button_width = MulDiv(48, window->dpi, 96);
+        window->titlebar_icon_size = MulDiv(24, window->dpi, 96);
 
         // Resize canvas
         Canvas_Resize(window->canvas, window->width, window->height);
@@ -471,6 +691,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Window decoration buttons
         if (y >= 0 && y < window->titlebar_height) {
+            if (
+                x < window->titlebar_button_width
+            ) {
+                ShellExecuteW(hwnd, L"open", L"https://youtu.be/dQw4w9WgXcQ?t=43", NULL, NULL, SW_SHOWNORMAL);
+            }
+
             if (
                 x >= window->width - window->titlebar_button_width * 3 &&
                 x < window->width - window->titlebar_button_width  * 2
@@ -512,10 +738,13 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         int32_t y = GET_Y_LPARAM(lParam);
 
         // Window decoration buttons
+        bool new_menu_hover = window->menu_hover;
         bool new_minimize_hover = window->minimize_hover;
         bool new_maximize_hover = window->minimize_hover;
         bool new_close_hover = window->close_hover;
         if (y >= 0 && y < window->titlebar_height) {
+            new_menu_hover = x >= 0 && x < window->titlebar_button_width;
+
             new_minimize_hover = x >= window->width - window->titlebar_button_width * 3 &&
                 x < window->width - window->titlebar_button_width  * 2;
 
@@ -525,21 +754,24 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             new_close_hover = x >= window->width - window->titlebar_button_width  * 1 &&
                     x < window->width;
         } else {
+            new_menu_hover = false;
             new_minimize_hover = false;
             new_maximize_hover = false;
             new_close_hover = false;
         }
 
         if (
+            new_menu_hover != window->menu_hover ||
             new_minimize_hover != window->minimize_hover ||
             new_maximize_hover != window->maximize_hover ||
             new_close_hover != window->close_hover
         ) {
+            window->menu_hover = new_menu_hover;
             window->minimize_hover = new_minimize_hover;
             window->maximize_hover = new_maximize_hover;
             window->close_hover = new_close_hover;
 
-            if (window->minimize_hover || window->maximize_hover || window->close_hover) {
+            if (window->menu_hover || window->minimize_hover || window->maximize_hover || window->close_hover) {
                 SetCapture(hwnd);
             } else {
                 ReleaseCapture();
@@ -567,7 +799,15 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         uint32_t inactive_text_color = RGBA(255, 255, 255, 128);
 
         // Draw window decoration buttons
-        Font button_font = { font_name, (float)window->titlebar_height / 3 };
+
+        // Menu button
+        if (window->menu_hover) {
+            Rect menu_button_rect = { 0, 0, window->titlebar_button_width, window->titlebar_height };
+            Canvas_FillRect(window->canvas, &menu_button_rect, RGBA(255, 255, 255, 48));
+        }
+        Rect menu_icon_rect = { (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+            (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
+        Canvas_FillPath(window->canvas, &menu_icon_rect, 24, 24, L"M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", window->active ? active_text_color : inactive_text_color);
 
         // Minimize button
         int32_t x = window->width - window->titlebar_button_width * 3;
@@ -575,9 +815,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             Rect minimize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
             Canvas_FillRect(window->canvas, &minimize_button_rect, RGBA(255, 255, 255, 48));
         }
-        Rect minimize_text_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
-        Canvas_DrawText(window->canvas, L"🗕", -1, &minimize_text_rect, &button_font,
-            DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
+        Rect minimize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+            (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
+        Canvas_FillPath(window->canvas, &minimize_icon_rect, 24, 24, L"M20,14H4V10H20", window->active ? active_text_color : inactive_text_color);
         x += window->titlebar_button_width;
 
         // Maximize button
@@ -587,9 +827,11 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
         WINDOWPLACEMENT placement;
         GetWindowPlacement(hwnd, &placement);
-        Rect maximize_text_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
-        Canvas_DrawText(window->canvas, placement.showCmd == SW_MAXIMIZE ? L"🗗" : L"🗖", -1, &maximize_text_rect, &button_font,
-            DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
+        Rect maximize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+            (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
+        Canvas_FillPath(window->canvas, &maximize_icon_rect, 24, 24,
+            placement.showCmd == SW_MAXIMIZE ? L"M4,8H8V4H20V16H16V20H4V8M16,8V14H18V6H10V8H16M6,12V18H14V12H6Z" :
+            L"M4,4H20V20H4V4M6,8V18H18V8H6Z", window->active ? active_text_color : inactive_text_color);
         x += window->titlebar_button_width;
 
         // Close button
@@ -597,21 +839,22 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             Rect close_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
             Canvas_FillRect(window->canvas, &close_button_rect, RGBA(255, 0, 0, 128));
         }
-        Rect close_text_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
-        Canvas_DrawText(window->canvas, L"🗙", -1, &close_text_rect, &button_font,
-            DT_CENTER | DT_VCENTER, window->active ? active_text_color : inactive_text_color);
+        Rect close_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+            (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
+        Canvas_FillPath(window->canvas, &close_icon_rect, 24, 24, L"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+            window->active ? active_text_color : inactive_text_color);
 
         // Draw centered text
         Font title_font = { font_name, (float)window->width / 32 };
         Rect title_rect = { 0, (window->height - title_font.size * 2) / 2, window->width, title_font.size * 2 };
-        Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, DT_CENTER, active_text_color);
+        Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, DT_CENTER | DT_VCENTER, active_text_color);
 
         // Draw footer text
         Font footer_font = { font_name, (float)window->width / 42 };
         Rect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
         wchar_t string_buffer[64];
         wsprintfW(string_buffer, L"Window size: %dx%d at %d dpi", window->width, window->height, window->dpi);
-        Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, DT_CENTER, active_text_color);
+        Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, DT_CENTER | DT_BOTTOM, active_text_color);
 
         Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);
