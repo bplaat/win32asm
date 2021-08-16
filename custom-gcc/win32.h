@@ -471,6 +471,7 @@ extern bool __stdcall SetProcessDPIAware();
 
 // Gdi32
 #define DEFAULT_GUI_FONT 17
+#define NULL_BRUSH 5
 
 #define FW_NORMAL 400
 #define FW_BOLD 700
@@ -543,9 +544,13 @@ extern HPEN __stdcall CreatePen( int32_t iStyle, int32_t cWidth, uint32_t color)
 extern bool __stdcall BeginPath(HDC hdc);
 extern bool __stdcall MoveToEx(HDC hdc, int32_t x, int32_t y, POINT *lppt);
 extern bool __stdcall LineTo(HDC hdc, int32_t x, int32_t y);
+extern bool __stdcall CloseFigure(HDC hdc);
 extern bool __stdcall FillPath(HDC hdc);
+extern bool __stdcall StrokePath(HDC hdc);
+extern bool __stdcall StrokeAndFillPath(HDC hdc);
 extern bool __stdcall EndPath(HDC hdc);
 extern HBITMAP __stdcall CreateBitmap(int32_t nWidth, int32_t nHeight, uint32_t nPlanes,  uint32_t nBitCount, const void *lpBits);
+extern bool __stdcall Rectangle(HDC hdc, int32_t left, int32_t top, int32_t right, int32_t bottom);
 
 // Gdiplus
 typedef struct {

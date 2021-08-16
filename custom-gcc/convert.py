@@ -26,10 +26,10 @@ libraries = {
         'SetWindowTextW', 'ShowWindow', 'TranslateAcceleratorW', 'TranslateMessage', 'UpdateWindow', 'wsprintfW', 'wvsprintfW'
     ],
     'GDI32.DLL': [
-        'BeginPath', 'BitBlt', 'CreateBitmap', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreatePen',
+        'BeginPath', 'BitBlt', 'CloseFigure', 'CreateBitmap', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreatePen',
         'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC', 'DeleteObject', 'EndPath', 'ExtTextOutW', 'FillPath', 'GdiAlphaBlend',
-        'GetDeviceCaps', 'GetStockObject', 'GetTextExtentPoint32W', 'LineTo', 'MoveToEx', 'SelectClipRgn', 'SelectObject', 'SetBkMode',
-        'SetStretchBltMode', 'SetTextAlign', 'SetTextColor', 'StretchBlt', 'TextOutW',
+        'GetDeviceCaps', 'GetStockObject', 'GetTextExtentPoint32W', 'LineTo', 'MoveToEx', 'Rectangle', 'SelectClipRgn', 'SelectObject',
+        'SetBkMode', 'SetStretchBltMode', 'SetTextAlign', 'SetTextColor', 'StretchBlt', 'StrokePath', 'StrokeAndFillPath', 'TextOutW'
     ],
     'SHELL32.DLL': [
         'DragFinish', 'DragQueryFileW', 'SHGetFolderPathW', 'ShellExecuteW'
