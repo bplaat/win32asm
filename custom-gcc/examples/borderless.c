@@ -57,10 +57,10 @@ typedef struct {
 } Font;
 
 typedef struct {
-    int32_t x;
-    int32_t y;
-    int32_t width;
-    int32_t height;
+    float x;
+    float y;
+    float width;
+    float height;
 } Rect;
 
 #undef RGB
@@ -191,6 +191,36 @@ void Canvas_EndDraw(Canvas *canvas) {
     }
 }
 
+void Canvas_StrokeRect(Canvas *canvas, Rect *rect, uint32_t color, float stroke_width) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        HPEN pen = CreatePen(PS_SOLID, stroke_width, color & 0x00ffffff);
+        if ((color >> 24) == 0xff) {
+            SelectObject(canvas->buffer_hdc, pen);
+            SelectObject(canvas->buffer_hdc, GetStockObject(NULL_BRUSH));
+            Rectangle(canvas->buffer_hdc, rect->x, rect->y, rect->x + rect->width + 1, rect->y + rect->height + 1);
+        } else {
+            BitBlt(canvas->alpha_hdc, 0, 0, rect->width + stroke_width * 2, rect->height + stroke_width * 2, canvas->buffer_hdc, rect->x - stroke_width, rect->y - stroke_width, SRCCOPY);
+            SelectObject(canvas->alpha_hdc, pen);
+            SelectObject(canvas->alpha_hdc, GetStockObject(NULL_BRUSH));
+            Rectangle(canvas->alpha_hdc, stroke_width, stroke_width, stroke_width + rect->width + 1, stroke_width + rect->height + 1);
+            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+            GdiAlphaBlend(canvas->buffer_hdc, rect->x - stroke_width, rect->y - stroke_width, rect->width + stroke_width * 2, rect->height + stroke_width * 2,
+                canvas->alpha_hdc, 0, 0, rect->width + stroke_width * 2, rect->height + stroke_width * 2, blend);
+        }
+        DeleteObject(pen);
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
+        ID2D1Brush *brush;
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
+        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+        ID2D1RenderTarget_DrawRectangle(canvas->render_target, &real_rect, brush, stroke_width, NULL);
+        IUnknown_Release(brush);
+    }
+}
+
 void Canvas_FillRect(Canvas *canvas, Rect *rect, uint32_t color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
@@ -219,6 +249,7 @@ void Canvas_FillRect(Canvas *canvas, Rect *rect, uint32_t color) {
 
 void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, Rect *rect, Font *font, uint32_t align, uint32_t color) {
     if (length == -1) length = wcslen(text);
+    Canvas_StrokeRect(canvas, rect, RGBA(0, 0, 0, 128), 2);
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         HFONT hfont = CreateFontW(-MulDiv(font->size, 96, 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
@@ -308,10 +339,8 @@ float Canvas_ParsePathFloat(char **string) {
 
 void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t viewport_height, char *path, uint32_t color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
-        int32_t smooth_scale = 1; // Experimental smoothing feature gives dark border artifacts
+        int32_t smooth_scale = 2; // Experimental smoothing feature gives dark border artifacts
         StretchBlt(canvas->alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, canvas->buffer_hdc, rect->x, rect->y, rect->width, rect->height, SRCCOPY);
-        HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
-        SelectObject(canvas->alpha_hdc, brush);
         BeginPath(canvas->alpha_hdc);
         float x = 0;
         float y = 0;
@@ -364,6 +393,8 @@ void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t
             }
         }
         EndPath(canvas->alpha_hdc);
+        HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
+        SelectObject(canvas->alpha_hdc, brush);
         FillPath(canvas->alpha_hdc);
         DeleteObject(brush);
         if ((color >> 24) == 0xff) {
@@ -386,7 +417,7 @@ void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t
         float y = 0;
         float scale_x = (float)rect->width / viewport_width;
         float scale_y = (float)rect->height / viewport_height;
-        bool open = false;
+        bool figure_open = false;
         char *c = path;
         while (*c != '\0') {
             if (*c == 'M') {
@@ -394,82 +425,58 @@ void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t
                 x = Canvas_ParsePathFloat(&c);
                 if (*c == ',') c++;
                 y = Canvas_ParsePathFloat(&c);
-                if (open) {
+                if (figure_open) {
                     ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
                 }
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1SimplifiedGeometrySink_BeginFigure(sink, point, D2D1_FIGURE_BEGIN_FILLED);
-                open = true;
+                ID2D1SimplifiedGeometrySink_BeginFigure(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }), D2D1_FIGURE_BEGIN_FILLED);
+                figure_open = true;
             } else if (*c == 'm') {
                 c++;
                 x += Canvas_ParsePathFloat(&c);
                 if (*c == ',') c++;
                 y += Canvas_ParsePathFloat(&c);
-                if (open) {
+                if (figure_open) {
                     ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
                 }
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1SimplifiedGeometrySink_BeginFigure(sink, point, D2D1_FIGURE_BEGIN_FILLED);
-                open = true;
+                ID2D1SimplifiedGeometrySink_BeginFigure(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }), D2D1_FIGURE_BEGIN_FILLED);
+                figure_open = true;
             } else if (*c == 'L') {
                 c++;
                 x = Canvas_ParsePathFloat(&c);
                 if (*c == ',') c++;
                 y = Canvas_ParsePathFloat(&c);
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1GeometrySink_AddLine(sink, point);
+                ID2D1GeometrySink_AddLine(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }));
             } else if (*c == 'l') {
                 c++;
                 x += Canvas_ParsePathFloat(&c);
                 if (*c == ',') c++;
                 y += Canvas_ParsePathFloat(&c);
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1GeometrySink_AddLine(sink, point);
+                ID2D1GeometrySink_AddLine(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }));
             } else if (*c == 'H') {
                 c++;
                 x = Canvas_ParsePathFloat(&c);
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1GeometrySink_AddLine(sink, point);
+                ID2D1GeometrySink_AddLine(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }));
             } else if (*c == 'h') {
                 c++;
                 x += Canvas_ParsePathFloat(&c);
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1GeometrySink_AddLine(sink, point);
+                ID2D1GeometrySink_AddLine(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }));
             } else if (*c == 'V') {
                 c++;
                 y = Canvas_ParsePathFloat(&c);
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1GeometrySink_AddLine(sink, point);
+                ID2D1GeometrySink_AddLine(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }));
             } else if (*c == 'v') {
                 c++;
                 y += Canvas_ParsePathFloat(&c);
-                D2D1_POINT_2F point;
-                point.x = rect->x + x * scale_x;
-                point.y = rect->y + y * scale_y;
-                ID2D1GeometrySink_AddLine(sink, point);
+                ID2D1GeometrySink_AddLine(sink, ((D2D1_POINT_2F){ rect->x + x * scale_x, rect->y + y * scale_y }));
             } else if (*c == 'Z' || *c == 'z') {
                 c++;
-                if (open) {
+                if (figure_open) {
                     ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
-                    open = false;
+                    figure_open = false;
                 }
             }
         }
-        if (open) {
+        if (figure_open) {
             ID2D1SimplifiedGeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
         }
         ID2D1SimplifiedGeometrySink_Close(sink);
@@ -479,7 +486,6 @@ void Canvas_FillPath(Canvas *canvas, Rect *rect, int32_t viewport_width, int32_t
             (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
         ID2D1RenderTarget_CreateSolidColorBrush(canvas->render_target, &color_float, NULL, &brush);
-
         ID2D1RenderTarget_FillGeometry(canvas->render_target, (ID2D1Geometry *)path_geometry, brush, NULL);
         IUnknown_Release(brush);
         IUnknown_Release(path_geometry);
@@ -570,7 +576,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_ACTIVATE) {
-        MARGINS borderless = { 1, 1, 1, 1 };
+        MARGINS borderless = { 0, 0, 0, 1 };
         DwmExtendFrameIntoClientArea(hwnd, &borderless);
         return 0;
     }
@@ -578,6 +584,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_NCACTIVATE) {
         window->active = wParam;
         InvalidateRect(hwnd, NULL, false);
+        return 0;
     }
 
     if (msg == WM_NCCALCSIZE) {
