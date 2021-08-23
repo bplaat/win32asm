@@ -1,27 +1,25 @@
-#define WIN32_MALLOC
-#define WIN32_FREE
-#define WIN32_RAND
-#define WIN32_WCSLEN
 #include "win32.h"
+#include "henk.h"
 
-wchar_t *window_class_name = L"window-test";
+wchar_t *window_class_name = L"canvas-test";
 
 #ifdef WIN64
-    wchar_t *window_title = L"This is a test window 😍 (64-bit)";
+    wchar_t *window_title = L"This is a test canvas window 😍 (64-bit)";
 #else
-    wchar_t *window_title = L"This is a test window 😍 (32-bit)";
+    wchar_t *window_title = L"This is a test canvas window 😍 (32-bit)";
 #endif
 
-wchar_t *font_name = L"Comic Sans MS";
+wchar_t *font_name = L"Georgia";
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 
-typedef struct {
+typedef struct WindowData {
     uint32_t width;
     uint32_t height;
     uint32_t background_color;
+    Henk *henk;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -40,7 +38,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
 
         // Generate random background color
-        window->background_color = rand() & 0x007f7f7f;
+        window->background_color = (rand() & 0x007f7f7f) | 0xff000000;
+        window->henk = Henk_New(hwnd, HENK_RENDERER_DEFAULT);
         return 0;
     }
 
@@ -48,6 +47,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Save new window size
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
+        Henk_Resize(window->henk, window->width, window->height);
         return 0;
     }
 
@@ -62,57 +62,48 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_ERASEBKGND) {
-        // Draw no background
-        return TRUE;
+        return true;
     }
 
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
-        HDC hdc = BeginPaint(hwnd, &paint_struct);
+        BeginPaint(hwnd, &paint_struct);
+        Henk_BeginDraw(window->henk);
 
-        // Create back buffer
-        HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window->width, window->height);
-        SelectObject(hdc_buffer, bitmap_buffer);
+        HenkRect background_rect = { 0, 0, window->width, window->height };
+        Henk_FillRect(window->henk, &background_rect, window->background_color);
 
-        // Draw background color
-        HBRUSH brush = CreateSolidBrush(window->background_color);
-        RECT rect = { 0, 0, window->width, window->height };
-        FillRect(hdc_buffer, &rect, brush);
-        DeleteObject(brush);
+        HenkRect rect1 = { 100, 100, 200, 200 };
+        Henk_FillRect(window->henk, &rect1, HENK_RGBA(255, 0, 0, 128));
 
-        // Draw centered text
-        uint32_t font_size = window->width / 16;
-        HFONT font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
-        SelectObject(hdc_buffer, font);
-        SetBkMode(hdc_buffer, TRANSPARENT);
-        SetTextColor(hdc_buffer, 0x00ffffff);
-        SetTextAlign(hdc_buffer, TA_CENTER);
-        TextOutW(hdc_buffer, window->width / 2, (window->height - font_size) / 2, window_title, wcslen(window_title));
-        DeleteObject(font);
+        HenkRect rect2 = { 200, 200, 200, 200 };
+        Henk_FillRect(window->henk, &rect2, HENK_RGBA(0, 255, 0, 128));
 
-        // Draw footer text
-        font_size = window->width / 24;
-        font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
-        SelectObject(hdc_buffer, font);
-        wchar_t string_buffer[64];
-        wsprintfW(string_buffer, L"(%dx%d)", window->width, window->height);
-        TextOutW(hdc_buffer, window->width / 2, window->height - font_size - 24, string_buffer, wcslen(string_buffer));
-        DeleteObject(font);
+        HenkRect rect3 = { 300, 300, 200, 200 };
+        Henk_FillRect(window->henk, &rect3, HENK_RGBA(0, 0, 255, 128));
 
-        // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, window->width, window->height, hdc_buffer, 0, 0, SRCCOPY);
-        DeleteObject(bitmap_buffer);
-        DeleteDC(hdc_buffer);
+        HenkFont font = { font_name, 32 };
 
+        HenkRect text_rect1 = { 150, 150, 600, font.size * 2 };
+        Henk_DrawText(window->henk, L"Henk Canvas Example", -1, &text_rect1, &font, 0, HENK_RGBA(255, 255, 255, 128));
+
+        HenkRect text_rect2 = { 175, 175, 600, font.size * 2 };
+        Henk_DrawText(window->henk, L"Hello World!", -1, &text_rect2, &font, 0, HENK_RGBA(255, 255, 255, 128));
+
+        HenkRect icon_rect1 = { 24, 24, 128, 128 };
+        Henk_FillPath(window->henk, &icon_rect1, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", HENK_RGBA(255, 255, 255, 128));
+
+        HenkRect icon_rect2 = { 300, 300, 200, 200 };
+        Henk_FillPath(window->henk, &icon_rect2, 24, 24, "M2,2H11V11H2V2M9,4H4V9H9V4M22,13V22H13V13H22M15,20H20V15H15V20M16,8V11H13V8H16M11,16H8V13H11V16Z", HENK_RGBA(255, 255, 255, 128));
+
+        Henk_EndDraw(window->henk);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
         // Free window data
+        Henk_Free(window->henk);
         free(window);
 
         // Close process

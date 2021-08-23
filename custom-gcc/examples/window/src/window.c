@@ -1,28 +1,23 @@
-#define WIN32_MALLOC
-#define WIN32_FREE
-#define WIN32_RAND
-#define WIN32_WCSLEN
 #include "win32.h"
 
-wchar_t *window_class_name = L"direct2d-test";
+wchar_t *window_class_name = L"window-test";
 
 #ifdef WIN64
-    wchar_t *window_title = L"Direct 2D Test 🎮 (64-bit)";
+    wchar_t *window_title = L"This is a test window 😍 (64-bit)";
 #else
-    wchar_t *window_title = L"Direct 2D Test 🎮 (32-bit)";
+    wchar_t *window_title = L"This is a test window 😍 (32-bit)";
 #endif
+
+wchar_t *font_name = L"Comic Sans MS";
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 
-typedef struct {
+typedef struct WindowData {
     uint32_t width;
     uint32_t height;
-    D2D1_COLOR_F background_color;
-
-    ID2D1Factory *pFactory;
-    ID2D1HwndRenderTarget *pRenderTarget;
+    uint32_t background_color;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -41,24 +36,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         srand((time.wHour * 60 + time.wMinute) * 60 + time.wSecond);
 
         // Generate random background color
-        window->background_color.r = (float)(rand() % 128) / 255;
-        window->background_color.g = (float)(rand() % 128) / 255;
-        window->background_color.b = (float)(rand() % 128) / 255;
-        window->background_color.a = 1;
-
-        // Create Direct2D factory
-        GUID ID2D1Factory_guid = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
-        if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &ID2D1Factory_guid, NULL, &window->pFactory))) {
-            return -1;
-        }
-
-        // Create Direct2D renderer
-        D2D1_RENDER_TARGET_PROPERTIES renderProps = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
-            { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
-            0, 0, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT };
-        D2D1_HWND_RENDER_TARGET_PROPERTIES hwndRenderProps = { hwnd, { 0, 0 }, D2D1_PRESENT_OPTIONS_NONE };
-        ID2D1Factory_CreateHwndRenderTarget(window->pFactory, &renderProps, &hwndRenderProps, &window->pRenderTarget);
-
+        window->background_color = rand() & 0x007f7f7f;
         return 0;
     }
 
@@ -66,10 +44,6 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Save new window size
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
-
-        // Resize Direct2D renderer
-        D2D1_SIZE_U size = { window->width, window->height };
-        ID2D1HwndRenderTarget_Resize(window->pRenderTarget, &size);
         return 0;
     }
 
@@ -84,46 +58,55 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_ERASEBKGND) {
-        // Draw no background
-        return TRUE;
+        return true;
     }
 
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
-        BeginPaint(hwnd, &paint_struct);
-        ID2D1RenderTarget_BeginDraw(window->pRenderTarget);
-        ID2D1RenderTarget_Clear(window->pRenderTarget, &window->background_color);
+        HDC hdc = BeginPaint(hwnd, &paint_struct);
 
-        for (int32_t i = 0; i < 1000; i++) {
-            ID2D1Brush *brush;
-            D2D1_COLOR_F color = {
-                (float)((rand() % 128) + 128) / 255,
-                (float)((rand() % 128) + 128) / 255,
-                (float)((rand() % 128) + 128) / 255,
-                1
-            };
-            ID2D1RenderTarget_CreateSolidColorBrush(window->pRenderTarget, &color, NULL, &brush);
+        // Create back buffer
+        HDC hdc_buffer = CreateCompatibleDC(hdc);
+        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window->width, window->height);
+        SelectObject(hdc_buffer, bitmap_buffer);
 
-            D2D1_RECT_F rect;
-            rect.left = rand() % window->width;
-            rect.top = rand() % window->height;
-            rect.right = rect.left + (rand() % (window->width / 10));
-            rect.bottom = rect.top + (rand() % (window->height / 10));
-            ID2D1RenderTarget_DrawRectangle(window->pRenderTarget, &rect, brush, 2, NULL);
+        // Draw background color
+        HBRUSH brush = CreateSolidBrush(window->background_color);
+        RECT rect = { 0, 0, window->width, window->height };
+        FillRect(hdc_buffer, &rect, brush);
+        DeleteObject(brush);
 
-            IUnknown_Release(brush);
-        }
+        // Draw centered text
+        uint32_t font_size = window->width / 16;
+        HFONT font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+        SelectObject(hdc_buffer, font);
+        SetBkMode(hdc_buffer, TRANSPARENT);
+        SetTextColor(hdc_buffer, 0x00ffffff);
+        SetTextAlign(hdc_buffer, TA_CENTER);
+        TextOutW(hdc_buffer, window->width / 2, (window->height - font_size) / 2, window_title, wcslen(window_title));
+        DeleteObject(font);
 
-        ID2D1RenderTarget_EndDraw(window->pRenderTarget, NULL, NULL);
+        // Draw footer text
+        font_size = window->width / 24;
+        font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
+        SelectObject(hdc_buffer, font);
+        wchar_t string_buffer[64];
+        wsprintfW(string_buffer, L"(%dx%d)", window->width, window->height);
+        TextOutW(hdc_buffer, window->width / 2, window->height - font_size - 24, string_buffer, wcslen(string_buffer));
+        DeleteObject(font);
+
+        // Draw and delete back buffer
+        BitBlt(hdc, 0, 0, window->width, window->height, hdc_buffer, 0, 0, SRCCOPY);
+        DeleteObject(bitmap_buffer);
+        DeleteDC(hdc_buffer);
+
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
-        // Free Direct2d stuff
-        IUnknown_Release(window->pRenderTarget);
-        IUnknown_Release(window->pFactory);
-
         // Free window data
         free(window);
 

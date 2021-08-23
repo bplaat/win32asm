@@ -1,8 +1,1 @@
-*.s
-*-x86.asm
-*-x64.asm
-*.res
-*.ico
-*.bmp
-*.bin
-redsquare.inc
+target/
