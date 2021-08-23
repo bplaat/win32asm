@@ -96,10 +96,10 @@ typedef struct ID2D1SimplifiedGeometrySinkVtbl {
     int32_t (__stdcall *Close)(ID2D1SimplifiedGeometrySink *This);
 } ID2D1SimplifiedGeometrySinkVtbl;
 
-#define ID2D1SimplifiedGeometrySink_SetFillMode(ptr, a) ((ID2D1SimplifiedGeometrySink *)ptr)->lpVtbl->SetFillMode((ID2D1SimplifiedGeometrySink *)ptr, a)
-#define ID2D1SimplifiedGeometrySink_BeginFigure(ptr, a, b) ((ID2D1SimplifiedGeometrySink *)ptr)->lpVtbl->BeginFigure((ID2D1SimplifiedGeometrySink *)ptr, a, b)
-#define ID2D1SimplifiedGeometrySink_EndFigure(ptr, a) ((ID2D1SimplifiedGeometrySink *)ptr)->lpVtbl->EndFigure((ID2D1SimplifiedGeometrySink *)ptr, a)
-#define ID2D1SimplifiedGeometrySink_Close(ptr) ((ID2D1SimplifiedGeometrySink *)ptr)->lpVtbl->Close((ID2D1SimplifiedGeometrySink *)ptr)
+#define ID2D1SimplifiedGeometrySink_SetFillMode(This, fillMode) ((ID2D1SimplifiedGeometrySink *)This)->lpVtbl->SetFillMode((ID2D1SimplifiedGeometrySink *)This, fillMode)
+#define ID2D1SimplifiedGeometrySink_BeginFigure(This, startPoint, figureBegin) ((ID2D1SimplifiedGeometrySink *)This)->lpVtbl->BeginFigure((ID2D1SimplifiedGeometrySink *)This, startPoint, figureBegin)
+#define ID2D1SimplifiedGeometrySink_EndFigure(This, figureEnd) ((ID2D1SimplifiedGeometrySink *)This)->lpVtbl->EndFigure((ID2D1SimplifiedGeometrySink *)This, figureEnd)
+#define ID2D1SimplifiedGeometrySink_Close(This) ((ID2D1SimplifiedGeometrySink *)This)->lpVtbl->Close((ID2D1SimplifiedGeometrySink *)This)
 
 struct ID2D1SimplifiedGeometrySink {
     const ID2D1SimplifiedGeometrySinkVtbl *lpVtbl;
@@ -119,7 +119,7 @@ struct ID2D1GeometrySink {
     const ID2D1GeometrySinkVtbl *lpVtbl;
 };
 
-#define ID2D1GeometrySink_AddLine(ptr, a) ((ID2D1GeometrySink *)ptr)->lpVtbl->AddLine((ID2D1GeometrySink *)ptr, a)
+#define ID2D1GeometrySink_AddLine(This, point) ((ID2D1GeometrySink *)This)->lpVtbl->AddLine((ID2D1GeometrySink *)This, point)
 
 // ID2D1Geometry
 typedef struct ID2D1Geometry ID2D1Geometry;
@@ -143,7 +143,7 @@ typedef struct ID2D1PathGeometryVtbl {
     uint8_t padding1[3 * sizeof(void *)];
 } ID2D1PathGeometryVtbl;
 
-#define ID2D1PathGeometry_Open(ptr, a) ((ID2D1PathGeometry *)ptr)->lpVtbl->Open((ID2D1PathGeometry *)ptr, a)
+#define ID2D1PathGeometry_Open(This, geometrySink) ((ID2D1PathGeometry *)This)->lpVtbl->Open((ID2D1PathGeometry *)This, geometrySink)
 
 struct ID2D1PathGeometry {
     const ID2D1PathGeometryVtbl *lpVtbl;
@@ -185,15 +185,21 @@ typedef struct ID2D1RenderTargetVtbl {
     uint8_t padding6[7 * sizeof(void *)];
 } ID2D1RenderTargetVtbl;
 
-#define ID2D1RenderTarget_CreateSolidColorBrush(ptr, a, b, c) ((ID2D1RenderTarget *)ptr)->lpVtbl->CreateSolidColorBrush((ID2D1RenderTarget *)ptr, a, b, c)
-#define ID2D1RenderTarget_DrawLine(ptr, a, b, c, d, e) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawLine((ID2D1RenderTarget *)ptr, a, b, c, d, e)
-#define ID2D1RenderTarget_DrawRectangle(ptr, a, b, c, d) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawRectangle((ID2D1RenderTarget *)ptr, a, b, c, d)
-#define ID2D1RenderTarget_FillRectangle(ptr, a, b) ((ID2D1RenderTarget *)ptr)->lpVtbl->FillRectangle((ID2D1RenderTarget *)ptr, a, b)
-#define ID2D1RenderTarget_FillGeometry(ptr, a, b, c) ((ID2D1RenderTarget *)ptr)->lpVtbl->FillGeometry((ID2D1RenderTarget *)ptr, a, b, c)
-#define ID2D1RenderTarget_DrawText(ptr, a, b, c, d, e, f, g) ((ID2D1RenderTarget *)ptr)->lpVtbl->DrawText((ID2D1RenderTarget *)ptr, a, b, c, d, e, f, g)
-#define ID2D1RenderTarget_Clear(ptr, a) ((ID2D1RenderTarget *)ptr)->lpVtbl->Clear((ID2D1RenderTarget *)ptr, a)
-#define ID2D1RenderTarget_BeginDraw(ptr) ((ID2D1RenderTarget *)ptr)->lpVtbl->BeginDraw((ID2D1RenderTarget *)ptr)
-#define ID2D1RenderTarget_EndDraw(ptr, a, b) ((ID2D1RenderTarget *)ptr)->lpVtbl->EndDraw((ID2D1RenderTarget *)ptr, a, b)
+#define ID2D1RenderTarget_CreateSolidColorBrush(This, color, brushProperties, solidColorBrush) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->CreateSolidColorBrush((ID2D1RenderTarget *)This, color, brushProperties, solidColorBrush)
+#define ID2D1RenderTarget_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->DrawLine((ID2D1RenderTarget *)This,  point0, point1, brush, strokeWidth, strokeStyle)
+#define ID2D1RenderTarget_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->DrawRectangle((ID2D1RenderTarget *)This, rect, brush, strokeWidth, strokeStyle)
+#define ID2D1RenderTarget_FillRectangle(This, rect, brush) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->FillRectangle((ID2D1RenderTarget *)This, rect, brush)
+#define ID2D1RenderTarget_FillGeometry(This, geometry, brush, opacityBrush) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->FillGeometry((ID2D1RenderTarget *)This, geometry, brush, opacityBrush)
+#define ID2D1RenderTarget_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode)
+#define ID2D1RenderTarget_Clear(This, clearColor) ((ID2D1RenderTarget *)This)->lpVtbl->Clear((ID2D1RenderTarget *)This, clearColor)
+#define ID2D1RenderTarget_BeginDraw(This) ((ID2D1RenderTarget *)This)->lpVtbl->BeginDraw((ID2D1RenderTarget *)This)
+#define ID2D1RenderTarget_EndDraw(This, tag1, tag2) ((ID2D1RenderTarget *)This)->lpVtbl->EndDraw((ID2D1RenderTarget *)This, tag1, tag2)
 
 struct ID2D1RenderTarget {
     const ID2D1RenderTargetVtbl *lpVtbl;
@@ -210,7 +216,7 @@ typedef struct ID2D1HwndRenderTargetVtbl {
     uint8_t padding2[1 * sizeof(void *)];
 } ID2D1HwndRenderTargetVtbl;
 
-#define ID2D1HwndRenderTarget_Resize(ptr, a) ((ID2D1HwndRenderTarget *)ptr)->lpVtbl->Resize((ID2D1HwndRenderTarget *)ptr, a)
+#define ID2D1HwndRenderTarget_Resize(This, pixelSize) ((ID2D1HwndRenderTarget *)This)->lpVtbl->Resize((ID2D1HwndRenderTarget *)This, pixelSize)
 
 struct ID2D1HwndRenderTarget {
     const ID2D1HwndRenderTargetVtbl *lpVtbl;
@@ -229,8 +235,10 @@ typedef struct ID2D1FactoryVtbl {
     uint8_t padding3[2 * sizeof(void *)];
 } ID2D1FactoryVtbl;
 
-#define ID2D1Factory_CreatePathGeometry(ptr, a) ((ID2D1Factory *)ptr)->lpVtbl->CreatePathGeometry((ID2D1Factory *)ptr, a)
-#define ID2D1Factory_CreateHwndRenderTarget(ptr, a, b, c) ((ID2D1Factory *)ptr)->lpVtbl->CreateHwndRenderTarget((ID2D1Factory *)ptr, a, b, c)
+#define ID2D1Factory_CreatePathGeometry(This, pathGeometry) \
+    ((ID2D1Factory *)This)->lpVtbl->CreatePathGeometry((ID2D1Factory *)This, pathGeometry)
+#define ID2D1Factory_CreateHwndRenderTarget(This, renderTargetProperties, hwndRenderTargetProperties, hwndRenderTarget) \
+    ((ID2D1Factory *)This)->lpVtbl->CreateHwndRenderTarget((ID2D1Factory *)This, renderTargetProperties, hwndRenderTargetProperties, hwndRenderTarget)
 
 struct ID2D1Factory {
     const ID2D1FactoryVtbl *lpVtbl;

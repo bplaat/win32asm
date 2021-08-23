@@ -714,7 +714,7 @@ struct IUnknown {
     const IUnknownVtbl *lpVtbl;
 };
 
-#define IUnknown_Release(ptr) ((IUnknown *)ptr)->lpVtbl->Release((IUnknown *)ptr);
+#define IUnknown_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This);
 
 // Multimon, Windows 8.1 DPI shit...
 #define MONITOR_DEFAULTTONEAREST 0x00000002
