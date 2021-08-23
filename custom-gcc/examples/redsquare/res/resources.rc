@@ -1,8 +1,8 @@
-#include "redsquare.h"
+#include "resources.h"
 #include <winver.h>
 
 // Manifest
-MANIFEST_ID MANIFEST "redsquare.manifest"
+MANIFEST_ID MANIFEST "app.manifest"
 
 // Icons
 APP_ICON_ID ICON "icon.ico"

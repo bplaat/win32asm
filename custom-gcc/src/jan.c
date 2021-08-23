@@ -1184,7 +1184,7 @@ void jan_button_init(JanButton *button) {
 
     button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
     button->hfont = jan_label_get_hfont(label);
-    SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
+    SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)true);
     ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
 
     widget->event_function = jan_button_event;
@@ -1227,7 +1227,7 @@ void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *pa
         DestroyWindow(button->hwnd);
         button->hwnd = CreateWindowExW(0, jan_button_class_name, label->text, WS_CHILD, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
         SetWindowPos(button->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
-        SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
+        SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)true);
         ShowWindow(button->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
         return NULL;
     }
@@ -1252,7 +1252,7 @@ void *jan_button_event(JanWidget *widget, uint32_t event, void *param1, void *pa
         jan_label_event(widget, event, param1, param2);
         DeleteObject(button->hfont);
         button->hfont = jan_label_get_hfont(label);
-        SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)TRUE);
+        SendMessageW(button->hwnd, WM_SETFONT, button->hfont, (LPARAM)true);
         return NULL;
     }
 
@@ -1276,7 +1276,7 @@ void jan_edit_init(JanEdit *edit) {
 
     edit->hwnd = CreateWindowExW(0, jan_edit_class_name, label->text, WS_CHILD | ES_AUTOHSCROLL, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
     edit->hfont = jan_label_get_hfont(label);
-    SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)TRUE);
+    SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)true);
     ShowWindow(edit->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
 
     widget->event_function = jan_edit_event;
@@ -1319,7 +1319,7 @@ void *jan_edit_event(JanWidget *widget, uint32_t event, void *param1, void *para
         DestroyWindow(edit->hwnd);
         edit->hwnd = CreateWindowExW(0, jan_edit_class_name, label->text, WS_CHILD | ES_AUTOHSCROLL, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
         SetWindowPos(edit->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
-        SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)TRUE);
+        SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)true);
         ShowWindow(edit->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
         return NULL;
     }
@@ -1351,7 +1351,7 @@ void *jan_edit_event(JanWidget *widget, uint32_t event, void *param1, void *para
         jan_label_event(widget, event, param1, param2);
         DeleteObject(edit->hfont);
         edit->hfont = jan_label_get_hfont(label);
-        SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)TRUE);
+        SendMessageW(edit->hwnd, WM_SETFONT, edit->hfont, (LPARAM)true);
         return NULL;
     }
 
@@ -1375,7 +1375,7 @@ void jan_combobox_init(JanComboBox *combobox) {
 
     combobox->hwnd = CreateWindowExW(0, jan_combobox_class_name, label->text, WS_CHILD | CBS_DROPDOWNLIST | CBS_HASSTRINGS, 0, 0, 0, 0, jan_hwnd, NULL, NULL, NULL);
     combobox->hfont = jan_label_get_hfont(label);
-    SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)TRUE);
+    SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)true);
     ShowWindow(combobox->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
 
     widget->event_function = jan_combobox_event;
@@ -1423,7 +1423,7 @@ void *jan_combobox_event(JanWidget *widget, uint32_t event, void *param1, void *
         DestroyWindow(combobox->hwnd);
         combobox->hwnd = CreateWindowExW(0, jan_combobox_class_name, label->text, WS_CHILD | CBS_DROPDOWNLIST | CBS_HASSTRINGS, 0, 0, 0, 0, jan_hwnd, (HMENU)(size_t)widget->id, NULL, NULL);
         SetWindowPos(combobox->hwnd, NULL, widget->padding_rect.x, widget->padding_rect.y, widget->padding_rect.width, widget->padding_rect.height, SWP_NOZORDER);
-        SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)TRUE);
+        SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)true);
         ShowWindow(combobox->hwnd, widget->visible ? SW_SHOW : SW_HIDE);
         return NULL;
     }
@@ -1452,7 +1452,7 @@ void *jan_combobox_event(JanWidget *widget, uint32_t event, void *param1, void *
         jan_label_event(widget, event, param1, param2);
         DeleteObject(combobox->hfont);
         combobox->hfont = jan_label_get_hfont(label);
-        SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)TRUE);
+        SendMessageW(combobox->hwnd, WM_SETFONT, combobox->hfont, (LPARAM)true);
         return NULL;
     }
 
