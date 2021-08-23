@@ -212,7 +212,7 @@ for filename in assembly_files:
             output = output.replace('rex.W jmp ', 'jmp ')
             output = output.replace(' XMMWORD ', ' OWORD ')
 
-        output = re.sub(r'L([0-9]+)', ' ' + modulename + '_L\\1', output)
+        output = re.sub(r' L([0-9]+)', ' ' + modulename + '_L\\1', output)
         output = re.sub(r'\[L([0-9]+)', '[' + modulename + '_L\\1', output)
         output = re.sub(r'\nL([0-9]+)', '\n' + modulename + '_L\\1', output)
 
