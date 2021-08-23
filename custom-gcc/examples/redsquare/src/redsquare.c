@@ -1,11 +1,5 @@
-#define WIN32_MALLOC
-#define WIN32_REALLOC
-#define WIN32_FREE
-#define WIN32_WCSLEN
-#define WIN32_WCSCPY
-#define WIN32_WCSCAT
 #include "win32.h"
-#include "redsquare.h"
+#include "resources.h"
 
 #define FRAME_TIMER_ID 1
 
@@ -409,7 +403,7 @@ void __stdcall ChangePage(HWND hwnd, uint32_t page) {
         SaveSettings(hwnd);
     }
 
-    InvalidateRect(hwnd, NULL, TRUE);
+    InvalidateRect(hwnd, NULL, true);
 }
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -504,7 +498,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 if (window->controls_handles[i] != NULL) {
                     DeleteObject(window->controls_handles[i]);
                 }
-                window->controls_handles[i] = CreateFontW(height, 0, 0, 0, control->width, FALSE, FALSE, FALSE, ANSI_CHARSET,
+                window->controls_handles[i] = CreateFontW(height, 0, 0, 0, control->width, false, false, false, ANSI_CHARSET,
                     OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             }
         }
@@ -516,7 +510,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 for (uint32_t j = 0; j < window->controls_size; j++) {
                     Control *other_control = &window->controls[j];
                     if (control->font == other_control->id) {
-                        SendMessageW(window->controls_handles[i], WM_SETFONT, window->controls_handles[j], (LPARAM)TRUE);
+                        SendMessageW(window->controls_handles[i], WM_SETFONT, window->controls_handles[j], (LPARAM)true);
                         break;
                     }
                 }
@@ -730,14 +724,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 if (window->page == PAGE_GAME && is_gameover) {
                     ChangePage(hwnd, PAGE_GAMEOVER);
                 } else {
-                    InvalidateRect(hwnd, NULL, TRUE);
+                    InvalidateRect(hwnd, NULL, true);
                 }
             }
         }
     }
 
     if (msg == WM_ERASEBKGND) {
-        return TRUE;
+        return true;
     }
 
     if (msg == WM_PAINT) {
@@ -811,7 +805,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             // Draw game stats
             wchar_t *font_name;
             LoadStringW(window->instance, FONT_STRING_ID, (wchar_t *)&font_name, 0);
-            HFONT stats_font = CreateFontW(20 * window->vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            HFONT stats_font = CreateFontW(20 * window->vx, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, stats_font);
 
@@ -847,7 +841,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             // Draw stats lines
             wchar_t *font_name;
             LoadStringW(window->instance, FONT_STRING_ID, (wchar_t *)&font_name, 0);
-            HFONT text_font = CreateFontW(24 * window->vx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+            HFONT text_font = CreateFontW(24 * window->vx, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
                 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
             SelectObject(hdc_buffer, text_font);
             SetTextAlign(hdc_buffer, TA_CENTER);
@@ -965,7 +959,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
-    HANDLE mutex = CreateMutexW(NULL, TRUE, window_class_name);
+    HANDLE mutex = CreateMutexW(NULL, true, window_class_name);
     if (mutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND window = FindWindowW(window_class_name, NULL);
         if (window != NULL) {
@@ -986,8 +980,8 @@ void _start(void) {
     GdiplusStartupInput gdiplusStartupInput;
     gdiplusStartupInput.GdiplusVersion = 1;
     gdiplusStartupInput.DebugEventCallback = NULL;
-    gdiplusStartupInput.SuppressBackgroundThread = FALSE;
-    gdiplusStartupInput.SuppressExternalCodecs = FALSE;
+    gdiplusStartupInput.SuppressBackgroundThread = false;
+    gdiplusStartupInput.SuppressExternalCodecs = false;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     WNDCLASSEXW wc = {0};

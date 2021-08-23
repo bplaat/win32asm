@@ -29,6 +29,8 @@ for arg in sys.argv[1:]:
         libs.append('dpi')
     if arg == '--henk':
         libs.append('henk')
+    if arg == '--jan':
+        libs.append('jan')
 
     if arg == '--clean':
         shutil.rmtree(path + '/target', ignore_errors = True)
@@ -43,12 +45,26 @@ if conf != 'debug' and conf != 'release':
     print('[ERROR] Conf must be: debug or release')
     exit(1)
 
+os.makedirs(path + '/target/' + arch + '/' + conf, exist_ok=True)
+
+# Compile resources
+if os.path.isdir(path + '/res'):
+    if os.path.isfile(path + '/build.sh'):
+        os.chdir(path)
+        os.system('bash build.sh resources')
+        os.chdir(script_folder)
+
+    if arch == 'x64':
+        if os.system('windres -I"' + path + '/include" ' + path + '/res/resources.rc -o ' + path + '/target/x64/' + conf + '/resources.res'):
+            exit(1)
+    else:
+        if os.system('windres -I"' + path + '/include" -UWIN64 ' + path + '/res/resources.rc -o ' + path + '/target/x86/' + conf + '/resources.res'):
+            exit(1)
+
 # Assemble c files
-if not os.path.isdir(path + '/src/'):
+if not os.path.isdir(path + '/src'):
     print('[ERROR] No src folder found')
     exit(1)
-
-os.makedirs(path + '/target/' + arch + '/' + conf + '/', exist_ok=True)
 
 assembly_files = []
 source_files = []
@@ -62,17 +78,17 @@ for file in source_files:
         filename = os.path.basename(file)
         if conf == 'release':
             if arch == 'x64':
-                if os.system('gcc -Iinclude -I"' + script_folder + '/include" -Os -nostdlib -DWIN64 ' + file + '.c -o ' + path + '/target/x64/release/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -DWIN64 ' + file + '.c -o ' + path + '/target/x64/release/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
             else:
-                if os.system('gcc -Iinclude -I"' + script_folder + '/include" -Os -nostdlib -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/release/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/release/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
         else:
             if arch == 'x64':
-                if os.system('gcc -Iinclude -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
             else:
-                if os.system('gcc -Iinclude -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
         assembly_files.append(path + '/target/' + arch + '/' + conf + '/' + filename + '.s')
 
@@ -165,7 +181,6 @@ for filename in assembly_files:
         output = re.sub(r'\s*\.file.*\n', '\n', output)
         output = re.sub(r'\s*\.intel_syntax.*\n', '\n', output)
         output = re.sub(r'\s*\.ident.*\n', '\n', output)
-
         output = re.sub(r'\s*\.align (.+)\n', '\n    align \\1, db 0\n', output)
         output = re.sub(r'\s*\.space (.+)\n', '\n    times \\1 db 0\n', output)
         output = output.replace('.ascii', 'db')
@@ -173,11 +188,11 @@ for filename in assembly_files:
         output = output.replace('.long', 'dd')
         output = output.replace('.quad', 'dq')
         output = output.replace(' PTR ', ' ')
-        output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
         output = output.replace(' OFFSET FLAT:', ' ')
         output = output.replace('`', '\`')
         output = output.replace('"', '`')
 
+        output = re.sub(r' \[DWORD (.+)\]\n', ' DWORD \\1\n', output)
         output = re.sub(r'DWORD LC(.+)\n', 'DWORD [LC\\1]\n', output)
         output = re.sub(r'TBYTE \[(.+)\]\n', 'TWORD [\\1]\n', output)
         output = re.sub(r'TBYTE LC(.+)\n', 'TWORD [LC\\1]\n', output)
@@ -186,18 +201,18 @@ for filename in assembly_files:
         output = output.replace('st\n', 'st0\n')
 
         if arch == 'x64':
-            output = re.sub(r'\s*\.linkonce.*\n', '\n', output)
-            output = re.sub(r'\s*\.linkonce.*\n', '\n', output)
             output = re.sub(r'\s*\.seh_.*\n', '\n', output)
+            output = re.sub(r'\.L([0-9]+)', 'L\\1', output)
             output = re.sub(r'\.LC([0-9]+)', 'LC\\1', output)
             output = re.sub(r' \[QWORD (.+)\]\n', ' QWORD \\1\n', output)
+            output = re.sub(r'\.refptr\.(.+)\[(.+)\]', '\\1', output)
+            output = re.sub(r'    \.section(.+)\n(    (.+)\n)+\.refptr\.(.+):\n    (.+)\n', '\n', output)
+            output = re.sub(r'([a-zA-Z_][a-zA-Z0-9_]*)\[rip\]', '[\\1]', output)
             output = output.replace('movabs r', 'mov r')
-            output = output.replace('.refptr.', '')
-            output = re.sub(r'([a-zA-Z_][a-zA-Z0-9_]*)\[rip\]', '[rel \\1]', output)
+            output = output.replace('rex.W jmp ', 'jmp ')
             output = output.replace(' XMMWORD ', ' OWORD ')
-            output = output.replace('rex.W ', ' ')
 
-        output = re.sub(r' L([0-9]+)', ' ' + modulename + '_L\\1', output)
+        output = re.sub(r'L([0-9]+)', ' ' + modulename + '_L\\1', output)
         output = re.sub(r'\[L([0-9]+)', '[' + modulename + '_L\\1', output)
         output = re.sub(r'\nL([0-9]+)', '\n' + modulename + '_L\\1', output)
 
@@ -236,8 +251,9 @@ for filename in assembly_files:
                 else:
                     data += line + '\n'
 
-for symbol in sorted(symbols, key=len, reverse=True):
-    text = re.sub(r'DWORD ' + symbol + '([^,\n]*)', 'DWORD [' + symbol + '\\1]', text)
+if arch == 'x86':
+    for symbol in sorted(symbols, key=len, reverse=True):
+        text = re.sub(r'DWORD ' + symbol + '([^,\n]*)', 'DWORD [' + symbol + '\\1]', text)
 
 def symbolRealName(name):
     if arch == 'x64':
@@ -416,19 +432,28 @@ _data_section_aligned_size equ $ - _data_section
 # Assemble file with NASM
 os.system('nasm -f bin ' + path + '/target/' + arch + '/' + conf + '/' + project_name + '.asm -o ' + path + '/target/' + arch + '/' + conf + '/' + project_name + '.exe')
 
+# Link resources in executable
+if os.path.isdir(path + '/res'):
+    os.system('ResourceHacker -open ' + path + '/target/' + arch + '/' + conf + '/' + project_name + '.exe -save ' + path + '/target/' + arch + '/' + conf + '/' + project_name + '.exe -action addskip -res ' + path + '/target/' + arch + '/' + conf + '/resources.res -log NUL')
+
+# Clean up
+if os.path.isfile(path + '/build.sh'):
+    os.chdir(path)
+    os.system('bash build.sh clean')
+    os.chdir(script_folder)
+
 # Clean up if release build
 if conf == 'release':
     for file in assembly_files:
         os.remove(file)
+    if os.path.isdir(path + '/res'):
+        os.remove(path + '/target/' + arch + '/' + conf + '/resources.res')
     os.remove(path + '/target/' + arch + '/' + conf + '/' + project_name + '.asm')
 
 # Zip final folder if release build
 if conf == 'release':
-    os.chdir(path + '/target/' + arch)
-    zip_name = project_name + '-' + arch
-    os.system('mv release ' + zip_name)
-    os.system('7z a ' + zip_name + '.zip ' + zip_name)
-    os.system('mv ' + zip_name + ' release')
+    os.chdir(path + '/target/' + arch + '/release')
+    os.system('7z a ' + project_name + '-' + arch + '.zip ' + project_name + '.exe')
 
 # Run executable when debug
 if conf == 'debug':

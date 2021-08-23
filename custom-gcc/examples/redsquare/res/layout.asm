@@ -1,5 +1,5 @@
     %include "layout.inc"
-    %include "redsquare.inc"
+    %include "resources.inc"
 
     ; #####################################################
     ; ###################### FONTS ########################

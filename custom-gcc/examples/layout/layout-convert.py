@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 # Extract constants from header file
 constants = {}
-with open('jan/jan.h', 'r') as file:
+with open('../../include/jan.h', 'r') as file:
     output = file.read()
     pattern = re.compile('[A-Z_]+')
     lines = output.split('\n')

@@ -1,13 +1,5 @@
-#define WIN32_MALLOC
-#define WIN32_REALLOC
-#define WIN32_FREE
-#define WIN32_WCSLEN
-#define WIN32_WCSDUP
-#define WIN32_WPRINTF
 #include "win32.h"
-
-#define JAN_DEBUG
-#include "jan/jan.c"
+#include "jan.h"
 
 wchar_t *window_class_name = L"jan-test";
 
@@ -64,7 +56,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
             // Redraw window
             jan_widget_measure(window->root);
-            InvalidateRect(hwnd, NULL, TRUE);
+            InvalidateRect(hwnd, NULL, true);
         }
 
         if (id == 2) {
@@ -83,7 +75,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
             // Redraw window
             jan_widget_measure(window->root);
-            InvalidateRect(hwnd, NULL, TRUE);
+            InvalidateRect(hwnd, NULL, true);
         }
 
         if (id == 201) {
@@ -145,8 +137,8 @@ void _start(void) {
     GdiplusStartupInput gdiplusStartupInput;
     gdiplusStartupInput.GdiplusVersion = 1;
     gdiplusStartupInput.DebugEventCallback = NULL;
-    gdiplusStartupInput.SuppressBackgroundThread = FALSE;
-    gdiplusStartupInput.SuppressExternalCodecs = FALSE;
+    gdiplusStartupInput.SuppressBackgroundThread = false;
+    gdiplusStartupInput.SuppressExternalCodecs = false;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     WNDCLASSEXW wc = {0};

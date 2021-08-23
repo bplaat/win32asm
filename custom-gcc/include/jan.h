@@ -2,13 +2,9 @@
 #ifndef JAN_H
 #define JAN_H
 
-#define WIN32_MALLOC
-#define WIN32_REALLOC
-#define WIN32_FREE
-#define WIN32_WCSLEN
-#define WIN32_WCSDUP
-#define WIN32_WPRINTF
 #include "win32.h"
+
+// #define JAN_DEBUG
 
 // Jan Globals
 extern HWND jan_hwnd;
