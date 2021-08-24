@@ -1,3 +1,4 @@
+#include "std.h"
 #include "win32.h"
 
 void *malloc(size_t size) {
