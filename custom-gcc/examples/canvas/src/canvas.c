@@ -1,5 +1,5 @@
 #include "win32.h"
-#include "henk.h"
+#include "canvas.h"
 
 wchar_t *window_class_name = L"canvas-test";
 
@@ -19,7 +19,7 @@ typedef struct WindowData {
     uint32_t width;
     uint32_t height;
     uint32_t background_color;
-    Henk *henk;
+    Canvas *canvas;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -39,7 +39,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Generate random background color
         window->background_color = (rand() & 0x007f7f7f) | 0xff000000;
-        window->henk = Henk_New(hwnd, HENK_RENDERER_DEFAULT);
+        window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DEFAULT);
         return 0;
     }
 
@@ -47,7 +47,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Save new window size
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
-        Henk_Resize(window->henk, window->width, window->height);
+        Canvas_Resize(window->canvas, window->width, window->height);
         return 0;
     }
 
@@ -68,42 +68,42 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
         BeginPaint(hwnd, &paint_struct);
-        Henk_BeginDraw(window->henk);
+        Canvas_BeginDraw(window->canvas);
 
-        HenkRect background_rect = { 0, 0, window->width, window->height };
-        Henk_FillRect(window->henk, &background_rect, window->background_color);
+        CanvasRect background_rect = { 0, 0, window->width, window->height };
+        Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
-        HenkRect rect1 = { 100, 100, 200, 200 };
-        Henk_FillRect(window->henk, &rect1, HENK_RGBA(255, 0, 0, 128));
+        CanvasRect rect1 = { 100, 100, 200, 200 };
+        Canvas_FillRect(window->canvas, &rect1, CANVAS_RGBA(255, 0, 0, 128));
 
-        HenkRect rect2 = { 200, 200, 200, 200 };
-        Henk_FillRect(window->henk, &rect2, HENK_RGBA(0, 255, 0, 128));
+        CanvasRect rect2 = { 200, 200, 200, 200 };
+        Canvas_FillRect(window->canvas, &rect2, CANVAS_RGBA(0, 255, 0, 128));
 
-        HenkRect rect3 = { 300, 300, 200, 200 };
-        Henk_FillRect(window->henk, &rect3, HENK_RGBA(0, 0, 255, 128));
+        CanvasRect rect3 = { 300, 300, 200, 200 };
+        Canvas_FillRect(window->canvas, &rect3, CANVAS_RGBA(0, 0, 255, 128));
 
-        HenkFont font = { font_name, 32 };
+        CanvasFont font = { font_name, 32 };
 
-        HenkRect text_rect1 = { 150, 150, 600, font.size * 2 };
-        Henk_DrawText(window->henk, L"Henk Canvas Example", -1, &text_rect1, &font, 0, HENK_RGBA(255, 255, 255, 128));
+        CanvasRect text_rect1 = { 150, 150, 600, font.size * 2 };
+        Canvas_DrawText(window->canvas, L"Canvas Canvas Example", -1, &text_rect1, &font, 0, CANVAS_RGBA(255, 255, 255, 128));
 
-        HenkRect text_rect2 = { 175, 175, 600, font.size * 2 };
-        Henk_DrawText(window->henk, L"Hello World!", -1, &text_rect2, &font, 0, HENK_RGBA(255, 255, 255, 128));
+        CanvasRect text_rect2 = { 175, 175, 600, font.size * 2 };
+        Canvas_DrawText(window->canvas, L"Hello World!", -1, &text_rect2, &font, 0, CANVAS_RGBA(255, 255, 255, 128));
 
-        HenkRect icon_rect1 = { 24, 24, 128, 128 };
-        Henk_FillPath(window->henk, &icon_rect1, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", HENK_RGBA(255, 255, 255, 128));
+        CanvasRect icon_rect1 = { 24, 24, 128, 128 };
+        Canvas_FillPath(window->canvas, &icon_rect1, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", CANVAS_RGBA(255, 255, 255, 128));
 
-        HenkRect icon_rect2 = { 300, 300, 200, 200 };
-        Henk_FillPath(window->henk, &icon_rect2, 24, 24, "M2,2H11V11H2V2M9,4H4V9H9V4M22,13V22H13V13H22M15,20H20V15H15V20M16,8V11H13V8H16M11,16H8V13H11V16Z", HENK_RGBA(255, 255, 255, 128));
+        CanvasRect icon_rect2 = { 300, 300, 200, 200 };
+        Canvas_FillPath(window->canvas, &icon_rect2, 24, 24, "M2,2H11V11H2V2M9,4H4V9H9V4M22,13V22H13V13H22M15,20H20V15H15V20M16,8V11H13V8H16M11,16H8V13H11V16Z", CANVAS_RGBA(255, 255, 255, 128));
 
-        Henk_EndDraw(window->henk);
+        Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
         // Free window data
-        Henk_Free(window->henk);
+        Canvas_Free(window->canvas);
         free(window);
 
         // Close process

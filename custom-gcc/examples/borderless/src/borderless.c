@@ -1,6 +1,6 @@
 #include "win32.h"
 #include "dpi.h"
-#include "henk.h"
+#include "canvas.h"
 
 wchar_t *window_class_name = L"window-borderless";
 
@@ -21,7 +21,7 @@ typedef struct WindowData {
     int32_t height;
     int32_t dpi;
     bool active;
-    Henk *henk;
+    Canvas *canvas;
 
     int32_t titlebar_height;
     int32_t titlebar_button_width;
@@ -51,9 +51,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
                 window->width, window->height, SWP_NOZORDER | SWP_NOACTIVATE);
         }
 
-        // Create henk
+        // Create canvas
         window->active = true;
-        window->henk = Henk_New(hwnd, HENK_RENDERER_DEFAULT);
+        window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DEFAULT);
 
         // Generate random seed by time
         SYSTEMTIME time;
@@ -172,8 +172,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->titlebar_button_width = MulDiv(48, window->dpi, 96);
         window->titlebar_icon_size = MulDiv(24, window->dpi, 96);
 
-        // Resize henk
-        Henk_Resize(window->henk, window->width, window->height);
+        // Resize canvas
+        Canvas_Resize(window->canvas, window->width, window->height);
         return 0;
     }
 
@@ -288,81 +288,81 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
         BeginPaint(hwnd, &paint_struct);
-        Henk_BeginDraw(window->henk);
+        Canvas_BeginDraw(window->canvas);
 
         // Draw background color
-        HenkRect background_rect = { 0, 0, window->width, window->height };
-        Henk_FillRect(window->henk, &background_rect, window->background_color);
+        CanvasRect background_rect = { 0, 0, window->width, window->height };
+        Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
-        uint32_t active_text_color = HENK_RGB(255, 255, 255);
-        uint32_t inactive_text_color = HENK_RGBA(255, 255, 255, 128);
+        uint32_t active_text_color = CANVAS_RGB(255, 255, 255);
+        uint32_t inactive_text_color = CANVAS_RGBA(255, 255, 255, 128);
 
         // Draw window decoration buttons
 
         // Menu button
         if (window->menu_hover) {
-            HenkRect menu_button_rect = { 0, 0, window->titlebar_button_width, window->titlebar_height };
-            Henk_FillRect(window->henk, &menu_button_rect, HENK_RGBA(255, 255, 255, 48));
+            CanvasRect menu_button_rect = { 0, 0, window->titlebar_button_width, window->titlebar_height };
+            Canvas_FillRect(window->canvas, &menu_button_rect, CANVAS_RGBA(255, 255, 255, 48));
         }
-        HenkRect menu_icon_rect = { (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+        CanvasRect menu_icon_rect = { (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Henk_FillPath(window->henk, &menu_icon_rect, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", window->active ? active_text_color : inactive_text_color);
+        Canvas_FillPath(window->canvas, &menu_icon_rect, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", window->active ? active_text_color : inactive_text_color);
 
         // Minimize button
         int32_t x = window->width - window->titlebar_button_width * 3;
         if (window->minimize_hover) {
-            HenkRect minimize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
-            Henk_FillRect(window->henk, &minimize_button_rect, HENK_RGBA(255, 255, 255, 48));
+            CanvasRect minimize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
+            Canvas_FillRect(window->canvas, &minimize_button_rect, CANVAS_RGBA(255, 255, 255, 48));
         }
-        HenkRect minimize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+        CanvasRect minimize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Henk_FillPath(window->henk, &minimize_icon_rect, 24, 24, "M20,14H4V10H20", window->active ? active_text_color : inactive_text_color);
+        Canvas_FillPath(window->canvas, &minimize_icon_rect, 24, 24, "M20,14H4V10H20", window->active ? active_text_color : inactive_text_color);
         x += window->titlebar_button_width;
 
         // Maximize button
         if (window->maximize_hover) {
-            HenkRect maximize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
-            Henk_FillRect(window->henk, &maximize_button_rect, HENK_RGBA(255, 255, 255, 48));
+            CanvasRect maximize_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
+            Canvas_FillRect(window->canvas, &maximize_button_rect, CANVAS_RGBA(255, 255, 255, 48));
         }
         WINDOWPLACEMENT placement;
         GetWindowPlacement(hwnd, &placement);
-        HenkRect maximize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+        CanvasRect maximize_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Henk_FillPath(window->henk, &maximize_icon_rect, 24, 24,
+        Canvas_FillPath(window->canvas, &maximize_icon_rect, 24, 24,
             placement.showCmd == SW_MAXIMIZE ? "M4,8H8V4H20V16H16V20H4V8M16,8V14H18V6H10V8H16M6,12V18H14V12H6Z" :
             "M4,4H20V20H4V4M6,8V18H18V8H6Z", window->active ? active_text_color : inactive_text_color);
         x += window->titlebar_button_width;
 
         // Close button
         if (window->close_hover) {
-            HenkRect close_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
-            Henk_FillRect(window->henk, &close_button_rect, HENK_RGBA(255, 0, 0, 128));
+            CanvasRect close_button_rect = { x, 0, window->titlebar_button_width, window->titlebar_height };
+            Canvas_FillRect(window->canvas, &close_button_rect, CANVAS_RGBA(255, 0, 0, 128));
         }
-        HenkRect close_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
+        CanvasRect close_icon_rect = { x + (window->titlebar_button_width - window->titlebar_icon_size) / 2,
             (window->titlebar_height - window->titlebar_icon_size) / 2, window->titlebar_icon_size, window->titlebar_icon_size };
-        Henk_FillPath(window->henk, &close_icon_rect, 24, 24, "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+        Canvas_FillPath(window->canvas, &close_icon_rect, 24, 24, "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
             window->active ? active_text_color : inactive_text_color);
 
         // Draw centered text
-        HenkFont title_font = { font_name, (float)window->width / 32 };
-        HenkRect title_rect = { 0, (window->height - title_font.size * 2) / 2, window->width, title_font.size * 2 };
-        Henk_DrawText(window->henk, window_title,  -1, &title_rect, &title_font, DT_CENTER | DT_VCENTER, active_text_color);
+        CanvasFont title_font = { font_name, (float)window->width / 32 };
+        CanvasRect title_rect = { 0, (window->height - title_font.size * 2) / 2, window->width, title_font.size * 2 };
+        Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, DT_CENTER | DT_VCENTER, active_text_color);
 
         // Draw footer text
-        HenkFont footer_font = { font_name, (float)window->width / 42 };
-        HenkRect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
+        CanvasFont footer_font = { font_name, (float)window->width / 42 };
+        CanvasRect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
         wchar_t string_buffer[64];
         wsprintfW(string_buffer, L"Window size: %dx%d at %d dpi", window->width, window->height, window->dpi);
-        Henk_DrawText(window->henk, string_buffer, -1, &footer_rect, &footer_font, DT_CENTER | DT_BOTTOM, active_text_color);
+        Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, DT_CENTER | DT_BOTTOM, active_text_color);
 
-        Henk_EndDraw(window->henk);
+        Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
         // Free window data
-        Henk_Free(window->henk);
+        Canvas_Free(window->canvas);
         free(window);
 
         // Close process
