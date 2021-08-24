@@ -8,7 +8,7 @@ import sys
 path = '.'
 conf = 'debug'
 arch = 'x64'
-libs = [ 'win32' ]
+libs = [ 'std' ]
 subsystem = 'gui'
 for arg in sys.argv[1:]:
     if arg.startswith('--path='):
