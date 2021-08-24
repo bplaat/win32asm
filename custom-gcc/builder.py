@@ -36,6 +36,7 @@ for arg in sys.argv[1:]:
         libs.append('henk')
     if arg == '--hans':
         libs.append('hans')
+        libs.append('map')
     if arg == '--jan':
         libs.append('jan')
 

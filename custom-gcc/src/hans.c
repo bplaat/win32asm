@@ -52,7 +52,7 @@ void Uri_Free(Uri *uri) {
     free(uri);
 }
 
-char *Http_Get(Uri *uri, char **http_header) {
+char *Http_Get(Uri *uri, char **buffer_ptr, Map **headers_ptr) {
     // Start WSA
     WSADATA wsaData;
     if (WSAStartup(0x0202, &wsaData) != 0) {
@@ -136,30 +136,43 @@ char *Http_Get(Uri *uri, char **http_header) {
     }
     buffer[position] = '\0';
 
-    // Skip HTTP response header
+    // Parse HTTP header
+    Map *headers = Map_New(8);
     char *c = buffer;
-    while (*c != '\0') {
-        if (*c == '\r') {
-            if (*(c + 1) == '\n') {
-                c += 2;
-                if (*c == '\r' && *(c + 1) == '\n') {
-                    *c = '\0';
-                    c += 2;
-                    break;
-                }
-            } else {
-                c++;
-            }
-        } else {
-            c++;
-        }
+    while (*c != '\r') c++;
+    c += 2;
+    while (*c != '\r') {
+        char key[256];
+        char *s = key;
+        while (*c != ':') *s++ = *c++;
+        *s = '\0';
+        c++;
+        if (*c == ' ') c++;
+
+        char value[256];
+        s = value;
+        while (*c != '\r') *s++ = *c++;
+        *s = '\0';
+        c += 2;
+
+        Map_Set(headers, key, strdup(value));
     }
+    c += 2;
+
+    // Remove weird HTTP chunks
+    Map_Foreach(headers, char *key, char *value, {
+        if (!strcmp(key, "Transfer-Encoding") && !strcmp(value, "chunked")) {
+            // TODO
+            break;
+        }
+    });
 
     // Close socket
     closesocket(sock);
     WSACleanup();
 
     // Return buffer and response
-    *http_header = buffer;
+    *buffer_ptr = buffer;
+    *headers_ptr = headers;
     return c;
 }
