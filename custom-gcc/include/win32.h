@@ -150,6 +150,7 @@ extern uint32_t __stdcall SizeofResource(HMODULE hModule, HRSRC hResInfo);
 extern HGLOBAL __stdcall LoadResource(HMODULE hModule, HRSRC hResInfo);
 extern void * __stdcall LockResource(HGLOBAL hResData);
 extern HANDLE __stdcall GetStdHandle(uint32_t nStdHandle);
+extern bool __stdcall WriteConsoleA(HANDLE hConsoleOutput, const void *lpBuffer, uint32_t nNumberOfCharsToWrite, uint32_t *lpNumberOfCharsWritten, void *lpReserved);
 extern bool __stdcall WriteConsoleW(HANDLE hConsoleOutput, const void *lpBuffer, uint32_t nNumberOfCharsToWrite, uint32_t *lpNumberOfCharsWritten, void *lpReserved);
 extern uint32_t __stdcall GetFullPathNameW(const wchar_t *lpFileName, uint32_t nBufferLength, wchar_t *lpBuffer, wchar_t **lpFilePart);
 extern int32_t __stdcall MultiByteToWideChar(uint32_t CodePage, uint32_t dwFlags, const char *lpMultiByteStr,
@@ -436,8 +437,10 @@ extern int32_t __stdcall LoadStringW(HINSTANCE hInstance, uint32_t uID, wchar_t 
 extern HWND __stdcall GetDlgItem(HWND hDlg, int32_t nIDDlgItem);
 extern HDC __stdcall GetDC(HWND hWnd);
 extern int32_t __stdcall DrawTextW(HDC hdc, const wchar_t *lpchText, int32_t cchText, RECT *lprc, uint32_t format);
-extern int32_t __cdecl wsprintfW(wchar_t *, wchar_t *, ...);
-extern int32_t __cdecl wvsprintfW(wchar_t *, wchar_t *, va_list arglist);
+extern int32_t __cdecl wsprintfA(char *, const char *, ...);
+extern int32_t __cdecl wvsprintfA(char *, const char *, va_list arglist);
+extern int32_t __cdecl wsprintfW(wchar_t *, const wchar_t *, ...);
+extern int32_t __cdecl wvsprintfW(wchar_t *, const wchar_t *, va_list arglist);
 extern HDC __stdcall BeginPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern bool __stdcall EndPaint(HWND hWnd, PAINTSTRUCT *lpPaint);
 extern int32_t __stdcall FillRect(HDC hDC, const RECT *lprc, HBRUSH hbr);
@@ -680,6 +683,72 @@ extern bool __stdcall PlaySoundW(wchar_t *pszSound, HMODULE hmod, uint32_t fdwSo
 // Advapi
 extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
 
+// Winsock
+#define WSADESCRIPTION_LEN 256
+
+#define WSASYS_STATUS_LEN 128
+
+#define AF_UNSPEC 0
+
+#define SOCK_STREAM 1
+
+#define IPPROTO_TCP 6
+
+#define SD_SEND 1
+
+#define INVALID_SOCKET (SOCKET)(~0)
+
+#define SOCKET_ERROR -1
+
+#define MSG_WAITALL 0x8
+
+typedef struct WSAData {
+    uint16_t wVersion;
+    uint16_t wHighVersion;
+    #ifdef WIN64
+        uint16_t iMaxSockets;
+        uint16_t iMaxUdpDg;
+        char *lpVendorInfo;
+        char szDescription[WSADESCRIPTION_LEN + 1];
+        char szSystemStatus[WSASYS_STATUS_LEN + 1];
+    #else
+        char szDescription[WSADESCRIPTION_LEN + 1];
+        char szSystemStatus[WSASYS_STATUS_LEN + 1];
+        uint16_t iMaxSockets;
+        uint16_t iMaxUdpDg;
+        char *lpVendorInfo;
+    #endif
+} WSADATA;
+
+typedef uint32_t * SOCKET;
+
+typedef struct sockaddr {
+    uint16_t sa_family;
+    char sa_data[14];
+} sockaddr;
+
+typedef struct ADDRINFOA {
+    int32_t ai_flags;
+    int32_t ai_family;
+    int32_t ai_socktype;
+    int32_t ai_protocol;
+    size_t ai_addrlen;
+    char *ai_canonname;
+    sockaddr *ai_addr;
+    struct ADDRINFOA *ai_next;
+} ADDRINFOA;
+
+extern int32_t __stdcall WSAStartup(uint16_t wVersionRequired, WSADATA *lpWSAData);
+extern int32_t __stdcall WSACleanup(void);
+extern int32_t __stdcall getaddrinfo(const char *pNodeName, const char *pServiceName, const ADDRINFOA *pHints, ADDRINFOA **ppResult);
+extern void __stdcall freeaddrinfo(ADDRINFOA *pAddrInfo);
+extern SOCKET __stdcall socket(int32_t af, int32_t type, int32_t protocol);
+extern int32_t __stdcall connect(SOCKET s, const sockaddr *name, int namelen);
+extern int32_t __stdcall closesocket(SOCKET s);
+extern int32_t __stdcall send(SOCKET s, const char *buf, int32_t len, int32_t flags);
+extern int32_t __stdcall recv(SOCKET s, char *buf, int32_t len, int32_t flags);
+extern int32_t __stdcall shutdown(SOCKET s, int32_t how);
+
 // Dwmapi
 typedef struct MARGINS {
     int32_t cxLeftWidth;
@@ -727,13 +796,25 @@ struct IUnknown {
 void *malloc(size_t size);
 void *realloc(void *ptr, size_t size);
 void free(void *ptr);
+
 extern uint32_t rand_seed;
 void srand(uint32_t seed);
 uint32_t rand(void);
-size_t wcslen(wchar_t *string);
-wchar_t *wcscpy(wchar_t *dest, wchar_t *src);
-wchar_t *wcscat(wchar_t *dest, wchar_t *src);
-wchar_t *wcsdup(wchar_t *src);
-void wprintf(wchar_t *format, ...);
+
+size_t strlen(const char *string);
+int32_t strcmp(const char *s1, const char *s2);
+char *strcpy(char *dest, const char *src);
+char *strcat(char *dest, const char *src);
+char *strdup(const char *src);
+
+size_t wcslen(const wchar_t *string);
+int32_t wcscmp(const wchar_t *s1, const wchar_t *s2);
+wchar_t *wcscpy(wchar_t *dest, const wchar_t *src);
+wchar_t *wcscat(wchar_t *dest, const wchar_t *src);
+wchar_t *wcsdup(const wchar_t *src);
+
+int32_t puts(const char *str);
+int32_t printf(const char *format, ...);
+int32_t wprintf(const wchar_t *format, ...);
 
 #endif
