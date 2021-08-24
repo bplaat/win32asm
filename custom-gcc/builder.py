@@ -9,6 +9,7 @@ path = '.'
 conf = 'debug'
 arch = 'x64'
 libs = [ 'win32' ]
+subsystem = 'gui'
 for arg in sys.argv[1:]:
     if arg.startswith('--path='):
         path = arg[len('--path='):]
@@ -29,12 +30,22 @@ for arg in sys.argv[1:]:
         libs.append('dpi')
     if arg == '--henk':
         libs.append('henk')
+    if arg == '--hans':
+        libs.append('hans')
     if arg == '--jan':
         libs.append('jan')
+
+    if arg.startswith('--subsystem='):
+        subsystem = arg[len('--subsystem='):]
+    if arg == '--console':
+        subsystem = 'console'
 
     if arg == '--clean':
         shutil.rmtree(path + '/target', ignore_errors = True)
         exit(0)
+
+if conf == 'debug':
+    subsystem = 'console'
 
 project_name = os.path.basename(os.path.realpath(path))
 script_folder = os.path.dirname(os.path.realpath(__file__))
@@ -104,7 +115,7 @@ libraries = {
         'GetFileSize', 'GetFullPathNameW', 'GetLastError', 'GetLocalTime', 'GetModuleHandleW', 'GetProcAddress', 'GetProcessHeap',
         'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree', 'HeapReAlloc', 'LoadLibraryW', 'LoadResource', 'LockResource',
         'MulDiv', 'MultiByteToWideChar', 'ReadFile', 'ReleaseMutex', 'SetFilePointer', 'SetThreadLocale', 'SetThreadUILanguage',
-        'SizeofResource', 'Sleep', 'WideCharToMultiByte', 'WriteConsoleW', 'WriteFile'
+        'SizeofResource', 'Sleep', 'WideCharToMultiByte', 'WriteConsoleA', 'WriteConsoleW', 'WriteFile'
     ],
     'USER32.DLL': [
         'AdjustWindowRectEx', 'BeginPaint', 'CreateWindowExW', 'DefWindowProcW', 'DestroyWindow', 'DispatchMessageW', 'DrawTextW',
@@ -113,7 +124,8 @@ libraries = {
         'InvalidateRect', 'IsIconic', 'KillTimer', 'LoadAcceleratorsW', 'LoadBitmapW', 'LoadCursorW', 'LoadIconW', 'LoadImageW',
         'LoadStringW', 'MessageBeep', 'MessageBoxW', 'MonitorFromWindow', 'PeekMessageW', 'PostQuitMessage', 'RegisterClassExW',
         'ReleaseCapture', 'SendMessageW', 'SetCapture', 'SetForegroundWindow', 'SetMenu', 'SetTimer', 'SetWindowPos',
-        'SetWindowTextW', 'ShowWindow', 'TranslateAcceleratorW', 'TranslateMessage', 'UpdateWindow', 'wsprintfW', 'wvsprintfW'
+        'SetWindowTextW', 'ShowWindow', 'TranslateAcceleratorW', 'TranslateMessage', 'UpdateWindow', 'wsprintfA', 'wvsprintfA',
+        'wsprintfW', 'wvsprintfW'
     ],
     'GDI32.DLL': [
         'BeginPath', 'BitBlt', 'CloseFigure', 'CreateBitmap', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreatePen',
@@ -136,6 +148,9 @@ libraries = {
     'WINMM.DLL': [
         'PlaySoundW'
     ],
+    'WS2_32.DLL': [
+        'freeaddrinfo', 'getaddrinfo', 'WSACleanup', 'WSAStartup', 'closesocket', 'connect', 'recv', 'send', 'shutdown', 'socket'
+    ],
     'gdiplus.dll': [
         'GdipCreateFromHDC', 'GdipCreatePen1', 'GdipCreateSolidFill', 'GdipDeleteBrush', 'GdipDeleteGraphics', 'GdipDeletePen',
         'GdipDrawRectangle', 'GdipDrawRectangleI', 'GdipFillRectangle', 'GdipFillRectangleI', 'GdipGraphicsClear', 'GdipSetSmoothingMode',
@@ -156,14 +171,6 @@ if arch == 'x64':
     libraries['USER32.DLL'].extend(['SetWindowLongPtrW', 'GetWindowLongPtrW', 'SetWindowLongPtrW', 'GetWindowLongPtrW'])
 else:
     libraries['USER32.DLL'].extend(['SetWindowLongW', 'GetWindowLongW', 'SetWindowLongW', 'GetWindowLongW'])
-
-registers = ['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'ebp', 'esp']
-if arch == 'x64':
-    registers.extend([
-        'rax', 'rbx', 'rcx', 'rdx', 'rsi', 'rdi', 'rbp', 'rsp',
-        'r8', 'r8d', 'r9', 'r9d', 'r10', 'r10d', 'r11', 'r11d',
-        'r12', 'r12d', 'r13', 'r13d', 'r14', 'r14d', 'r15', 'r15d'
-    ])
 
 text = ''
 data = ''
@@ -220,10 +227,10 @@ for filename in assembly_files:
         output = re.sub(r'\[LC([0-9]+)', '[' + modulename + '_LC\\1', output)
         output = re.sub(r'\nLC([0-9]+)', '\n' + modulename + '_LC\\1', output)
 
-        for register in registers:
-            output = output.replace('shl ' + register + '\n', 'shl ' + register + ', 1\n')
-            output = output.replace('shr ' + register + '\n', 'shr ' + register + ', 1\n')
-            output = output.replace('sar ' + register + '\n', 'sar ' + register + ', 1\n')
+        output = re.sub(r'shl ([^,\n]+)\n', 'shl \\1, 1\n', output)
+        output = re.sub(r'shr ([^,\n]+)\n', 'shr \\1, 1\n', output)
+        output = re.sub(r'sal ([^,\n]+)\n', 'sal \\1, 1\n', output)
+        output = re.sub(r'sar ([^,\n]+)\n', 'sar \\1, 1\n', output)
 
         isText = True
         for line in output.split('\n'):
@@ -425,7 +432,7 @@ _data_section_aligned_size equ $ - _data_section
     (arch == 'x64' and '0x020B' or '0x010B'),
     (arch == 'x64' and '_start' or '__start'),
     (arch != 'x64' and 'dd _data_section - _base ; BaseOfData' or ''),
-    dp, conf == 'release' and 2 or 3, dp, dp, dp, dp,
+    dp, subsystem == 'console' and 3 or 2, dp, dp, dp, dp,
     text, data, importTable)
 )
 
