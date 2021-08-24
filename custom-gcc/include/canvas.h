@@ -27,6 +27,15 @@ typedef enum CanvasRenderer {
     CANVAS_RENDERER_DIRECT2D
 } CanvasRenderer;
 
+typedef enum CanvasAlign {
+    CANVAS_ALIGN_TOP = 0,
+    CANVAS_ALIGN_LEFT = 0,
+    CANVAS_ALIGN_CENTER = 1,
+    CANVAS_ALIGN_RIGHT = 2,
+    CANVAS_ALIGN_VCENTER = 4,
+    CANVAS_ALIGN_BOTTOM = 8
+} CanvasAlign;
+
 typedef struct Canvas {
     CanvasRenderer renderer;
     int32_t width;
@@ -43,13 +52,11 @@ typedef struct Canvas {
     ID2D1HwndRenderTarget *render_target;
 } Canvas;
 
-Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
-
 typedef int32_t (__stdcall *_D2D1CreateFactory)(uint32_t factoryType, GUID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
 
 typedef int32_t (__stdcall *_DWriteCreateFactory)(uint32_t factoryType, GUID *riid, IDWriteFactory **factory);
 
-void Canvas_Init(Canvas *canvas, HWND hwnd, CanvasRenderer renderer);
+Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
 
 void Canvas_Free(Canvas *canvas);
 
@@ -63,7 +70,7 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, uint32_t color, float s
 
 void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, uint32_t color);
 
-void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, uint32_t align, uint32_t color);
+void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, uint32_t color);
 
 float Canvas_ParsePathFloat(char **string);
 
