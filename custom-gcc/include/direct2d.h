@@ -177,7 +177,8 @@ typedef struct ID2D1RenderTargetVtbl {
     uint8_t padding4[3 * sizeof(void *)];
 
     void (__stdcall *DrawText)(ID2D1RenderTarget *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat, const D2D1_RECT_F *layoutRect, ID2D1Brush *defaultForegroundBrush, uint32_t options, uint32_t measuringMode);
-    uint8_t padding5[19 * sizeof(void *)];
+    void (__stdcall *DrawTextLayout)(ID2D1RenderTarget *This, D2D1_POINT_2F origin, IDWriteTextLayout *textLayout, ID2D1Brush *defaultForegroundBrush, uint32_t options);
+    uint8_t padding5[18 * sizeof(void *)];
 
     void (__stdcall *Clear)(ID2D1RenderTarget *This, const D2D1_COLOR_F *clearColor);
     void (__stdcall *BeginDraw)(ID2D1RenderTarget *This);
@@ -197,6 +198,8 @@ typedef struct ID2D1RenderTargetVtbl {
     ((ID2D1RenderTarget *)This)->lpVtbl->FillGeometry((ID2D1RenderTarget *)This, geometry, brush, opacityBrush)
 #define ID2D1RenderTarget_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
     ((ID2D1RenderTarget *)This)->lpVtbl->DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode)
+#define ID2D1RenderTarget_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
+    ((ID2D1RenderTarget *)This)->lpVtbl->DrawTextLayout((ID2D1RenderTarget *)This, origin, textLayout, defaultForegroundBrush, options)
 #define ID2D1RenderTarget_Clear(This, clearColor) ((ID2D1RenderTarget *)This)->lpVtbl->Clear((ID2D1RenderTarget *)This, clearColor)
 #define ID2D1RenderTarget_BeginDraw(This) ((ID2D1RenderTarget *)This)->lpVtbl->BeginDraw((ID2D1RenderTarget *)This)
 #define ID2D1RenderTarget_EndDraw(This, tag1, tag2) ((ID2D1RenderTarget *)This)->lpVtbl->EndDraw((ID2D1RenderTarget *)This, tag1, tag2)
