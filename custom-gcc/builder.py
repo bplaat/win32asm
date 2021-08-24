@@ -32,10 +32,10 @@ for arg in sys.argv[1:]:
         libs.append('map')
     if arg == '--dpi':
         libs.append('dpi')
-    if arg == '--henk':
-        libs.append('henk')
-    if arg == '--hans':
-        libs.append('hans')
+    if arg == '--canvas':
+        libs.append('canvas')
+    if arg == '--http':
+        libs.append('http')
         libs.append('map')
     if arg == '--jan':
         libs.append('jan')
@@ -88,10 +88,10 @@ for file in os.listdir(path + '/src'):
     source_files.append(path + '/src/' + file)
 for file in libs:
     source_files.append(script_folder + '/src/' + file + '.c')
-for file in source_files:
+for index, file in enumerate(source_files):
     if file.endswith('.c'):
         file = file[:-2]
-        filename = os.path.basename(file)
+        filename = os.path.basename(file) + str(index)
         if conf == 'release':
             if arch == 'x64':
                 if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -DWIN64 ' + file + '.c -o ' + path + '/target/x64/release/' + filename + '.s -S -masm=intel') != 0:
@@ -183,8 +183,8 @@ symbols = []
 imports = []
 
 # Process GNU assembly style files
-for filename in assembly_files:
-    modulename = os.path.splitext(os.path.basename(filename))[0]
+for index, filename in enumerate(assembly_files):
+    modulename = os.path.splitext(os.path.basename(filename))[0] + str(index)
     with open(filename, 'r') as file:
         output = file.read()
         output = output.replace('\n\t', '\n    ')

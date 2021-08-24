@@ -1,5 +1,5 @@
 #include "win32.h"
-#include "hans.h"
+#include "http.h"
 
 void _start(void) {
     Uri *uri = Uri_New("http://www.plaatsoft.nl/android/coinlist/"); // http://www.example.com

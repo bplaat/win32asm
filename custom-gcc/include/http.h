@@ -1,5 +1,5 @@
-#ifndef HANS_H
-#define HANS_H
+#ifndef HTTP_H
+#define HTTP_H
 
 #include "win32.h"
 #include "map.h"
