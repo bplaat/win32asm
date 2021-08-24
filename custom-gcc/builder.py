@@ -26,6 +26,10 @@ for arg in sys.argv[1:]:
 
     if arg.startswith('--lib='):
         libs.append(arg[len('--lib='):])
+    if arg == '--list':
+        libs.append('list')
+    if arg == '--map':
+        libs.append('map')
     if arg == '--dpi':
         libs.append('dpi')
     if arg == '--henk':
