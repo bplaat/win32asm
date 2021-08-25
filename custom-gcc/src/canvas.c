@@ -108,6 +108,32 @@ void Canvas_EndDraw(Canvas *canvas) {
     }
 }
 
+void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
+        if ((color >> 24) == 0xff) {
+            RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+            FillRect(canvas->data.gdi.buffer_hdc, &real_rect, brush);
+        } else {
+            RECT real_rect = { 0, 0, rect->width, rect->height };
+            FillRect(canvas->data.gdi.alpha_hdc, &real_rect, brush);
+            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+            GdiAlphaBlend(canvas->data.gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->data.gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+        }
+        DeleteObject(brush);
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
+        ID2D1Brush *brush;
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->data.d2d.render_target, &color_float, NULL, &brush);
+        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+        ID2D1RenderTarget_FillRectangle(canvas->data.d2d.render_target, &real_rect, brush);
+        IUnknown_Release(brush);
+    }
+}
+
 void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         HPEN pen = CreatePen(PS_SOLID, stroke_width, color & 0x00ffffff);
@@ -134,32 +160,6 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, floa
         ID2D1RenderTarget_CreateSolidColorBrush(canvas->data.d2d.render_target, &color_float, NULL, &brush);
         D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
         ID2D1RenderTarget_DrawRectangle(canvas->data.d2d.render_target, &real_rect, brush, stroke_width, NULL);
-        IUnknown_Release(brush);
-    }
-}
-
-void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color) {
-    if (canvas->renderer == CANVAS_RENDERER_GDI) {
-        HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
-        if ((color >> 24) == 0xff) {
-            RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-            FillRect(canvas->data.gdi.buffer_hdc, &real_rect, brush);
-        } else {
-            RECT real_rect = { 0, 0, rect->width, rect->height };
-            FillRect(canvas->data.gdi.alpha_hdc, &real_rect, brush);
-            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-            GdiAlphaBlend(canvas->data.gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->data.gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
-        }
-        DeleteObject(brush);
-    }
-
-    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
-            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
-        ID2D1Brush *brush;
-        ID2D1RenderTarget_CreateSolidColorBrush(canvas->data.d2d.render_target, &color_float, NULL, &brush);
-        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-        ID2D1RenderTarget_FillRectangle(canvas->data.d2d.render_target, &real_rect, brush);
         IUnknown_Release(brush);
     }
 }
@@ -232,12 +232,8 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
 
         IDWriteTextLayout *text_layout;
         IDWriteFactory_CreateTextLayout(canvas->data.d2d.dwrite_factory, text, length, text_format, rect->width, rect->height == 0 ? canvas->height * 2 : rect->height, &text_layout);
-        if (font->underline) {
-            IDWriteTextLayout_SetUnderline(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
-        }
-        if (font->line_through) {
-            IDWriteTextLayout_SetStrikethrough(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
-        }
+        if (font->underline) IDWriteTextLayout_SetUnderline(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
+        if (font->line_through) IDWriteTextLayout_SetStrikethrough(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
         if (rect->height == 0) {
             DWRITE_TEXT_METRICS metrics;
             IDWriteTextLayout_GetMetrics(text_layout, &metrics);
