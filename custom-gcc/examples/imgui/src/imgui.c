@@ -7,46 +7,114 @@ typedef enum JanOrientation {
 } JanOrientation;
 
 typedef struct Jan {
+    int32_t width;
+    int32_t height;
     Canvas *canvas;
     JanOrientation orientation;
-    CanvasRect rect;
+    CanvasRect content_rect;
+    CanvasRect scroll_rect;
+
+    struct {
+        int32_t mousewheel_y;
+    } io;
 } Jan;
 
+Jan *Jan_New(HWND hwnd) {
+    Jan *jan = malloc(sizeof(Jan));
+    jan->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DEFAULT);
+    jan->io.mousewheel_y = 0;
+    return jan;
+}
+
+void Jan_Free(Jan *jan) {
+    Canvas_Free(jan->canvas);
+}
+
+void Jan_Resize(Jan *jan, int32_t width, int32_t height) {
+    jan->width = width;
+    jan->height = height;
+    Canvas_Resize(jan->canvas, jan->width, jan->height);
+}
+
+void Jan_BeginDraw(Jan *jan) {
+    Canvas_BeginDraw(jan->canvas);
+    jan->orientation = JAN_ORIENTATION_VERTICAL;
+    jan->content_rect = (CanvasRect){ 0, 0, jan->width, jan->height };
+}
+
+void Jan_EndDraw(Jan *jan) {
+    Canvas_EndDraw(jan->canvas);
+    jan->io.mousewheel_y = 0;
+}
+
 void Jan_Label(Jan *jan, wchar_t *text, CanvasFont *font, CanvasColor color) {
-    CanvasRect rect = { jan->rect.x, jan->rect.y, jan->rect.width, 0 };
+    CanvasRect rect = { jan->content_rect.x, jan->content_rect.y, jan->content_rect.width, 0 };
     Canvas_DrawText(jan->canvas, text, -1, &rect, font, CANVAS_ALIGN_DEFAULT, color);
     if (jan->orientation == JAN_ORIENTATION_VERTICAL) {
-        jan->rect.y += rect.height;
+        jan->content_rect.y += rect.height;
+        jan->content_rect.height -= rect.height;
     }
 }
 
 void Jan_Gap(Jan *jan, float size) {
     if (jan->orientation == JAN_ORIENTATION_HORIZONTAL) {
-        jan->rect.x += size;
+        jan->content_rect.x += size;
+        jan->content_rect.width -= size;
     }
     if (jan->orientation == JAN_ORIENTATION_VERTICAL) {
-        jan->rect.y += size;
+        jan->content_rect.y += size;
+        jan->content_rect.height -= size;
     }
 }
 
 void Jan_BeginPadding(Jan *jan, float top, float right, float bottom, float left) {
-    jan->rect.x += left;
-    jan->rect.y += top;
-    jan->rect.width -= left + right;
-    jan->rect.height -= top + bottom;
+    jan->content_rect.x += left;
+    jan->content_rect.y += top;
+    jan->content_rect.width -= left + right;
+    jan->content_rect.height -= top + bottom;
 }
 
 void Jan_EndPadding(Jan *jan, float top, float right, float bottom, float left) {
     if (jan->orientation == JAN_ORIENTATION_HORIZONTAL) {
-        jan->rect.x += left;
-        jan->rect.y -= top;
+        jan->content_rect.x += left;
+        jan->content_rect.y -= top;
+        jan->content_rect.height += top + bottom;
     }
     if (jan->orientation == JAN_ORIENTATION_VERTICAL) {
-        jan->rect.x -= left;
-        jan->rect.y += top;
+        jan->content_rect.x -= left;
+        jan->content_rect.width += left + right;
+        jan->content_rect.y += top;
     }
-    jan->rect.width += left + right;
-    jan->rect.height += top + bottom;
+}
+
+int32_t scroll_width = 16;
+
+void Jan_BeginScroll(Jan *jan, int32_t *scroll_y) {
+    jan->scroll_rect = jan->content_rect;
+
+    *scroll_y += jan->io.mousewheel_y;
+    if (*scroll_y < 0) *scroll_y = 0;
+    // if (*scroll_y + viewport_height> content_height) *scroll_y = content_height - viewport_height;
+
+    jan->content_rect.y -= *scroll_y;
+    jan->content_rect.width -= scroll_width;
+    Canvas_Clip(jan->canvas, &jan->scroll_rect);
+}
+
+void Jan_EndScroll(Jan *jan, int32_t *scroll_y) {
+    Canvas_Clip(jan->canvas, NULL);
+
+    int32_t viewport_height = jan->scroll_rect.height;
+    int32_t content_height = (jan->content_rect.y + *scroll_y) - jan->scroll_rect.y;
+
+    CanvasRect rect = { jan->scroll_rect.x + jan->scroll_rect.width - scroll_width,
+        jan->scroll_rect.y, scroll_width, jan->scroll_rect.height };
+    Canvas_FillRect(jan->canvas, &rect, CANVAS_RGBA(255, 255, 255, 64));
+
+    CanvasRect thumb_rect = { jan->scroll_rect.x + jan->scroll_rect.width - scroll_width,
+        jan->scroll_rect.y + viewport_height * *scroll_y / content_height,
+        scroll_width, viewport_height * viewport_height / content_height };
+    Canvas_FillRect(jan->canvas, &thumb_rect, CANVAS_RGBA(255, 255, 255, 128));
 }
 
 // ###########################################################
@@ -67,6 +135,7 @@ typedef struct WindowData {
     uint32_t width;
     uint32_t height;
     Jan *jan;
+    int32_t scroll_y;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
@@ -79,8 +148,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->width = WINDOW_WIDTH;
         window->height = WINDOW_HEIGHT;
 
-        window->jan = malloc(sizeof(Jan));
-        window->jan->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DEFAULT);
+        window->jan = Jan_New(hwnd);
+        window->scroll_y = 0;
         return 0;
     }
 
@@ -88,7 +157,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Save new window size
         window->width = LOWORD(lParam);
         window->height = HIWORD(lParam);
-        Canvas_Resize(window->jan->canvas, window->width, window->height);
+        Jan_Resize(window->jan, window->width, window->height);
         return 0;
     }
 
@@ -106,22 +175,29 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         return true;
     }
 
+    if (msg == WM_MOUSEWHEEL) {
+        window->jan->io.mousewheel_y -= GET_WHEEL_DELTA_WPARAM(wParam);
+        InvalidateRect(hwnd, NULL, true);
+        return 0;
+    }
+
     if (msg == WM_PAINT) {
         PAINTSTRUCT paint_struct;
         BeginPaint(hwnd, &paint_struct);
-        Canvas_BeginDraw(window->jan->canvas);
+        Jan_BeginDraw(window->jan);
 
-        window->jan->orientation = JAN_ORIENTATION_VERTICAL;
-        window->jan->rect = (CanvasRect){ 0, 0, window->width, window->height };
-        Canvas_FillRect(window->jan->canvas, &window->jan->rect, CANVAS_HEX(0x222222));
+        Canvas_FillRect(window->jan->canvas, &window->jan->content_rect, CANVAS_HEX(0x222222));
 
         Jan_BeginPadding(window->jan, 16, 16, 16, 16);
         Jan_Label(window->jan, L"Lorem Ipsum", &(CanvasFont){ .name = L"Segoe UI", .size = 20, .weight = CANVAS_FONT_WEIGHT_BOLD }, CANVAS_RGB(255, 255, 255));
-        Jan_Gap(window->jan, 20);
+        Jan_EndPadding(window->jan, 16, 16, 16, 16);
+
+        Jan_BeginScroll(window->jan, &window->scroll_y);
+        Jan_BeginPadding(window->jan, 16, 16, 16, 16);
 
         CanvasFont font = { .name = L"Georgia", .size = 16 };
         CanvasFont italic_font = { .name = L"Georgia", .size = 16, .italic = true };
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 5; i++) {
             Jan_Label(window->jan, L"Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Donec odio. Quisque volutpat mattis eros. Nullam malesuada erat ut turpis. Suspendisse urna nibh, viverra non, semper suscipit, posuere a, pede.", &font, CANVAS_RGB(255, 255, 255));
             Jan_Gap(window->jan, 16);
             Jan_Label(window->jan, L"Donec nec justo eget felis facilisis fermentum. Aliquam porttitor mauris sit amet orci. Aenean dignissim pellentesque felis.", &font, CANVAS_RGB(255, 255, 255));
@@ -135,15 +211,17 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
         Jan_Label(window->jan, L"Written by Bastiaan van der Plaat", &italic_font, CANVAS_HEX(0x888888));
 
-        Canvas_EndDraw(window->jan->canvas);
+        Jan_EndPadding(window->jan, 16, 16, 16, 16);
+        Jan_EndScroll(window->jan, &window->scroll_y);
+
+        Jan_EndDraw(window->jan);
         EndPaint(hwnd, &paint_struct);
         return 0;
     }
 
     if (msg == WM_DESTROY) {
         // Free window data
-        Canvas_Free(window->jan->canvas);
-        free(window->jan);
+        Jan_Free(window->jan);
         free(window);
 
         // Close process
