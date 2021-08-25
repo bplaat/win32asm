@@ -108,6 +108,27 @@ void Canvas_EndDraw(Canvas *canvas) {
     }
 }
 
+void Canvas_Clip(Canvas *canvas, CanvasRect *rect) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        if (rect != NULL) {
+            HRGN clip_region = CreateRectRgn(rect->x, rect->y, rect->x + rect->width, rect->y + rect->height);
+            SelectClipRgn(canvas->data.gdi.buffer_hdc, clip_region);
+            DeleteObject(clip_region);
+        } else {
+            SelectClipRgn(canvas->data.gdi.buffer_hdc, NULL);
+        }
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        if (rect != NULL) {
+            D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+            ID2D1RenderTarget_PushAxisAlignedClip(canvas->data.d2d.render_target, &real_rect, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        } else {
+            ID2D1RenderTarget_PopAxisAlignedClip(canvas->data.d2d.render_target);
+        }
+    }
+}
+
 void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
