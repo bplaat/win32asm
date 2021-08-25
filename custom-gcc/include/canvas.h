@@ -81,9 +81,9 @@ void Canvas_BeginDraw(Canvas *canvas);
 
 void Canvas_EndDraw(Canvas *canvas);
 
-void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width);
-
 void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
+
+void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width);
 
 void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, CanvasColor color);
 

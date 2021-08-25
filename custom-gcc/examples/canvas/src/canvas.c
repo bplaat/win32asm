@@ -88,18 +88,15 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         CanvasRect rect1 = { 100, 100, 200, 200 };
         Canvas_FillRect(window->canvas, &rect1, CANVAS_RGBA(255, 0, 0, 128));
-
-        CanvasRect icon_rect1 = { 100, 100, 200, 200 };
-        Canvas_FillPath(window->canvas, &icon_rect1, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", CANVAS_RGBA(255, 255, 255, 128));
+        Canvas_FillPath(window->canvas, &rect1, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", CANVAS_RGBA(255, 255, 255, 128));
 
         CanvasRect rect2 = { 200, 200, 200, 200 };
         Canvas_FillRect(window->canvas, &rect2, CANVAS_RGBA(0, 255, 0, 128));
+        Canvas_FillPath(window->canvas, &rect2, 24, 24, "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z", CANVAS_RGBA(255, 255, 255, 128));
 
         CanvasRect rect3 = { 300, 300, 200, 200 };
         Canvas_FillRect(window->canvas, &rect3, CANVAS_RGBA(0, 0, 255, 128));
-
-        CanvasRect icon_rect2 = { 300, 300, 200, 200 };
-        Canvas_FillPath(window->canvas, &icon_rect2, 24, 24, "M2,2H11V11H2V2M9,4H4V9H9V4M22,13V22H13V13H22M15,20H20V15H15V20M16,8V11H13V8H16M11,16H8V13H11V16Z", CANVAS_RGBA(255, 255, 255, 128));
+        Canvas_FillPath(window->canvas, &rect3, 24, 24, "M2,2H11V11H2V2M9,4H4V9H9V4M22,13V22H13V13H22M15,20H20V15H15V20M16,8V11H13V8H16M11,16H8V13H11V16Z", CANVAS_RGBA(255, 255, 255, 128));
 
         CanvasFont small_font = { .name = L"Georgia", .size = 16 };
         CanvasRect text_rect0 = { 16, 16, window->width - 32, window->height - 32 };
