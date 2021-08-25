@@ -175,24 +175,24 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
         SelectObject(canvas->data.gdi.buffer_hdc, hfont);
 
         RECT measure_rect = { 0, 0, rect->width, 0 };
-        if (rect->height == 0 || (align & CANVAS_ALIGN_VCENTER) != 0 || (align & CANVAS_ALIGN_BOTTOM) != 0) {
+        if (rect->height == 0 || (align & CANVAS_ALIGN_VERTICAL_CENTER) != 0 || (align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) {
             DrawTextW(canvas->data.gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
             if (rect->height == 0) rect->height = measure_rect.bottom;
         }
 
         int32_t options = DT_WORDBREAK;
         int32_t y = 0;
-        if ((align & CANVAS_ALIGN_CENTER) != 0) {
+        if ((align & CANVAS_ALIGN_HORIZONTAL_CENTER) != 0) {
             options |= DT_CENTER;
         }
-        if ((align & CANVAS_ALIGN_RIGHT) != 0) {
+        if ((align & CANVAS_ALIGN_HORIZONTAL_RIGHT) != 0) {
             options |= DT_RIGHT;
         }
-        if ((align & CANVAS_ALIGN_VCENTER) != 0) {
+        if ((align & CANVAS_ALIGN_VERTICAL_CENTER) != 0) {
             options |= DT_VCENTER;
             y = (rect->height - measure_rect.bottom) / 2;
         }
-        if ((align & CANVAS_ALIGN_BOTTOM) != 0) {
+        if ((align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) {
             options |= DT_BOTTOM;
             y = rect->height - measure_rect.bottom;
         }
@@ -225,10 +225,10 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
         IDWriteFactory_CreateTextFormat(canvas->data.d2d.dwrite_factory, font->name, NULL, weight,
             font->italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
             (font->size / 72) * 96, L"", &text_format);
-        if ((align & CANVAS_ALIGN_CENTER) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
-        if ((align & CANVAS_ALIGN_RIGHT) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
-        if ((align & CANVAS_ALIGN_VCENTER) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-        if ((align & CANVAS_ALIGN_BOTTOM) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+        if ((align & CANVAS_ALIGN_HORIZONTAL_CENTER) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
+        if ((align & CANVAS_ALIGN_HORIZONTAL_RIGHT) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
+        if ((align & CANVAS_ALIGN_VERTICAL_CENTER) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        if ((align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
 
         IDWriteTextLayout *text_layout;
         IDWriteFactory_CreateTextLayout(canvas->data.d2d.dwrite_factory, text, length, text_format, rect->width, rect->height == 0 ? canvas->height * 2 : rect->height, &text_layout);

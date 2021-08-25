@@ -4,6 +4,12 @@
 #include "win32.h"
 #include "direct2d.h"
 
+typedef enum CanvasRenderer {
+    CANVAS_RENDERER_DEFAULT,
+    CANVAS_RENDERER_GDI,
+    CANVAS_RENDERER_DIRECT2D
+} CanvasRenderer;
+
 #define CANVAS_RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | (0xff << 24))
 #define CANVAS_RGBA(r, g, b, a) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | ((a & 0xff) << 24))
 #define CANVAS_HEX(x) (((x >> 16) & 0xff) | (((x >> 8) & 0xff) << 8) | ((x & 0xff) << 16) | (0xff << 24))
@@ -18,31 +24,28 @@ typedef struct CanvasRect {
     float height;
 } CanvasRect;
 
-#define CANVAS_FONT_WEIGHT_NORMAL 400
-#define CANVAS_FONT_WEIGHT_BOLD 700
+typedef enum CanvasFontWeight {
+    CANVAS_FONT_WEIGHT_NORMAL,
+    CANVAS_FONT_WEIGHT_BOLD
+} CanvasFontWeight;
 
 typedef struct CanvasFont {
     wchar_t *name;
     float size;
-    uint32_t weight;
+    CanvasFontWeight weight;
     bool italic;
     bool underline;
     bool line_through;
 } CanvasFont;
 
-typedef enum CanvasRenderer {
-    CANVAS_RENDERER_DEFAULT,
-    CANVAS_RENDERER_GDI,
-    CANVAS_RENDERER_DIRECT2D
-} CanvasRenderer;
-
 typedef enum CanvasAlign {
-    CANVAS_ALIGN_TOP = 0,
-    CANVAS_ALIGN_LEFT = 0,
-    CANVAS_ALIGN_CENTER = 1,
-    CANVAS_ALIGN_RIGHT = 2,
-    CANVAS_ALIGN_VCENTER = 4,
-    CANVAS_ALIGN_BOTTOM = 8
+    CANVAS_ALIGN_DEFAULT = 0,
+    CANVAS_ALIGN_HORIZONTAL_LEFT = 0,
+    CANVAS_ALIGN_HORIZONTAL_CENTER = 1,
+    CANVAS_ALIGN_HORIZONTAL_RIGHT = 2,
+    CANVAS_ALIGN_VERTICAL_TOP = 0,
+    CANVAS_ALIGN_VERTICAL_CENTER = 4,
+    CANVAS_ALIGN_VERTICAL_BOTTOM = 8
 } CanvasAlign;
 
 typedef struct Canvas {
