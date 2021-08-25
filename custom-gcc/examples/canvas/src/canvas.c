@@ -86,6 +86,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         CanvasRect background_rect = { 0, 0, window->width, window->height };
         Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
+        Canvas_Clip(window->canvas, &(CanvasRect){ 32, 32, window->width - 64, window->height - 64 });
+
         CanvasRect rect1 = { 100, 100, 200, 200 };
         Canvas_FillRect(window->canvas, &rect1, CANVAS_RGBA(255, 0, 0, 128));
         Canvas_FillPath(window->canvas, &rect1, 24, 24, "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", CANVAS_RGBA(255, 255, 255, 128));
@@ -130,6 +132,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             Canvas_DrawText(window->canvas, L"Direct2D backend", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGBA(255, 255, 0, 200));
         }
 
+        Canvas_Clip(window->canvas, NULL);
         Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);
         return 0;

@@ -84,6 +84,8 @@ void Canvas_BeginDraw(Canvas *canvas);
 
 void Canvas_EndDraw(Canvas *canvas);
 
+void Canvas_Clip(Canvas *canvas, CanvasRect *rect);
+
 void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
 
 void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width);

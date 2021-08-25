@@ -161,6 +161,8 @@ typedef struct ID2D1RenderTarget ID2D1RenderTarget;
 
 #define DWRITE_MEASURING_MODE_NATURAL 0
 
+#define D2D1_ANTIALIAS_MODE_PER_PRIMITIVE 0
+
 typedef struct ID2D1RenderTargetVtbl {
     ID2D1ResourceVtbl Base;
     uint8_t padding1[4 * sizeof(void *)];
@@ -178,8 +180,10 @@ typedef struct ID2D1RenderTargetVtbl {
 
     void (__stdcall *DrawText)(ID2D1RenderTarget *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat, const D2D1_RECT_F *layoutRect, ID2D1Brush *defaultForegroundBrush, uint32_t options, uint32_t measuringMode);
     void (__stdcall *DrawTextLayout)(ID2D1RenderTarget *This, D2D1_POINT_2F origin, IDWriteTextLayout *textLayout, ID2D1Brush *defaultForegroundBrush, uint32_t options);
-    uint8_t padding5[18 * sizeof(void *)];
+    uint8_t padding5[16 * sizeof(void *)];
 
+    void (__stdcall *PushAxisAlignedClip)(ID2D1RenderTarget *This, const D2D1_RECT_F *clip_rect, uint32_t antialias_mode);
+    void (__stdcall *PopAxisAlignedClip)(ID2D1RenderTarget *This);
     void (__stdcall *Clear)(ID2D1RenderTarget *This, const D2D1_COLOR_F *clearColor);
     void (__stdcall *BeginDraw)(ID2D1RenderTarget *This);
     int32_t (__stdcall *EndDraw)(ID2D1RenderTarget *This, void *tag1, void *tag2);
@@ -200,6 +204,8 @@ typedef struct ID2D1RenderTargetVtbl {
     ((ID2D1RenderTarget *)This)->lpVtbl->DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode)
 #define ID2D1RenderTarget_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
     ((ID2D1RenderTarget *)This)->lpVtbl->DrawTextLayout((ID2D1RenderTarget *)This, origin, textLayout, defaultForegroundBrush, options)
+#define ID2D1RenderTarget_PushAxisAlignedClip(This, clip_rect, antialias_mode) ((ID2D1RenderTarget *)This)->lpVtbl->PushAxisAlignedClip((ID2D1RenderTarget *)This, clip_rect, antialias_mode)
+#define ID2D1RenderTarget_PopAxisAlignedClip(This) ((ID2D1RenderTarget *)This)->lpVtbl->PopAxisAlignedClip((ID2D1RenderTarget *)This)
 #define ID2D1RenderTarget_Clear(This, clearColor) ((ID2D1RenderTarget *)This)->lpVtbl->Clear((ID2D1RenderTarget *)This, clearColor)
 #define ID2D1RenderTarget_BeginDraw(This) ((ID2D1RenderTarget *)This)->lpVtbl->BeginDraw((ID2D1RenderTarget *)This)
 #define ID2D1RenderTarget_EndDraw(This, tag1, tag2) ((ID2D1RenderTarget *)This)->lpVtbl->EndDraw((ID2D1RenderTarget *)This, tag1, tag2)
