@@ -9,6 +9,8 @@
 #define CANVAS_HEX(x) (((x >> 16) & 0xff) | (((x >> 8) & 0xff) << 8) | ((x & 0xff) << 16) | (0xff << 24))
 #define CANVAS_HEXA(x) (((x >> 24) & 0xff) | (((x >> 16) & 0xff) << 8) | (((x >> 8) & 0xff) << 16) | ((x & 0xff) << 24))
 
+typedef uint32_t CanvasColor;
+
 typedef struct CanvasRect {
     float x;
     float y;
@@ -16,9 +18,16 @@ typedef struct CanvasRect {
     float height;
 } CanvasRect;
 
+#define CANVAS_FONT_WEIGHT_NORMAL 400
+#define CANVAS_FONT_WEIGHT_BOLD 700
+
 typedef struct CanvasFont {
     wchar_t *name;
     float size;
+    uint32_t weight;
+    bool italic;
+    bool underline;
+    bool line_through;
 } CanvasFont;
 
 typedef enum CanvasRenderer {
@@ -41,15 +50,21 @@ typedef struct Canvas {
     int32_t width;
     int32_t height;
 
-    HDC hdc;
-    HDC buffer_hdc;
-    HBITMAP buffer_bitmap;
-    HDC alpha_hdc;
-    HBITMAP alpha_bitmap;
+    union {
+        struct {
+            HDC hdc;
+            HDC buffer_hdc;
+            HBITMAP buffer_bitmap;
+            HDC alpha_hdc;
+            HBITMAP alpha_bitmap;
+        } gdi;
 
-    ID2D1Factory *d2d_factory;
-    IDWriteFactory *dwrite_factory;
-    ID2D1HwndRenderTarget *render_target;
+        struct {
+            ID2D1Factory *d2d_factory;
+            IDWriteFactory *dwrite_factory;
+            ID2D1HwndRenderTarget *render_target;
+        } d2d;
+    } data;
 } Canvas;
 
 typedef int32_t (__stdcall *_D2D1CreateFactory)(uint32_t factoryType, GUID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
@@ -66,14 +81,14 @@ void Canvas_BeginDraw(Canvas *canvas);
 
 void Canvas_EndDraw(Canvas *canvas);
 
-void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, uint32_t color, float stroke_width);
+void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width);
 
-void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, uint32_t color);
+void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
 
-void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, uint32_t color);
+void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, CanvasColor color);
 
 float Canvas_ParsePathFloat(char **string);
 
-void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewport_width, int32_t viewport_height, char *path, uint32_t color);
+void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewport_width, int32_t viewport_height, char *path, CanvasColor color);
 
 #endif

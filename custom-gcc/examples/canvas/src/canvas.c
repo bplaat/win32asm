@@ -101,12 +101,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         CanvasRect icon_rect2 = { 300, 300, 200, 200 };
         Canvas_FillPath(window->canvas, &icon_rect2, 24, 24, "M2,2H11V11H2V2M9,4H4V9H9V4M22,13V22H13V13H22M15,20H20V15H15V20M16,8V11H13V8H16M11,16H8V13H11V16Z", CANVAS_RGBA(255, 255, 255, 128));
 
-        CanvasFont small_font = { L"Georgia", 16 };
+        CanvasFont small_font = { .name = L"Georgia", .size = 16 };
         CanvasRect text_rect0 = { 16, 16, window->width - 32, window->height - 32 };
         Canvas_DrawText(window->canvas, L"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur sed massa eu risus egestas ornare viverra in nisi. Aenean imperdiet eros sit amet enim ornare fringilla. Praesent iaculis mauris vitae ante commodo tincidunt. Morbi efficitur, lorem vel auctor dignissim, turpis erat rhoncus tortor, vitae suscipit nunc sem bibendum mauris. Mauris vitae tortor at dui rhoncus ullamcorper. Maecenas quis sagittis turpis. Donec a nisl turpis. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nulla et erat lorem. Integer a neque at nisl sagittis rhoncus rutrum a metus. Aenean sed urna in lorem auctor lobortis. Suspendisse faucibus rhoncus augue vitae blandit. Maecenas tincidunt id nunc vel tempor. Morbi porta ligula finibus odio gravida iaculis.",
             -1, &text_rect0, &small_font, CANVAS_ALIGN_BOTTOM | CANVAS_ALIGN_CENTER, CANVAS_RGBA(255, 255, 255, 128));
 
-        CanvasFont line_font = { L"Segoe UI", 18 };
+        CanvasFont line_font = { .name = L"Segoe UI", .size = 18, .weight = CANVAS_FONT_WEIGHT_BOLD, .italic = true, .underline = true, .line_through = true };
         CanvasRect line_rect = { 16, 16, window->width - 32, 0 };
         Canvas_DrawText(window->canvas, L"The quick brown fox jumps over the lazy dog.", -1, &line_rect, &line_font, 0, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
