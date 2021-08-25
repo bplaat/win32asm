@@ -26,7 +26,7 @@ typedef struct WindowData {
     int32_t titlebar_height;
     int32_t titlebar_button_width;
     int32_t titlebar_icon_size;
-    uint32_t background_color;
+    CanvasColor background_color;
     bool menu_hover;
     bool minimize_hover;
     bool maximize_hover;
@@ -294,8 +294,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         CanvasRect background_rect = { 0, 0, window->width, window->height };
         Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
-        uint32_t active_text_color = CANVAS_RGB(255, 255, 255);
-        uint32_t inactive_text_color = CANVAS_RGBA(255, 255, 255, 128);
+        CanvasColor active_text_color = CANVAS_RGB(255, 255, 255);
+        CanvasColor inactive_text_color = CANVAS_RGBA(255, 255, 255, 128);
 
         // Draw window decoration buttons
 
@@ -344,12 +344,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             window->active ? active_text_color : inactive_text_color);
 
         // Draw centered text
-        CanvasFont title_font = { font_name, (float)window->width / 32 };
+        CanvasFont title_font = { .name = font_name, .size = (float)window->width / 32 };
         CanvasRect title_rect = { 0, (window->height - title_font.size * 2) / 2, window->width, title_font.size * 2 };
         Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, CANVAS_ALIGN_CENTER | CANVAS_ALIGN_VCENTER, active_text_color);
 
         // Draw footer text
-        CanvasFont footer_font = { font_name, (float)window->width / 42 };
+        CanvasFont footer_font = { .name = font_name, .size = (float)window->width / 42 };
         CanvasRect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
         wchar_t string_buffer[64];
         wsprintfW(string_buffer, L"Window size: %dx%d at %d dpi", window->width, window->height, window->dpi);

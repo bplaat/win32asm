@@ -48,14 +48,25 @@ typedef struct DWRITE_TEXT_METRICS {
     uint32_t lineCount;
 } DWRITE_TEXT_METRICS;
 
+typedef struct DWRITE_TEXT_RANGE {
+    uint32_t startPosition;
+    uint32_t length;
+} DWRITE_TEXT_RANGE;
+
 typedef struct IDWriteTextLayoutVtbl {
     IDWriteTextFormatVtbl Base;
-    uint8_t padding1[32 * sizeof(void *)];
+    uint8_t padding1[8 * sizeof(void *)];
+
+    int32_t (__stdcall *SetUnderline)(IDWriteTextLayout *This, bool underline, DWRITE_TEXT_RANGE range);
+    int32_t (__stdcall *SetStrikethrough)(IDWriteTextLayout *This, bool strikethrough, DWRITE_TEXT_RANGE range);
+    uint8_t padding2[22 * sizeof(void *)];
 
     int32_t (__stdcall *GetMetrics)(IDWriteTextLayout *This, DWRITE_TEXT_METRICS *metrics);
-    uint8_t padding2[6 * sizeof(void *)];
+    uint8_t padding3[6 * sizeof(void *)];
 } IDWriteTextLayoutVtbl;
 
+#define IDWriteTextLayout_SetUnderline(This, underline, range) ((IDWriteTextLayout *)This)->lpVtbl->SetUnderline((IDWriteTextLayout *)This, underline, range)
+#define IDWriteTextLayout_SetStrikethrough(This, strikethrough, range) ((IDWriteTextLayout *)This)->lpVtbl->SetStrikethrough((IDWriteTextLayout *)This, strikethrough, range)
 #define IDWriteTextLayout_GetMetrics(This, metrics) ((IDWriteTextLayout *)This)->lpVtbl->GetMetrics((IDWriteTextLayout *)This, metrics)
 
 struct IDWriteTextLayout {
@@ -65,8 +76,10 @@ struct IDWriteTextLayout {
 // IDWriteFactory
 typedef struct IDWriteFactory IDWriteFactory;
 
-#define DWRITE_FONT_WEIGHT_NORMAL 4
+#define DWRITE_FONT_WEIGHT_NORMAL 400
+#define DWRITE_FONT_WEIGHT_BOLD 700
 #define DWRITE_FONT_STYLE_NORMAL 0
+#define DWRITE_FONT_STYLE_ITALIC 2
 #define DWRITE_FONT_STRETCH_NORMAL 5
 
 typedef struct IDWriteFactoryVtbl {
