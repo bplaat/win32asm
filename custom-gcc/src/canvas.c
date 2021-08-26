@@ -21,15 +21,15 @@ Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
             __extension__
         #endif
         _D2D1CreateFactory D2D1CreateFactory = GetProcAddress(hd2d1, "D2D1CreateFactory");
-        IID ID2D1Factory_iid = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
-        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &ID2D1Factory_iid, NULL, &canvas->data.d2d.d2d_factory);
+        IID IID_ID2D1Factory = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
+        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &IID_ID2D1Factory, NULL, &canvas->data.d2d.d2d_factory);
 
         #ifdef __GNUC__
             __extension__
         #endif
         _DWriteCreateFactory DWriteCreateFactory = GetProcAddress(hdwrite, "DWriteCreateFactory");
-        IID IDWriteFactory_iid = { 0xb859ee5a, 0xd838, 0x4b5b, { 0xa2, 0xe8, 0x1a, 0xdc, 0x7d, 0x93, 0xdb, 0x48 } };
-        DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, &IDWriteFactory_iid, &canvas->data.d2d.dwrite_factory);
+        IID IID_IDWriteFactory = { 0xb859ee5a, 0xd838, 0x4b5b, { 0xa2, 0xe8, 0x1a, 0xdc, 0x7d, 0x93, 0xdb, 0x48 } };
+        DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, &IID_IDWriteFactory, &canvas->data.d2d.dwrite_factory);
 
         D2D1_RENDER_TARGET_PROPERTIES render_props = { D2D1_RENDER_TARGET_TYPE_DEFAULT,
             { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN },
