@@ -3,8 +3,7 @@
 
 #include "win32.h"
 
-// IDWriteTextFormat
-typedef struct IDWriteTextFormat IDWriteTextFormat;
+#define DWRITE_FACTORY_TYPE_SHARED 0
 
 #define DWRITE_TEXT_ALIGNMENT_LEADING 0
 #define DWRITE_TEXT_ALIGNMENT_TRAILING 1
@@ -13,6 +12,36 @@ typedef struct IDWriteTextFormat IDWriteTextFormat;
 #define DWRITE_PARAGRAPH_ALIGNMENT_NEAR 0
 #define DWRITE_PARAGRAPH_ALIGNMENT_FAR 1
 #define DWRITE_PARAGRAPH_ALIGNMENT_CENTER 2
+
+#define DWRITE_FONT_WEIGHT_NORMAL 400
+#define DWRITE_FONT_WEIGHT_BOLD 700
+
+#define DWRITE_FONT_STYLE_NORMAL 0
+#define DWRITE_FONT_STYLE_ITALIC 2
+
+#define DWRITE_FONT_STRETCH_NORMAL 5
+
+#define DWRITE_MEASURING_MODE_NATURAL 0
+
+typedef struct DWRITE_TEXT_METRICS {
+    float left;
+    float top;
+    float width;
+    float widthIncludingTrailingWhitespace;
+    float height;
+    float layoutWidth;
+    float layoutHeight;
+    uint32_t maxBidiReorderingDepth;
+    uint32_t lineCount;
+} DWRITE_TEXT_METRICS;
+
+typedef struct DWRITE_TEXT_RANGE {
+    uint32_t startPosition;
+    uint32_t length;
+} DWRITE_TEXT_RANGE;
+
+// IDWriteTextFormat
+typedef struct IDWriteTextFormat IDWriteTextFormat;
 
 typedef struct IDWriteTextFormatVtbl {
     IUnknownVtbl Base;
@@ -35,23 +64,6 @@ struct IDWriteTextFormat {
 
 // IDWriteTextLayout
 typedef struct IDWriteTextLayout IDWriteTextLayout;
-
-typedef struct DWRITE_TEXT_METRICS {
-    float left;
-    float top;
-    float width;
-    float widthIncludingTrailingWhitespace;
-    float height;
-    float layoutWidth;
-    float layoutHeight;
-    uint32_t maxBidiReorderingDepth;
-    uint32_t lineCount;
-} DWRITE_TEXT_METRICS;
-
-typedef struct DWRITE_TEXT_RANGE {
-    uint32_t startPosition;
-    uint32_t length;
-} DWRITE_TEXT_RANGE;
 
 typedef struct IDWriteTextLayoutVtbl {
     IDWriteTextFormatVtbl Base;
@@ -76,12 +88,6 @@ struct IDWriteTextLayout {
 // IDWriteFactory
 typedef struct IDWriteFactory IDWriteFactory;
 
-#define DWRITE_FONT_WEIGHT_NORMAL 400
-#define DWRITE_FONT_WEIGHT_BOLD 700
-#define DWRITE_FONT_STYLE_NORMAL 0
-#define DWRITE_FONT_STYLE_ITALIC 2
-#define DWRITE_FONT_STRETCH_NORMAL 5
-
 typedef struct IDWriteFactoryVtbl {
     IUnknownVtbl Base;
     uint8_t padding1[12 * sizeof(void *)];
@@ -104,8 +110,7 @@ struct IDWriteFactory {
     const IDWriteFactoryVtbl *lpVtbl;
 };
 
-#define DWRITE_FACTORY_TYPE_SHARED 0
-
-extern int32_t __stdcall DWriteCreateFactory(uint32_t factoryType, GUID *riid, IDWriteFactory **factory);
+// DWriteCreateFactory
+extern int32_t __stdcall DWriteCreateFactory(uint32_t factoryType, IID *riid, IDWriteFactory **factory);
 
 #endif

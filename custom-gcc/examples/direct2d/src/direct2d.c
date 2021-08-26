@@ -44,10 +44,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->background_color.a = 1;
 
         // Create Direct2D factory
-        GUID ID2D1Factory_guid = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
-        if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &ID2D1Factory_guid, NULL, &window->pFactory))) {
-            return -1;
-        }
+        IID ID2D1Factory_iid = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
+        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &ID2D1Factory_iid, NULL, &window->pFactory);
 
         // Create Direct2D renderer
         D2D1_RENDER_TARGET_PROPERTIES renderProps = { D2D1_RENDER_TARGET_TYPE_DEFAULT,

@@ -4,6 +4,34 @@
 #include "win32.h"
 #include "directwrite.h"
 
+#define DXGI_FORMAT_UNKNOWN 0
+
+#define D2D1_ALPHA_MODE_UNKNOWN 0
+
+#define D2D1_RENDER_TARGET_TYPE_DEFAULT 0
+
+#define D2D1_RENDER_TARGET_USAGE_NONE 0
+
+#define D2D1_FEATURE_LEVEL_DEFAULT 0
+
+#define D2D1_PRESENT_OPTIONS_NONE 0
+
+#define D2D1_FILL_MODE_WINDING 1
+
+#define D2D1_FIGURE_BEGIN_FILLED 0
+
+#define D2D1_FIGURE_END_CLOSED 1
+
+#define D2D1_DRAW_TEXT_OPTIONS_NONE 0
+#define D2D1_DRAW_TEXT_OPTIONS_CLIP 2
+#define D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT 4
+
+#define D2D1_ANTIALIAS_MODE_PER_PRIMITIVE 0
+
+#define D2D1_FACTORY_TYPE_SINGLE_THREADED 0
+
+#define D2D1_LAYER_OPTIONS_NONE 0
+
 typedef struct D2D1_COLOR_F {
     float r;
     float g;
@@ -42,19 +70,10 @@ typedef struct D2D1_MATRIX_3X2_F {
     float dy;
 } D2D1_MATRIX_3X2_F;
 
-#define DXGI_FORMAT_UNKNOWN 0
-#define D2D1_ALPHA_MODE_UNKNOWN 0
-
 typedef struct D2D1_PIXEL_FORMAT {
   uint32_t format;
   uint32_t alphaMode;
 } D2D1_PIXEL_FORMAT;
-
-#define D2D1_RENDER_TARGET_TYPE_DEFAULT 0
-
-#define D2D1_RENDER_TARGET_USAGE_NONE 0
-
-#define D2D1_FEATURE_LEVEL_DEFAULT 0
 
 typedef struct D2D1_RENDER_TARGET_PROPERTIES {
   uint32_t type;
@@ -64,8 +83,6 @@ typedef struct D2D1_RENDER_TARGET_PROPERTIES {
   uint32_t usage;
   uint32_t minLevel;
 } D2D1_RENDER_TARGET_PROPERTIES;
-
-#define D2D1_PRESENT_OPTIONS_NONE 0
 
 typedef struct D2D1_HWND_RENDER_TARGET_PROPERTIES {
   HWND hwnd;
@@ -101,12 +118,6 @@ struct ID2D1Layer {
 };
 
 // ID2D1SimplifiedGeometrySink
-#define D2D1_FILL_MODE_WINDING 1
-
-#define D2D1_FIGURE_BEGIN_FILLED 0
-
-#define D2D1_FIGURE_END_CLOSED 1
-
 typedef struct ID2D1SimplifiedGeometrySink ID2D1SimplifiedGeometrySink;
 
 typedef struct ID2D1SimplifiedGeometrySinkVtbl {
@@ -175,19 +186,14 @@ struct ID2D1PathGeometry {
     const ID2D1PathGeometryVtbl *lpVtbl;
 };
 
-// ID2D1RenderTarget
+// ID2D1Brush
 typedef struct ID2D1Brush ID2D1Brush;
+
+// ID2D1SolidColorBrush
 typedef ID2D1Brush ID2D1SolidColorBrush;
 
+// ID2D1RenderTarget
 typedef struct ID2D1RenderTarget ID2D1RenderTarget;
-
-#define D2D1_DRAW_TEXT_OPTIONS_NONE 0
-#define D2D1_DRAW_TEXT_OPTIONS_CLIP 2
-#define D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT 4
-
-#define DWRITE_MEASURING_MODE_NATURAL 0
-
-#define D2D1_ANTIALIAS_MODE_PER_PRIMITIVE 0
 
 typedef struct D2D1_LAYER_PARAMETERS {
     D2D1_RECT_F contentBounds;
@@ -305,8 +311,7 @@ struct ID2D1Factory {
     const ID2D1FactoryVtbl *lpVtbl;
 };
 
-#define D2D1_FACTORY_TYPE_SINGLE_THREADED 0
-
-extern int32_t __stdcall D2D1CreateFactory(uint32_t factoryType, GUID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+// D2D1CreateFactory
+extern int32_t __stdcall D2D1CreateFactory(uint32_t factoryType, IID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
 
 #endif

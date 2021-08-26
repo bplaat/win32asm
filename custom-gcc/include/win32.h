@@ -8,27 +8,27 @@
 #include "std.h"
 
 // Types & Macros
-#define HANDLE void *
-#define HMODULE HANDLE
-#define HINSTANCE HANDLE
-#define HWND HANDLE
-#define HICON HANDLE
-#define HCURSOR HANDLE
-#define HMENU HANDLE
-#define HDC HANDLE
-#define HBRUSH HANDLE
-#define HBITMAP HANDLE
-#define HFONT HANDLE
-#define HGDIOBJ HANDLE
-#define HRGN HANDLE
-#define HRSRC HANDLE
-#define HGLOBAL HANDLE
-#define HACCEL HANDLE
-#define HDROP HANDLE
-#define HMONITOR HANDLE
-#define HPEN HANDLE
-#define WPARAM void *
-#define LPARAM void *
+typedef void * HANDLE;
+typedef HANDLE HMODULE;
+typedef HANDLE HINSTANCE;
+typedef HANDLE HWND;
+typedef HANDLE HICON;
+typedef HANDLE HCURSOR;
+typedef HANDLE HMENU;
+typedef HANDLE HDC;
+typedef HANDLE HBRUSH;
+typedef HANDLE HBITMAP;
+typedef HANDLE HFONT;
+typedef HANDLE HGDIOBJ;
+typedef HANDLE HRGN;
+typedef HANDLE HRSRC;
+typedef HANDLE HGLOBAL;
+typedef HANDLE HACCEL;
+typedef HANDLE HDROP;
+typedef HANDLE HMONITOR;
+typedef HANDLE HPEN;
+typedef void * WPARAM;
+typedef void * LPARAM;
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -54,7 +54,7 @@
 
 #define FILE_ATTRIBUTE_NORMAL 0x80
 
-#define INVALID_HANDLE_VALUE ((HANDLE)(void *)-1)
+#define INVALID_HANDLE_VALUE ((HANDLE)-1)
 
 #define MAX_PATH 260
 
@@ -165,11 +165,11 @@ extern bool __stdcall FindClose(HANDLE hFindFile);
 extern int32_t __stdcall MulDiv(int32_t nNumber, int32_t nNumerator, int32_t nDenominator);
 
 // User32
-#define GET_X_LPARAM(lParam) ((int32_t)(int16_t)LOWORD(lParam))
+#define GET_X_LPARAM(lParam) LOWORD(lParam)
 
-#define GET_Y_LPARAM(lParam) ((int32_t)(int16_t)HIWORD(lParam))
+#define GET_Y_LPARAM(lParam) HIWORD(lParam)
 
-#define GET_WHEEL_DELTA_WPARAM(wParam) ((int32_t)(int16_t)HIWORD(wParam))
+#define GET_WHEEL_DELTA_WPARAM(wParam) HIWORD(wParam)
 
 #define HWND_DESKTOP 0
 
@@ -563,8 +563,8 @@ extern bool __stdcall StrokeAndFillPath(HDC hdc);
 extern bool __stdcall EndPath(HDC hdc);
 extern HBITMAP __stdcall CreateBitmap(int32_t nWidth, int32_t nHeight, uint32_t nPlanes,  uint32_t nBitCount, const void *lpBits);
 extern bool __stdcall Rectangle(HDC hdc, int32_t left, int32_t top, int32_t right, int32_t bottom);
-extern bool __stdcall SetWorldTransform(HDC hdc,const XFORM *lpxf);
 extern int32_t __stdcall SetGraphicsMode(HDC hdc, int32_t iMode);
+extern bool __stdcall SetWorldTransform(HDC hdc, const XFORM *lpxf);
 extern bool __stdcall DPtoLP(HDC hdc, POINT *lppt, int c);
 extern bool __stdcall LPtoDP(HDC hdc, POINT *lppt, int c);
 
@@ -701,6 +701,8 @@ extern bool __stdcall PlaySoundW(wchar_t *pszSound, HMODULE hmod, uint32_t fdwSo
 extern bool __stdcall GetUserNameW(wchar_t *lpBuffer, uint32_t *pcbBuffer);
 
 // Winsock
+typedef uint32_t * SOCKET;
+
 #define WSADESCRIPTION_LEN 256
 
 #define WSASYS_STATUS_LEN 128
@@ -736,8 +738,6 @@ typedef struct WSAData {
         char *lpVendorInfo;
     #endif
 } WSADATA;
-
-typedef uint32_t * SOCKET;
 
 typedef struct sockaddr {
     uint16_t sa_family;
@@ -780,6 +780,7 @@ extern int32_t __stdcall DwmExtendFrameIntoClientArea(HWND hWnd, const MARGINS *
 #define SUCCEEDED(hr) ((int32_t)(hr) >= 0)
 #define FAILED(hr) ((int32_t)(hr) < 0)
 #define S_OK ((int32_t)0)
+#define E_NOINTERFACE ((int32_t)0x80004002)
 
 typedef struct GUID {
     uint32_t Data1;
@@ -788,10 +789,13 @@ typedef struct GUID {
     uint8_t Data4[8];
 } GUID;
 
+typedef GUID IID;
+
+// IUnknown
 typedef struct IUnknown IUnknown;
 
 typedef struct IUnknownVtbl {
-    int32_t (__stdcall *QueryInterface)(IUnknown *This, GUID *riid, void **ppvObject);
+    int32_t (__stdcall *QueryInterface)(IUnknown *This, IID *riid, void **ppvObject);
     uint32_t (__stdcall *AddRef)(IUnknown *This);
     uint32_t (__stdcall *Release)(IUnknown *This);
 } IUnknownVtbl;
@@ -800,6 +804,8 @@ struct IUnknown {
     const IUnknownVtbl *lpVtbl;
 };
 
+#define IUnknown_QueryInterface(This, riid, ppvObject) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This, riid, ppvObject);
+#define IUnknown_AddRef(This) ((IUnknown *)This)->lpVtbl->AddRef((IUnknown *)This);
 #define IUnknown_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This);
 
 // Multimon, Windows 8.1 DPI shit...
