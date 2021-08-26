@@ -111,6 +111,6 @@ struct IDWriteFactory {
 };
 
 // DWriteCreateFactory
-extern int32_t __stdcall DWriteCreateFactory(uint32_t factoryType, IID *riid, IDWriteFactory **factory);
+extern int32_t __stdcall DWriteCreateFactory(uint32_t factoryType, const IID *riid, IDWriteFactory **factory);
 
 #endif

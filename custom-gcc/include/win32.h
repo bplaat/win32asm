@@ -779,7 +779,7 @@ extern int32_t __stdcall DwmExtendFrameIntoClientArea(HWND hWnd, const MARGINS *
 // Com
 #define SUCCEEDED(hr) ((int32_t)(hr) >= 0)
 #define FAILED(hr) ((int32_t)(hr) < 0)
-#define S_OK ((int32_t)0)
+#define E_OK ((int32_t)0)
 #define E_NOINTERFACE ((int32_t)0x80004002)
 
 typedef struct GUID {
@@ -795,7 +795,7 @@ typedef GUID IID;
 typedef struct IUnknown IUnknown;
 
 typedef struct IUnknownVtbl {
-    int32_t (__stdcall *QueryInterface)(IUnknown *This, IID *riid, void **ppvObject);
+    int32_t (__stdcall *QueryInterface)(IUnknown *This, const IID *riid, void **ppvObject);
     uint32_t (__stdcall *AddRef)(IUnknown *This);
     uint32_t (__stdcall *Release)(IUnknown *This);
 } IUnknownVtbl;

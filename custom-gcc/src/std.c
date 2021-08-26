@@ -23,6 +23,22 @@ uint32_t rand(void) {
     return rand_seed = rand_seed * 1103515245 + 12345;
 }
 
+void *memcpy(void *dest, const void * src, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        ((uint8_t *)dest)[i] = ((uint8_t *)src)[i];
+    }
+    return dest;
+}
+
+int memcmp(const void *str1, const void *str2, size_t n) {
+    if (!n) return 0;
+    while (--n && *(uint8_t *)str1 == *(uint8_t *)str2) {
+        str1 = (uint8_t *)str1 + 1;
+        str2 = (uint8_t *)str2 + 1;
+    }
+    return *(uint8_t *)str1 - *(uint8_t *)str2;
+}
+
 size_t strlen(const char *string) {
     const char *start = string;
     while (*string != '\0') string++;

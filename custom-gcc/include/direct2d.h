@@ -312,6 +312,6 @@ struct ID2D1Factory {
 };
 
 // D2D1CreateFactory
-extern int32_t __stdcall D2D1CreateFactory(uint32_t factoryType, IID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+extern int32_t __stdcall D2D1CreateFactory(uint32_t factoryType, const IID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
 
 #endif
