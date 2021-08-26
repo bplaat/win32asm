@@ -101,10 +101,10 @@ for index, file in enumerate(source_files):
                     exit(1)
         else:
             if arch == 'x64':
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -Os -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
             else:
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -Os -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
         assembly_files.append(path + '/target/' + arch + '/' + conf + '/' + filename + '.s')
 
@@ -134,9 +134,10 @@ libraries = {
     ],
     'GDI32.DLL': [
         'BeginPath', 'BitBlt', 'CloseFigure', 'CreateBitmap', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreatePen',
-        'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC', 'DeleteObject', 'EndPath', 'ExtTextOutW', 'FillPath', 'GdiAlphaBlend',
-        'GetDeviceCaps', 'GetStockObject', 'GetTextExtentPoint32W', 'LineTo', 'MoveToEx', 'Rectangle', 'SelectClipRgn', 'SelectObject',
-        'SetBkMode', 'SetStretchBltMode', 'SetTextAlign', 'SetTextColor', 'StretchBlt', 'StrokePath', 'StrokeAndFillPath', 'TextOutW'
+        'CreateRectRgn', 'CreateSolidBrush', 'DeleteDC', 'DeleteObject', 'DPtoLP', 'EndPath', 'ExtTextOutW', 'FillPath', 'GdiAlphaBlend',
+        'GetDeviceCaps', 'GetStockObject', 'GetTextExtentPoint32W', 'LPtoDP', 'LineTo', 'MoveToEx', 'Rectangle', 'SelectClipRgn',
+        'SelectObject', 'SetBkMode', 'SetGraphicsMode', 'SetStretchBltMode', 'SetTextAlign', 'SetTextColor', 'SetWorldTransform',
+        'StretchBlt', 'StrokePath', 'StrokeAndFillPath', 'TextOutW'
     ],
     'SHELL32.DLL': [
         'DragFinish', 'DragQueryFileW', 'SHGetFolderPathW', 'ShellExecuteW'

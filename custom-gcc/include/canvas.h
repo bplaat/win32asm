@@ -48,6 +48,15 @@ typedef enum CanvasAlign {
     CANVAS_ALIGN_VERTICAL_BOTTOM = 8
 } CanvasAlign;
 
+typedef struct CanvasTransform {
+    float m11;
+    float m12;
+    float m21;
+    float m22;
+    float dx;
+    float dy;
+} CanvasTransform;
+
 typedef struct Canvas {
     CanvasRenderer renderer;
     int32_t width;
@@ -66,6 +75,7 @@ typedef struct Canvas {
             ID2D1Factory *d2d_factory;
             IDWriteFactory *dwrite_factory;
             ID2D1HwndRenderTarget *render_target;
+            // ID2D1Layer *layer;
         } d2d;
     } data;
 } Canvas;
@@ -83,6 +93,8 @@ void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height);
 void Canvas_BeginDraw(Canvas *canvas);
 
 void Canvas_EndDraw(Canvas *canvas);
+
+void Canvas_Transform(Canvas *canvas, CanvasTransform *transform);
 
 void Canvas_Clip(Canvas *canvas, CanvasRect *rect);
 

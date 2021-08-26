@@ -86,6 +86,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         CanvasRect background_rect = { 0, 0, window->width, window->height };
         Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
+        Canvas_Transform(window->canvas, &(CanvasTransform){ 1, 0, 0, 1, 50, 50 });
         Canvas_Clip(window->canvas, &(CanvasRect){ 32, 32, window->width - 64, window->height - 64 });
 
         CanvasRect rect1 = { 100, 100, 200, 200 };
@@ -133,6 +134,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         }
 
         Canvas_Clip(window->canvas, NULL);
+        Canvas_Transform(window->canvas, NULL);
+
         Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);
         return 0;

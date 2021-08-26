@@ -75,6 +75,7 @@ void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         canvas->data.gdi.buffer_hdc = CreateCompatibleDC(canvas->data.gdi.hdc);
+        SetGraphicsMode(canvas->data.gdi.buffer_hdc, GM_ADVANCED);
         SetBkMode(canvas->data.gdi.buffer_hdc, TRANSPARENT);
         SetStretchBltMode(canvas->data.gdi.buffer_hdc, STRETCH_HALFTONE);
         canvas->data.gdi.buffer_bitmap = CreateCompatibleBitmap(canvas->data.gdi.hdc, canvas->width, canvas->height);
@@ -96,6 +97,15 @@ void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
 void Canvas_BeginDraw(Canvas *canvas) {
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
         ID2D1RenderTarget_BeginDraw(canvas->data.d2d.render_target);
+        // D2D1_SIZE_F layer_size = { canvas->width, canvas->height };
+        // ID2D1RenderTarget_CreateLayer(canvas->data.d2d.render_target, &layer_size, &canvas->data.d2d.layer);
+        // D2D1_LAYER_PARAMETERS layer_parameters = {
+        //     .contentBounds = { canvas->width, canvas->height },
+        //     .maskAntialiasMode = D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+        //     .maskTransform = { 1, 0, 0, 1, 0, 100 },
+        //     .opacity = 1
+        // };
+        // ID2D1RenderTarget_PushLayer(canvas->data.d2d.render_target, &layer_parameters, canvas->data.d2d.layer);
     }
 }
 
@@ -104,14 +114,30 @@ void Canvas_EndDraw(Canvas *canvas) {
         BitBlt(canvas->data.gdi.hdc, 0, 0, canvas->width, canvas->height, canvas->data.gdi.buffer_hdc, 0, 0, SRCCOPY);
     }
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        // ID2D1RenderTarget_PopLayer(canvas->data.d2d.render_target);
+        // IUnknown_Release(canvas->data.d2d.layer);
         ID2D1RenderTarget_EndDraw(canvas->data.d2d.render_target, NULL, NULL);
+    }
+}
+
+void Canvas_Transform(Canvas *canvas, CanvasTransform *transform) {
+    CanvasTransform identity = { 1, 0, 0, 1, 0, 0 };
+
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        SetWorldTransform(canvas->data.gdi.buffer_hdc, (XFORM *)(transform != NULL ? transform : &identity));
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        ID2D1RenderTarget_SetTransform(canvas->data.d2d.render_target, (D2D1_MATRIX_3X2_F *)(transform != NULL ? transform : &identity));
     }
 }
 
 void Canvas_Clip(Canvas *canvas, CanvasRect *rect) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         if (rect != NULL) {
-            HRGN clip_region = CreateRectRgn(rect->x, rect->y, rect->x + rect->width, rect->y + rect->height);
+            POINT points[] = { { rect->x, rect->y }, { rect->x + rect->width, rect->y + rect->height }};
+            LPtoDP(canvas->data.gdi.buffer_hdc, points, 2);
+            HRGN clip_region = CreateRectRgn(points[0].x, points[0].y, points[1].x, points[1].y);
             SelectClipRgn(canvas->data.gdi.buffer_hdc, clip_region);
             DeleteObject(clip_region);
         } else {
