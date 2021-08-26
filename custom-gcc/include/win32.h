@@ -506,12 +506,24 @@ extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
 
 #define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16))
 
+#define GM_COMPATIBLE 1
+#define GM_ADVANCED 2
+
 typedef struct BLENDFUNCTION {
     uint8_t BlendOp;
     uint8_t BlendFlags;
     uint8_t SourceConstantAlpha;
     uint8_t AlphaFormat;
 } BLENDFUNCTION;
+
+typedef struct XFORM {
+    float eM11;
+    float eM12;
+    float eM21;
+    float eM22;
+    float eDx;
+    float eDy;
+} XFORM;
 
 extern HGDIOBJ __stdcall GetStockObject(int32_t i);
 extern HDC __stdcall CreateCompatibleDC(HDC hdc);
@@ -551,6 +563,10 @@ extern bool __stdcall StrokeAndFillPath(HDC hdc);
 extern bool __stdcall EndPath(HDC hdc);
 extern HBITMAP __stdcall CreateBitmap(int32_t nWidth, int32_t nHeight, uint32_t nPlanes,  uint32_t nBitCount, const void *lpBits);
 extern bool __stdcall Rectangle(HDC hdc, int32_t left, int32_t top, int32_t right, int32_t bottom);
+extern bool __stdcall SetWorldTransform(HDC hdc,const XFORM *lpxf);
+extern int32_t __stdcall SetGraphicsMode(HDC hdc, int32_t iMode);
+extern bool __stdcall DPtoLP(HDC hdc, POINT *lppt, int c);
+extern bool __stdcall LPtoDP(HDC hdc, POINT *lppt, int c);
 
 // Gdiplus
 typedef struct GdiplusStartupInput {
