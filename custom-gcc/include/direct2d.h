@@ -62,12 +62,25 @@ typedef struct D2D1_RECT_F {
 } D2D1_RECT_F;
 
 typedef struct D2D1_MATRIX_3X2_F {
-    float m11;
-    float m12;
-    float m21;
-    float m22;
-    float dx;
-    float dy;
+    union {
+        struct {
+            float m11;
+            float m12;
+            float m21;
+            float m22;
+            float dx;
+            float dy;
+        };
+        struct {
+            float _11;
+            float _12;
+            float _21;
+            float _22;
+            float _31;
+            float _32;
+        };
+        float m[3][2];
+    };
 } D2D1_MATRIX_3X2_F;
 
 typedef struct D2D1_PIXEL_FORMAT {
@@ -98,7 +111,7 @@ typedef struct ID2D1Resource ID2D1Resource;
 
 typedef struct ID2D1ResourceVtbl {
     IUnknownVtbl Base;
-    void (__stdcall *GetFactory)(ID2D1Resource *This, ID2D1Factory **factory);
+    void __stdcall (*GetFactory)(ID2D1Resource *This, ID2D1Factory **factory);
 } ID2D1ResourceVtbl;
 
 struct ID2D1Resource {
@@ -123,14 +136,14 @@ typedef struct ID2D1SimplifiedGeometrySink ID2D1SimplifiedGeometrySink;
 typedef struct ID2D1SimplifiedGeometrySinkVtbl {
     IUnknownVtbl Base;
 
-    void (__stdcall *SetFillMode)(ID2D1SimplifiedGeometrySink *This, uint32_t fillMode);
+    void __stdcall (*SetFillMode)(ID2D1SimplifiedGeometrySink *This, uint32_t fillMode);
 
     uint8_t padding1[1 * sizeof(void *)];
-    void (__stdcall *BeginFigure)(ID2D1SimplifiedGeometrySink *This, D2D1_POINT_2F startPoint, uint32_t figureBegin);
+    void __stdcall (*BeginFigure)(ID2D1SimplifiedGeometrySink *This, D2D1_POINT_2F startPoint, uint32_t figureBegin);
 
     uint8_t padding2[2 * sizeof(void *)];
-    void (__stdcall *EndFigure)(ID2D1SimplifiedGeometrySink *This, uint32_t figureEnd);
-    int32_t (__stdcall *Close)(ID2D1SimplifiedGeometrySink *This);
+    void __stdcall (*EndFigure)(ID2D1SimplifiedGeometrySink *This, uint32_t figureEnd);
+    int32_t __stdcall (*Close)(ID2D1SimplifiedGeometrySink *This);
 } ID2D1SimplifiedGeometrySinkVtbl;
 
 #define ID2D1SimplifiedGeometrySink_SetFillMode(This, fillMode) ((ID2D1SimplifiedGeometrySink *)This)->lpVtbl->SetFillMode((ID2D1SimplifiedGeometrySink *)This, fillMode)
@@ -148,7 +161,7 @@ typedef struct ID2D1GeometrySink ID2D1GeometrySink;
 typedef struct ID2D1GeometrySinkVtbl {
     ID2D1SimplifiedGeometrySinkVtbl Base;
 
-    void (__stdcall *AddLine)(ID2D1GeometrySink *This, D2D1_POINT_2F point);
+    void __stdcall (*AddLine)(ID2D1GeometrySink *This, D2D1_POINT_2F point);
     uint8_t padding1[4 * sizeof(void *)];
 } ID2D1GeometrySinkVtbl;
 
@@ -176,7 +189,7 @@ typedef struct ID2D1PathGeometry ID2D1PathGeometry;
 typedef struct ID2D1PathGeometryVtbl {
     ID2D1GeometryVtbl Base;
 
-    int32_t (__stdcall *Open)(ID2D1PathGeometry *This, ID2D1GeometrySink **geometrySink);
+    int32_t __stdcall (*Open)(ID2D1PathGeometry *This, ID2D1GeometrySink **geometrySink);
     uint8_t padding1[3 * sizeof(void *)];
 } ID2D1PathGeometryVtbl;
 
@@ -209,37 +222,37 @@ typedef struct ID2D1RenderTargetVtbl {
     ID2D1ResourceVtbl Base;
     uint8_t padding1[4 * sizeof(void *)];
 
-    int32_t (__stdcall *CreateSolidColorBrush)(ID2D1RenderTarget *This, const D2D1_COLOR_F *color, const void *brushProperties, ID2D1SolidColorBrush **solidColorBrush);
+    int32_t __stdcall (*CreateSolidColorBrush)(ID2D1RenderTarget *This, const D2D1_COLOR_F *color, const void *brushProperties, ID2D1SolidColorBrush **solidColorBrush);
     uint8_t padding2[4 * sizeof(void *)];
 
-    int32_t (__stdcall *CreateLayer)(ID2D1RenderTarget *This, const D2D1_SIZE_F *size, ID2D1Layer **layer);
+    int32_t __stdcall (*CreateLayer)(ID2D1RenderTarget *This, const D2D1_SIZE_F *size, ID2D1Layer **layer);
     uint8_t padding3[1 * sizeof(void *)];
 
-    void (__stdcall *DrawLine)(ID2D1RenderTarget *This, D2D1_POINT_2F point0, D2D1_POINT_2F point1, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
-    void (__stdcall *DrawRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
-    void (__stdcall *FillRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush);
+    void __stdcall (*DrawLine)(ID2D1RenderTarget *This, D2D1_POINT_2F point0, D2D1_POINT_2F point1, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
+    void __stdcall (*DrawRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush, float strokeWidth, void *strokeStyle);
+    void __stdcall (*FillRectangle)(ID2D1RenderTarget *This, const D2D1_RECT_F *rect, ID2D1Brush *brush);
     uint8_t padding4[5 * sizeof(void *)];
 
-    void (__stdcall *FillGeometry)(ID2D1RenderTarget *This, ID2D1Geometry *geometry, ID2D1Brush *brush, ID2D1Brush *opacityBrush);
+    void __stdcall (*FillGeometry)(ID2D1RenderTarget *This, ID2D1Geometry *geometry, ID2D1Brush *brush, ID2D1Brush *opacityBrush);
     uint8_t padding5[3 * sizeof(void *)];
 
-    void (__stdcall *DrawText)(ID2D1RenderTarget *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat, const D2D1_RECT_F *layoutRect, ID2D1Brush *defaultForegroundBrush, uint32_t options, uint32_t measuringMode);
-    void (__stdcall *DrawTextLayout)(ID2D1RenderTarget *This, D2D1_POINT_2F origin, IDWriteTextLayout *textLayout, ID2D1Brush *defaultForegroundBrush, uint32_t options);
+    void __stdcall (*DrawText)(ID2D1RenderTarget *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat, const D2D1_RECT_F *layoutRect, ID2D1Brush *defaultForegroundBrush, uint32_t options, uint32_t measuringMode);
+    void __stdcall (*DrawTextLayout)(ID2D1RenderTarget *This, D2D1_POINT_2F origin, IDWriteTextLayout *textLayout, ID2D1Brush *defaultForegroundBrush, uint32_t options);
     uint8_t padding6[1 * sizeof(void *)];
 
-    void (__stdcall *SetTransform)(ID2D1RenderTarget *This, const D2D1_MATRIX_3X2_F *transform);
+    void __stdcall (*SetTransform)(ID2D1RenderTarget *This, const D2D1_MATRIX_3X2_F *transform);
     uint8_t padding7[9 * sizeof(void *)];
 
-    void (__stdcall *PushLayer)(ID2D1RenderTarget *This, const D2D1_LAYER_PARAMETERS *layerParameters, ID2D1Layer *layer);
-    void (__stdcall *PopLayer)(ID2D1RenderTarget *This);
-    int32_t (__stdcall *Flush)(ID2D1RenderTarget *This, void *tag1, void *tag2);
+    void __stdcall (*PushLayer)(ID2D1RenderTarget *This, const D2D1_LAYER_PARAMETERS *layerParameters, ID2D1Layer *layer);
+    void __stdcall (*PopLayer)(ID2D1RenderTarget *This);
+    int32_t __stdcall (*Flush)(ID2D1RenderTarget *This, void *tag1, void *tag2);
     uint8_t padding8[2 * sizeof(void *)];
 
-    void (__stdcall *PushAxisAlignedClip)(ID2D1RenderTarget *This, const D2D1_RECT_F *clip_rect, uint32_t antialias_mode);
-    void (__stdcall *PopAxisAlignedClip)(ID2D1RenderTarget *This);
-    void (__stdcall *Clear)(ID2D1RenderTarget *This, const D2D1_COLOR_F *clearColor);
-    void (__stdcall *BeginDraw)(ID2D1RenderTarget *This);
-    int32_t (__stdcall *EndDraw)(ID2D1RenderTarget *This, void *tag1, void *tag2);
+    void __stdcall (*PushAxisAlignedClip)(ID2D1RenderTarget *This, const D2D1_RECT_F *clip_rect, uint32_t antialias_mode);
+    void __stdcall (*PopAxisAlignedClip)(ID2D1RenderTarget *This);
+    void __stdcall (*Clear)(ID2D1RenderTarget *This, const D2D1_COLOR_F *clearColor);
+    void __stdcall (*BeginDraw)(ID2D1RenderTarget *This);
+    int32_t __stdcall (*EndDraw)(ID2D1RenderTarget *This, void *tag1, void *tag2);
     uint8_t padding9[7 * sizeof(void *)];
 } ID2D1RenderTargetVtbl;
 
@@ -279,7 +292,7 @@ typedef struct ID2D1HwndRenderTargetVtbl {
     ID2D1RenderTargetVtbl Base;
     uint8_t padding1[1 * sizeof(void *)];
 
-    int32_t (__stdcall *Resize)(ID2D1HwndRenderTarget *This, const D2D1_SIZE_U *pixelSize);
+    int32_t __stdcall (*Resize)(ID2D1HwndRenderTarget *This, const D2D1_SIZE_U *pixelSize);
     uint8_t padding2[1 * sizeof(void *)];
 } ID2D1HwndRenderTargetVtbl;
 
@@ -295,10 +308,10 @@ typedef struct ID2D1FactoryVtbl {
 
     uint8_t padding1[7 * sizeof(void *)];
 
-    int32_t (__stdcall *CreatePathGeometry)(ID2D1Factory *This, ID2D1PathGeometry **pathGeometry);
+    int32_t __stdcall (*CreatePathGeometry)(ID2D1Factory *This, ID2D1PathGeometry **pathGeometry);
     uint8_t padding2[3 * sizeof(void *)];
 
-    int32_t (__stdcall *CreateHwndRenderTarget)(ID2D1Factory *This, const D2D1_RENDER_TARGET_PROPERTIES *renderTargetProperties, const D2D1_HWND_RENDER_TARGET_PROPERTIES *hwndRenderTargetProperties, ID2D1HwndRenderTarget **hwndRenderTarget);
+    int32_t __stdcall (*CreateHwndRenderTarget)(ID2D1Factory *This, const D2D1_RENDER_TARGET_PROPERTIES *renderTargetProperties, const D2D1_HWND_RENDER_TARGET_PROPERTIES *hwndRenderTargetProperties, ID2D1HwndRenderTarget **hwndRenderTarget);
     uint8_t padding3[2 * sizeof(void *)];
 } ID2D1FactoryVtbl;
 

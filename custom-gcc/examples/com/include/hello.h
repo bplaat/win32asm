@@ -4,13 +4,11 @@
 #include "win32.h"
 
 // IHello
-extern const IID IID_IHello;
-
 typedef struct IHello IHello;
 
 typedef struct IHelloVtbl {
     IUnknownVtbl Base;
-    int32_t (__stdcall *SayHello)(IHello *This, wchar_t *name);
+    void __stdcall (*SayHello)(IHello *This, wchar_t *name);
 } IHelloVtbl;
 
 #define IHello_SayHello(This, name) ((IHello *)This)->lpVtbl->SayHello((IHello *)This, name)
@@ -19,20 +17,24 @@ struct IHello {
     const IHelloVtbl *lpVtbl;
 };
 
+extern const IID IID_IHello;
+
+int32_t __stdcall CreateHello(const IID *riid, IHello **ppIHello);
+
 // Hello
 typedef struct Hello {
-    IHello interface;
-    uint32_t references;
+    IHello Base;
+    uint32_t RefCount;
 } Hello;
 
-int32_t __stdcall CreateHello(const IID *riid, IHello **ihello);
+extern const IHelloVtbl HelloVtbl;
 
-int32_t __stdcall Hello_QueryInterface(Hello *hello, const IID *riid, void **ppv);
+int32_t __stdcall Hello_QueryInterface(Hello *This, const IID *riid, void **ppv);
 
-uint32_t __stdcall Hello_AddRef(Hello *hello);
+uint32_t __stdcall Hello_AddRef(Hello *This);
 
-uint32_t __stdcall Hello_Release(Hello *hello);
+uint32_t __stdcall Hello_Release(Hello *This);
 
-int32_t __stdcall Hello_SayHello(Hello *hello, wchar_t *name);
+void __stdcall Hello_SayHello(Hello *This, wchar_t *name);
 
 #endif

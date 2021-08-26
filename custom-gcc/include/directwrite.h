@@ -46,11 +46,11 @@ typedef struct IDWriteTextFormat IDWriteTextFormat;
 typedef struct IDWriteTextFormatVtbl {
     IUnknownVtbl Base;
 
-    int32_t (__stdcall *SetTextAlignment)(IDWriteTextFormat *This, uint32_t textAlignment);
-    int32_t (__stdcall *SetParagraphAlignment)(IDWriteTextFormat *This, uint32_t paragraphAlignment);
+    int32_t __stdcall (*SetTextAlignment)(IDWriteTextFormat *This, uint32_t textAlignment);
+    int32_t __stdcall (*SetParagraphAlignment)(IDWriteTextFormat *This, uint32_t paragraphAlignment);
     uint8_t padding1[5 * sizeof(void *)];
 
-    int32_t (__stdcall *SetLineSpacing)(IDWriteTextFormat *This, uint32_t lineSpacingMethod, float lineSpacing, float baseline);
+    int32_t __stdcall (*SetLineSpacing)(IDWriteTextFormat *This, uint32_t lineSpacingMethod, float lineSpacing, float baseline);
     uint8_t padding2[17 * sizeof(void *)];
 } IDWriteTextFormatVtbl;
 
@@ -69,11 +69,11 @@ typedef struct IDWriteTextLayoutVtbl {
     IDWriteTextFormatVtbl Base;
     uint8_t padding1[8 * sizeof(void *)];
 
-    int32_t (__stdcall *SetUnderline)(IDWriteTextLayout *This, bool underline, DWRITE_TEXT_RANGE range);
-    int32_t (__stdcall *SetStrikethrough)(IDWriteTextLayout *This, bool strikethrough, DWRITE_TEXT_RANGE range);
+    int32_t __stdcall (*SetUnderline)(IDWriteTextLayout *This, bool underline, DWRITE_TEXT_RANGE range);
+    int32_t __stdcall (*SetStrikethrough)(IDWriteTextLayout *This, bool strikethrough, DWRITE_TEXT_RANGE range);
     uint8_t padding2[22 * sizeof(void *)];
 
-    int32_t (__stdcall *GetMetrics)(IDWriteTextLayout *This, DWRITE_TEXT_METRICS *metrics);
+    int32_t __stdcall (*GetMetrics)(IDWriteTextLayout *This, DWRITE_TEXT_METRICS *metrics);
     uint8_t padding3[6 * sizeof(void *)];
 } IDWriteTextLayoutVtbl;
 
@@ -92,11 +92,11 @@ typedef struct IDWriteFactoryVtbl {
     IUnknownVtbl Base;
     uint8_t padding1[12 * sizeof(void *)];
 
-    int32_t (__stdcall *CreateTextFormat)(IDWriteFactory *This, const wchar_t *fontFamilyName, void *fontCollection, uint32_t fontWeight, uint32_t fontStyle,
+    int32_t __stdcall (*CreateTextFormat)(IDWriteFactory *This, const wchar_t *fontFamilyName, void *fontCollection, uint32_t fontWeight, uint32_t fontStyle,
         uint32_t fontStretch, float fontSize, const wchar_t *localeName, IDWriteTextFormat **textFormat);
     uint8_t padding2[2 * sizeof(void *)];
 
-    int32_t (__stdcall *CreateTextLayout)(IDWriteFactory *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat,
+    int32_t __stdcall (*CreateTextLayout)(IDWriteFactory *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat,
         float maxWidth, float maxHeight, IDWriteTextLayout **textLayout);
     uint8_t padding3[5 * sizeof(void *)];
 } IDWriteFactoryVtbl;
