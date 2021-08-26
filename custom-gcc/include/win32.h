@@ -795,9 +795,9 @@ typedef GUID IID;
 typedef struct IUnknown IUnknown;
 
 typedef struct IUnknownVtbl {
-    int32_t (__stdcall *QueryInterface)(IUnknown *This, const IID *riid, void **ppvObject);
-    uint32_t (__stdcall *AddRef)(IUnknown *This);
-    uint32_t (__stdcall *Release)(IUnknown *This);
+    int32_t __stdcall (*QueryInterface)(IUnknown *This, const IID *riid, void **ppvObject);
+    uint32_t __stdcall (*AddRef)(IUnknown *This);
+    uint32_t __stdcall (*Release)(IUnknown *This);
 } IUnknownVtbl;
 
 struct IUnknown {

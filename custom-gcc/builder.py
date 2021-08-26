@@ -101,10 +101,10 @@ for index, file in enumerate(source_files):
                     exit(1)
         else:
             if arch == 'x64':
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -Os -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Werror -Os -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
             else:
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Wpedantic -Werror --std=c99 -Os -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
+                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Werror -Os -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
                     exit(1)
         assembly_files.append(path + '/target/' + arch + '/' + conf + '/' + filename + '.s')
 

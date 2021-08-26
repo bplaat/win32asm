@@ -110,14 +110,11 @@ bool __stdcall IsVistaOrHigher(void) {
     return osver.dwMajorVersion >= 6;
 }
 
-typedef uint32_t (__stdcall *_SetThreadUILanguage)(uint32_t LangId);
+typedef uint32_t __stdcall (*_SetThreadUILanguage)(uint32_t LangId);
 
 void __stdcall SetLanguage(uint32_t language) {
     if (IsVistaOrHigher()) {
         HMODULE kernel32 = LoadLibraryW(L"kernel32.dll");
-        #ifdef __GNUC__
-            __extension__
-        #endif
         _SetThreadUILanguage SetThreadUILanguage = GetProcAddress(kernel32, "SetThreadUILanguage");
         SetThreadUILanguage(language);
     } else {
