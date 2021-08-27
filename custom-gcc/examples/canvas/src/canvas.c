@@ -12,6 +12,7 @@ wchar_t *window_class_name = L"canvas-test";
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
+#define WINDOW_TIMER_ID 1
 
 typedef struct WindowData {
     uint32_t width;
@@ -41,12 +42,12 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         window->renderer = true;
         window->canvas = Canvas_New(hwnd, window->renderer ? CANVAS_RENDERER_DIRECT2D : CANVAS_RENDERER_GDI);
 
-        SetTimer(hwnd, 1, 500, NULL);
+        SetTimer(hwnd, WINDOW_TIMER_ID, 500, NULL);
         return 0;
     }
 
     if (msg == WM_TIMER) {
-        if ((uintptr_t)wParam == 1) {
+        if ((uintptr_t)wParam == WINDOW_TIMER_ID) {
             window->renderer = !window->renderer;
             Canvas_Free(window->canvas);
             window->canvas = Canvas_New(hwnd, window->renderer ? CANVAS_RENDERER_DIRECT2D : CANVAS_RENDERER_GDI);

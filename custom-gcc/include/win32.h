@@ -165,11 +165,11 @@ extern bool __stdcall FindClose(HANDLE hFindFile);
 extern int32_t __stdcall MulDiv(int32_t nNumber, int32_t nNumerator, int32_t nDenominator);
 
 // User32
-#define GET_X_LPARAM(lParam) LOWORD(lParam)
+#define GET_X_LPARAM(lParam) (int32_t)(int16_t)LOWORD(lParam)
 
-#define GET_Y_LPARAM(lParam) HIWORD(lParam)
+#define GET_Y_LPARAM(lParam) (int32_t)(int16_t)HIWORD(lParam)
 
-#define GET_WHEEL_DELTA_WPARAM(wParam) HIWORD(wParam)
+#define GET_WHEEL_DELTA_WPARAM(wParam) (int32_t)(int16_t)HIWORD(wParam)
 
 #define HWND_DESKTOP 0
 
