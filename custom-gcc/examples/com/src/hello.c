@@ -13,43 +13,45 @@ const IHelloVtbl HelloVtbl = {
 
 int32_t __stdcall CreateHello(const IID *riid, IHello **ppIHello) {
     if (!memcmp(riid, &IID_IHello, sizeof(IID))) {
-        Hello *hello = malloc(sizeof(Hello));
-        hello->Base.lpVtbl = &HelloVtbl;
-        hello->RefCount = 1;
-        *ppIHello = (IHello *)hello;
+        *ppIHello = (IHello *)Hello_New();
         return E_OK;
     }
     *ppIHello = NULL;
     return E_NOINTERFACE;
 }
 
-int32_t __stdcall Hello_QueryInterface(Hello *This, const IID *riid, void **ppv) {
-    IID IID_IUnknown = { 0x00000000, 0x0000, 0x0000, { 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 } };
-    if (!memcmp(riid, &IID_IUnknown, sizeof(IID))) {
-        *ppv = This;
-    } else if (!memcmp(riid, &IID_IHello, sizeof(IID))) {
-        *ppv = This;
-    } else {
-        *ppv = NULL;
-        return E_NOINTERFACE;
+int32_t __stdcall Hello_QueryInterface(Hello *this, const IID *riid, void **ppvObject) {
+    const IID IID_IUnknown = { 0x00000000, 0x0000, 0x0000, { 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 } };
+    if (!memcmp(riid, &IID_IUnknown, sizeof(IID)) || !memcmp(riid, &IID_IHello, sizeof(IID))) {
+        *ppvObject = this;
+        IUnknown_AddRef(*ppvObject);
+        return E_OK;
     }
-    IUnknown_AddRef(*ppv);
-    return E_OK;
+    *ppvObject = NULL;
+    return E_NOINTERFACE;
 }
 
-uint32_t __stdcall Hello_AddRef(Hello *This) {
-    return ++This->RefCount;
+uint32_t __stdcall Hello_AddRef(Hello *this) {
+    return ++this->refs;
 }
 
-uint32_t __stdcall Hello_Release(Hello *This) {
-    This->RefCount--;
-    if (This->RefCount == 0) {
-        free(This);
-    }
-    return This->RefCount;
+uint32_t __stdcall Hello_Release(Hello *this) {
+    if (--this->refs == 0) Hello_Free(this);
+    return this->refs;
 }
 
-void __stdcall Hello_SayHello(Hello *This, wchar_t *name) {
-    (void)This;
+Hello * __stdcall Hello_New(void) {
+    Hello *hello = malloc(sizeof(Hello));
+    hello->base.lpVtbl = &HelloVtbl;
+    hello->refs = 1;
+    return hello;
+}
+
+void __stdcall Hello_SayHello(Hello *this, wchar_t *name) {
+    (void)this;
     wprintf(L"Hello %s!\n", name);
+}
+
+void __stdcall Hello_Free(Hello *this) {
+    free(this);
 }

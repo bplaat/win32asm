@@ -44,19 +44,19 @@ typedef struct DWRITE_TEXT_RANGE {
 typedef struct IDWriteTextFormat IDWriteTextFormat;
 
 typedef struct IDWriteTextFormatVtbl {
-    IUnknownVtbl Base;
+    IUnknownVtbl base;
 
-    int32_t __stdcall (*SetTextAlignment)(IDWriteTextFormat *This, uint32_t textAlignment);
-    int32_t __stdcall (*SetParagraphAlignment)(IDWriteTextFormat *This, uint32_t paragraphAlignment);
+    int32_t __stdcall (*SetTextAlignment)(IDWriteTextFormat *this, uint32_t textAlignment);
+    int32_t __stdcall (*SetParagraphAlignment)(IDWriteTextFormat *this, uint32_t paragraphAlignment);
     uint8_t padding1[5 * sizeof(void *)];
 
-    int32_t __stdcall (*SetLineSpacing)(IDWriteTextFormat *This, uint32_t lineSpacingMethod, float lineSpacing, float baseline);
+    int32_t __stdcall (*SetLineSpacing)(IDWriteTextFormat *this, uint32_t lineSpacingMethod, float lineSpacing, float baseline);
     uint8_t padding2[17 * sizeof(void *)];
 } IDWriteTextFormatVtbl;
 
-#define IDWriteTextFormat_SetTextAlignment(This, textAlignment) ((IDWriteTextFormat *)This)->lpVtbl->SetTextAlignment((IDWriteTextFormat *)This, textAlignment)
-#define IDWriteTextFormat_SetParagraphAlignment(This, paragraphAlignment) ((IDWriteTextFormat *)This)->lpVtbl->SetParagraphAlignment((IDWriteTextFormat *)This, paragraphAlignment)
-#define IDWriteTextFormat_SetLineSpacing(This, lineSpacingMethod, lineSpacing, baseline) ((IDWriteTextFormat *)This)->lpVtbl->SetLineSpacing((IDWriteTextFormat *)This, lineSpacingMethod, lineSpacing, baseline)
+#define IDWriteTextFormat_SetTextAlignment(this, textAlignment) ((IDWriteTextFormat *)this)->lpVtbl->SetTextAlignment((IDWriteTextFormat *)this, textAlignment)
+#define IDWriteTextFormat_SetParagraphAlignment(this, paragraphAlignment) ((IDWriteTextFormat *)this)->lpVtbl->SetParagraphAlignment((IDWriteTextFormat *)this, paragraphAlignment)
+#define IDWriteTextFormat_SetLineSpacing(this, lineSpacingMethod, lineSpacing, baseline) ((IDWriteTextFormat *)this)->lpVtbl->SetLineSpacing((IDWriteTextFormat *)this, lineSpacingMethod, lineSpacing, baseline)
 
 struct IDWriteTextFormat {
     const IDWriteTextFormatVtbl *lpVtbl;
@@ -66,20 +66,20 @@ struct IDWriteTextFormat {
 typedef struct IDWriteTextLayout IDWriteTextLayout;
 
 typedef struct IDWriteTextLayoutVtbl {
-    IDWriteTextFormatVtbl Base;
+    IDWriteTextFormatVtbl base;
     uint8_t padding1[8 * sizeof(void *)];
 
-    int32_t __stdcall (*SetUnderline)(IDWriteTextLayout *This, bool underline, DWRITE_TEXT_RANGE range);
-    int32_t __stdcall (*SetStrikethrough)(IDWriteTextLayout *This, bool strikethrough, DWRITE_TEXT_RANGE range);
+    int32_t __stdcall (*SetUnderline)(IDWriteTextLayout *this, bool underline, DWRITE_TEXT_RANGE range);
+    int32_t __stdcall (*SetStrikethrough)(IDWriteTextLayout *this, bool strikethrough, DWRITE_TEXT_RANGE range);
     uint8_t padding2[22 * sizeof(void *)];
 
-    int32_t __stdcall (*GetMetrics)(IDWriteTextLayout *This, DWRITE_TEXT_METRICS *metrics);
+    int32_t __stdcall (*GetMetrics)(IDWriteTextLayout *this, DWRITE_TEXT_METRICS *metrics);
     uint8_t padding3[6 * sizeof(void *)];
 } IDWriteTextLayoutVtbl;
 
-#define IDWriteTextLayout_SetUnderline(This, underline, range) ((IDWriteTextLayout *)This)->lpVtbl->SetUnderline((IDWriteTextLayout *)This, underline, range)
-#define IDWriteTextLayout_SetStrikethrough(This, strikethrough, range) ((IDWriteTextLayout *)This)->lpVtbl->SetStrikethrough((IDWriteTextLayout *)This, strikethrough, range)
-#define IDWriteTextLayout_GetMetrics(This, metrics) ((IDWriteTextLayout *)This)->lpVtbl->GetMetrics((IDWriteTextLayout *)This, metrics)
+#define IDWriteTextLayout_SetUnderline(this, underline, range) ((IDWriteTextLayout *)this)->lpVtbl->SetUnderline((IDWriteTextLayout *)this, underline, range)
+#define IDWriteTextLayout_SetStrikethrough(this, strikethrough, range) ((IDWriteTextLayout *)this)->lpVtbl->SetStrikethrough((IDWriteTextLayout *)this, strikethrough, range)
+#define IDWriteTextLayout_GetMetrics(this, metrics) ((IDWriteTextLayout *)this)->lpVtbl->GetMetrics((IDWriteTextLayout *)this, metrics)
 
 struct IDWriteTextLayout {
     const IDWriteTextLayoutVtbl *lpVtbl;
@@ -89,22 +89,22 @@ struct IDWriteTextLayout {
 typedef struct IDWriteFactory IDWriteFactory;
 
 typedef struct IDWriteFactoryVtbl {
-    IUnknownVtbl Base;
+    IUnknownVtbl base;
     uint8_t padding1[12 * sizeof(void *)];
 
-    int32_t __stdcall (*CreateTextFormat)(IDWriteFactory *This, const wchar_t *fontFamilyName, void *fontCollection, uint32_t fontWeight, uint32_t fontStyle,
+    int32_t __stdcall (*CreateTextFormat)(IDWriteFactory *this, const wchar_t *fontFamilyName, void *fontCollection, uint32_t fontWeight, uint32_t fontStyle,
         uint32_t fontStretch, float fontSize, const wchar_t *localeName, IDWriteTextFormat **textFormat);
     uint8_t padding2[2 * sizeof(void *)];
 
-    int32_t __stdcall (*CreateTextLayout)(IDWriteFactory *This, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat,
+    int32_t __stdcall (*CreateTextLayout)(IDWriteFactory *this, const wchar_t *string, uint32_t stringLength, IDWriteTextFormat *textFormat,
         float maxWidth, float maxHeight, IDWriteTextLayout **textLayout);
     uint8_t padding3[5 * sizeof(void *)];
 } IDWriteFactoryVtbl;
 
-#define IDWriteFactory_CreateTextFormat(This, fontFamilyName, fontCollection, fontWeight, fontStyle, fontStretch, fontSize, localeName, textFormat) \
-    ((IDWriteFactory *)This)->lpVtbl->CreateTextFormat((IDWriteFactory *)This, fontFamilyName, fontCollection, fontWeight, fontStyle, fontStretch, fontSize, localeName, textFormat)
-#define IDWriteFactory_CreateTextLayout(This, string, stringLength, textFormat, maxWidth, maxHeight, textLayout) \
-    ((IDWriteFactory *)This)->lpVtbl->CreateTextLayout((IDWriteFactory *)This, string, stringLength, textFormat, maxWidth, maxHeight, textLayout)
+#define IDWriteFactory_CreateTextFormat(this, fontFamilyName, fontCollection, fontWeight, fontStyle, fontStretch, fontSize, localeName, textFormat) \
+    ((IDWriteFactory *)this)->lpVtbl->CreateTextFormat((IDWriteFactory *)this, fontFamilyName, fontCollection, fontWeight, fontStyle, fontStretch, fontSize, localeName, textFormat)
+#define IDWriteFactory_CreateTextLayout(this, string, stringLength, textFormat, maxWidth, maxHeight, textLayout) \
+    ((IDWriteFactory *)this)->lpVtbl->CreateTextLayout((IDWriteFactory *)this, string, stringLength, textFormat, maxWidth, maxHeight, textLayout)
 
 struct IDWriteFactory {
     const IDWriteFactoryVtbl *lpVtbl;
