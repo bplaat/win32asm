@@ -41,10 +41,10 @@ uint32_t __stdcall Hello_Release(Hello *this) {
 }
 
 Hello * __stdcall Hello_New(void) {
-    Hello *hello = malloc(sizeof(Hello));
-    hello->base.lpVtbl = &HelloVtbl;
-    hello->refs = 1;
-    return hello;
+    Hello *this = malloc(sizeof(Hello));
+    this->base.lpVtbl = &HelloVtbl;
+    this->refs = 1;
+    return this;
 }
 
 void __stdcall Hello_SayHello(Hello *this, wchar_t *name) {

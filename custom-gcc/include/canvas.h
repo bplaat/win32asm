@@ -80,9 +80,9 @@ typedef struct Canvas {
     };
 } Canvas;
 
-typedef int32_t __stdcall (*_D2D1CreateFactory)(uint32_t factoryType, GUID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+typedef int32_t __stdcall (*_D2D1CreateFactory)(uint32_t factoryType, const IID *riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
 
-typedef int32_t __stdcall (*_DWriteCreateFactory)(uint32_t factoryType, GUID *riid, IDWriteFactory **factory);
+typedef int32_t __stdcall (*_DWriteCreateFactory)(uint32_t factoryType, const IID *riid, IDWriteFactory **factory);
 
 Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
 
