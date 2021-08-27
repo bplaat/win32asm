@@ -795,18 +795,18 @@ typedef GUID IID;
 typedef struct IUnknown IUnknown;
 
 typedef struct IUnknownVtbl {
-    int32_t __stdcall (*QueryInterface)(IUnknown *This, const IID *riid, void **ppvObject);
-    uint32_t __stdcall (*AddRef)(IUnknown *This);
-    uint32_t __stdcall (*Release)(IUnknown *This);
+    int32_t __stdcall (*QueryInterface)(IUnknown *this, const IID *riid, void **ppvObject);
+    uint32_t __stdcall (*AddRef)(IUnknown *this);
+    uint32_t __stdcall (*Release)(IUnknown *this);
 } IUnknownVtbl;
 
 struct IUnknown {
     const IUnknownVtbl *lpVtbl;
 };
 
-#define IUnknown_QueryInterface(This, riid, ppvObject) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This, riid, ppvObject);
-#define IUnknown_AddRef(This) ((IUnknown *)This)->lpVtbl->AddRef((IUnknown *)This);
-#define IUnknown_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This);
+#define IUnknown_QueryInterface(this, riid, ppvObject) ((IUnknown *)this)->lpVtbl->Release((IUnknown *)this, riid, ppvObject);
+#define IUnknown_AddRef(this) ((IUnknown *)this)->lpVtbl->AddRef((IUnknown *)this);
+#define IUnknown_Release(this) ((IUnknown *)this)->lpVtbl->Release((IUnknown *)this);
 
 // Multimon, Windows 8.1 DPI shit...
 #define MONITOR_DEFAULTTONEAREST 0x00000002
