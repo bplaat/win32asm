@@ -3,6 +3,7 @@
 Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
     Canvas *canvas = malloc(sizeof(Canvas));
     canvas->renderer = renderer;
+    canvas->hwnd = hwnd;
     canvas->width = -1;
     canvas->height = -1;
 
@@ -43,7 +44,7 @@ void Canvas_Free(Canvas *canvas) {
         DeleteObject(canvas->gdi.buffer_bitmap);
         DeleteDC(canvas->gdi.buffer_hdc);
 
-        DeleteDC(canvas->gdi.hdc);
+        ReleaseDC(canvas->hwnd, canvas->gdi.hdc);
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
@@ -205,6 +206,48 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, floa
     }
 }
 
+void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font) {
+    if (length == -1) length = wcslen(text);
+
+    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        int32_t weight = FW_NORMAL;
+        if (font->weight == CANVAS_FONT_WEIGHT_BOLD) weight = FW_BOLD;
+        HFONT hfont = CreateFontW(-MulDiv(font->size, 96, 72), 0, 0, 0, weight, font->italic, font->underline, font->line_through,
+            ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
+        SelectObject(canvas->gdi.buffer_hdc, hfont);
+
+        RECT measure_rect = { 0, 0, rect->width, rect->height };
+        DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | (rect->width == 0 ? 0 : DT_WORDBREAK));
+        rect->width = measure_rect.right;
+        rect->height = measure_rect.bottom;
+
+        DeleteObject(hfont);
+    }
+
+    if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
+        IDWriteTextFormat *text_format;
+        int32_t weight = DWRITE_FONT_WEIGHT_NORMAL;
+        if (font->weight == CANVAS_FONT_WEIGHT_BOLD) weight = DWRITE_FONT_WEIGHT_BOLD;
+        IDWriteFactory_CreateTextFormat(canvas->d2d.dwrite_factory, font->name, NULL, weight,
+            font->italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+            (font->size / 72) * 96, L"", &text_format);
+
+        IDWriteTextLayout *text_layout;
+        IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format, rect->width == 0 ? INT32_MAX : rect->width,
+            canvas->height == 0 ? INT32_MAX : canvas->height, &text_layout);
+        if (font->underline) IDWriteTextLayout_SetUnderline(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
+        if (font->line_through) IDWriteTextLayout_SetStrikethrough(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
+
+        DWRITE_TEXT_METRICS metrics;
+        IDWriteTextLayout_GetMetrics(text_layout, &metrics);
+        rect->width = metrics.width;
+        rect->height = metrics.height;
+
+        IUnknown_Release(text_format);
+        IUnknown_Release(text_layout);
+    }
+}
+
 void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, CanvasColor color) {
     if (length == -1) length = wcslen(text);
 
@@ -215,13 +258,14 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
         SelectObject(canvas->gdi.buffer_hdc, hfont);
 
+        int32_t options = rect->width == 0 ? 0 : DT_WORDBREAK;
         RECT measure_rect = { 0, 0, rect->width, 0 };
-        if (rect->height == 0 || (align & CANVAS_ALIGN_VERTICAL_CENTER) != 0 || (align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) {
-            DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
+        if (rect->width == 0 || rect->height == 0 || (align & CANVAS_ALIGN_VERTICAL_CENTER) != 0 || (align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) {
+            DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | options);
+            if (rect->width == 0) rect->width = measure_rect.right;
             if (rect->height == 0) rect->height = measure_rect.bottom;
         }
 
-        int32_t options = DT_WORDBREAK;
         int32_t y = 0;
         if ((align & CANVAS_ALIGN_HORIZONTAL_CENTER) != 0) {
             options |= DT_CENTER;
@@ -272,13 +316,15 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
         if ((align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
 
         IDWriteTextLayout *text_layout;
-        IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format, rect->width, rect->height == 0 ? canvas->height * 2 : rect->height, &text_layout);
+        IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format, rect->width == 0 ? INT32_MAX : rect->width,
+            rect->height == 0 ? INT32_MAX : rect->height, &text_layout);
         if (font->underline) IDWriteTextLayout_SetUnderline(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
         if (font->line_through) IDWriteTextLayout_SetStrikethrough(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
-        if (rect->height == 0) {
+        if (rect->width == 0 || rect->height == 0) {
             DWRITE_TEXT_METRICS metrics;
             IDWriteTextLayout_GetMetrics(text_layout, &metrics);
-            rect->height = metrics.height;
+            if (rect->width == 0) rect->width = metrics.width;
+            if (rect->height == 0) rect->height = metrics.height;
         }
 
         ID2D1RenderTarget_DrawTextLayout(canvas->d2d.render_target, ((D2D1_POINT_2F){ rect->x, rect->y }), text_layout, brush,

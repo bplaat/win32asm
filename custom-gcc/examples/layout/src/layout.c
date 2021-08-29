@@ -175,5 +175,5 @@ void _start(void) {
 
     GdiplusShutdown(&gdiplusToken);
 
-    ExitProcess((int32_t)(uintptr_t)message.wParam);
+    ExitProcess((uintptr_t)message.wParam);
 }

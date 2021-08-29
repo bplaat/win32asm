@@ -991,13 +991,14 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
 
         widget->parent_width = parent_width;
         if (widget->width.type == JAN_UNIT_TYPE_WRAP) {
-            HDC hdc = GetDC(NULL);
+            HDC hdc = GetDC(HWND_DESKTOP);
             HFONT font = jan_label_get_hfont(label);
             SelectObject(hdc, font);
             RECT measure_rect = { 0, 0, 0, 0 };
             DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT);
-            DeleteObject(font);
             widget->content_rect.width = MIN((int32_t)measure_rect.right - (int32_t)measure_rect.left, parent_width);
+            DeleteObject(font);
+            ReleaseDC(HWND_DESKTOP, hdc);
         } else {
             widget->content_rect.width = jan_unit_to_pixels(&widget->width, parent_width - jan_unit_to_pixels(&widget->padding.left, parent_width) - jan_unit_to_pixels(&widget->padding.right, parent_width) -
                 jan_unit_to_pixels(&widget->margin.left, parent_width) - jan_unit_to_pixels(&widget->margin.right, parent_width));
@@ -1010,12 +1011,13 @@ void *jan_label_event(JanWidget *widget, uint32_t event, void *param1, void *par
             if (label->single_line) {
                 widget->content_rect.height = MIN(jan_unit_to_pixels(&label->font_size, 0), parent_height);
             } else {
-                HDC hdc = GetDC(NULL);
+                HDC hdc = GetDC(HWND_DESKTOP);
                 HFONT font = jan_label_get_hfont(label);
                 SelectObject(hdc, font);
                 RECT measure_rect = { 0, 0, widget->content_rect.width, 0 };
                 widget->content_rect.height = DrawTextW(hdc, label->text, -1, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
                 DeleteObject(font);
+                ReleaseDC(HWND_DESKTOP, hdc);
             }
         } else {
             widget->content_rect.height = jan_unit_to_pixels(&widget->height, parent_height - jan_unit_to_pixels(&widget->padding.top, parent_height) - jan_unit_to_pixels(&widget->padding.bottom, parent_height) -

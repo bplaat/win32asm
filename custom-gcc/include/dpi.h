@@ -3,14 +3,18 @@
 
 #include "win32.h"
 
+typedef int32_t __stdcall (*_SetProcessDpiAwarenessContext)(void *value);
+
 typedef int32_t __stdcall (*_SetProcessDpiAwareness)(uint32_t value);
 
 typedef bool __stdcall (*_SetProcessDPIAware)(void);
 
-void SetDPIAware(void);
+void SetDpiAware(void);
 
-typedef int32_t __stdcall (*_GetDpiForMonitor)(HMONITOR hmonitor, int dpiType, uint32_t *dpiX, uint32_t *dpiY);
+int32_t GetDesktopDpi(void);
 
-int32_t GetWindowDPI(HWND hwnd);
+typedef bool __stdcall (*_AdjustWindowRectExForDpi)(RECT *lpRect, uint32_t dwStyle, bool bMenu, uint32_t dwExStyle, uint32_t dpi);
+
+bool AdjustWindowRectExForDpi(RECT *lpRect, uint32_t dwStyle, bool bMenu, uint32_t dwExStyle, uint32_t dpi);
 
 #endif

@@ -1,4 +1,5 @@
 #include "win32.h"
+#include "dpi.h"
 
 wchar_t *window_class_name = L"window-test";
 
@@ -8,27 +9,26 @@ wchar_t *window_class_name = L"window-test";
     wchar_t *window_title = L"This is a test window 😍 (32-bit)";
 #endif
 
-wchar_t *font_name = L"Comic Sans MS";
-
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
+#define WINDOW_MIN_WIDTH 640
+#define WINDOW_MIN_HEIGHT 480
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 
 typedef struct WindowData {
-    uint32_t width;
-    uint32_t height;
-    uint32_t background_color;
+    int32_t dpi;
+    int32_t width;
+    int32_t height;
+    int32_t background_color;
 } WindowData;
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     if (msg == WM_CREATE) {
-        // Create window data
-        window = malloc(sizeof(WindowData));
+        // Set window data struct as user data
+        WindowData *window = ((CREATESTRUCTW *)lParam)->lpCreateParams;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-        window->width = WINDOW_WIDTH;
-        window->height = WINDOW_HEIGHT;
 
         // Generate random seed by time
         SYSTEMTIME time;
@@ -40,6 +40,15 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         return 0;
     }
 
+    if (msg == WM_DPICHANGED) {
+        // Update dpi and resize window
+        window->dpi = HIWORD(wParam);
+        RECT *window_rect = lParam;
+        SetWindowPos(hwnd, NULL, window_rect->left, window_rect->top, window_rect->right - window_rect->left,
+            window_rect->bottom - window_rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
+        return 0;
+    }
+
     if (msg == WM_SIZE) {
         // Save new window size
         window->width = LOWORD(lParam);
@@ -48,10 +57,13 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_GETMINMAXINFO) {
+        // Calculate window min size for dpi
+        int32_t window_dpi = window != NULL ? window->dpi : GetDesktopDpi();
+        RECT window_rect = { 0, 0, MulDiv(WINDOW_MIN_WIDTH, window_dpi, 96), MulDiv(WINDOW_MIN_HEIGHT, window_dpi, 96) };
+        AdjustWindowRectExForDpi(&window_rect, WINDOW_STYLE, false, 0, window_dpi);
+
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        RECT window_rect = { 0, 0, 640, 480 };
-        AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
         minMaxInfo->ptMinTrackSize.x = window_rect.right - window_rect.left;
         minMaxInfo->ptMinTrackSize.y = window_rect.bottom - window_rect.top;
         return 0;
@@ -77,7 +89,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         DeleteObject(brush);
 
         // Draw centered text
-        uint32_t font_size = window->width / 16;
+        wchar_t *font_name = L"Comic Sans MS";
+        int32_t font_size = window->width / 16;
         HFONT font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
         SelectObject(hdc_buffer, font);
@@ -119,6 +132,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
+    // Set process dpi aware
+    SetDpiAware();
+
+    // Register window class
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -130,24 +147,32 @@ void _start(void) {
     wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);
 
+    // Create window data struct
+    WindowData *window = malloc(sizeof(WindowData));
+    window->dpi = GetDesktopDpi();
+    window->width = MulDiv(WINDOW_WIDTH, window->dpi, 96);
+    window->height = MulDiv(WINDOW_HEIGHT, window->dpi, 96);
+
+    // Create centered window
     RECT window_rect;
-    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
-    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
-    window_rect.right = window_rect.left + WINDOW_WIDTH;
-    window_rect.bottom = window_rect.top + WINDOW_HEIGHT;
-    AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
+    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - window->width) / 2;
+    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - window->height) / 2;
+    window_rect.right = window_rect.left + window->width;
+    window_rect.bottom = window_rect.top + window->height;
+    AdjustWindowRectExForDpi(&window_rect, WINDOW_STYLE, false, 0, window->dpi);
 
     HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
         WINDOW_STYLE, window_rect.left, window_rect.top,
         window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
-        NULL, NULL, wc.hInstance, NULL);
+        NULL, NULL, wc.hInstance, window);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
+    // Main message loop
     MSG message;
     while (GetMessageW(&message, NULL, 0, 0) > 0) {
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
-    ExitProcess((int32_t)(uintptr_t)message.wParam);
+    ExitProcess((uintptr_t)message.wParam);
 }
