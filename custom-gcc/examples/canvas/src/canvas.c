@@ -186,5 +186,5 @@ void _start(void) {
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
-    ExitProcess((int32_t)(uintptr_t)message.wParam);
+    ExitProcess((uintptr_t)message.wParam);
 }

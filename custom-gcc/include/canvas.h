@@ -17,12 +17,25 @@ typedef enum CanvasRenderer {
 
 typedef uint32_t CanvasColor;
 
+typedef struct CanvasPoint {
+    float x;
+    float y;
+} CanvasPoint;
+
 typedef struct CanvasRect {
     float x;
     float y;
     float width;
     float height;
 } CanvasRect;
+
+#define CANVAS_POINT_COLLIDE(a, b) (b->x >= a->x && b->y >= a->x && \
+    b->x < a->x + a->width && b->y < a->y + a->height)
+
+#define CANVAS_RECT_COLLIDE(a, b) (a->x < b->x + b->width && \
+    a->x + a->width > b->x && \
+    a->y < b->y + b->height && \
+    a->y + a->height > b->y)
 
 typedef enum CanvasFontWeight {
     CANVAS_FONT_WEIGHT_NORMAL,
@@ -59,6 +72,7 @@ typedef struct CanvasTransform {
 
 typedef struct Canvas {
     CanvasRenderer renderer;
+    HWND hwnd;
     int32_t width;
     int32_t height;
 
@@ -101,6 +115,8 @@ void Canvas_Clip(Canvas *canvas, CanvasRect *rect);
 void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
 
 void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width);
+
+void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font);
 
 void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, CanvasColor color);
 

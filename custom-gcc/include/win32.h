@@ -29,6 +29,7 @@ typedef HANDLE HMONITOR;
 typedef HANDLE HPEN;
 typedef void * WPARAM;
 typedef void * LPARAM;
+typedef uint16_t ATOM;
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -145,6 +146,7 @@ extern HANDLE __stdcall CreateMutexW(void *lpMutexAttributes, bool bInitialOwner
 extern bool __stdcall ReleaseMutex(HANDLE hMutex);
 extern bool __stdcall GetVersionExW(OSVERSIONINFOW *lpVersionInformation);
 extern HMODULE __stdcall LoadLibraryW(wchar_t *lpLibFileName);
+extern bool __stdcall FreeLibrary(HMODULE hLibModule);
 extern void * __stdcall GetProcAddress(HMODULE hModule, char *lpProcName);
 extern HRSRC __stdcall FindResourceW(HMODULE hModule, wchar_t *lpName, wchar_t *lpType);
 extern uint32_t __stdcall SizeofResource(HMODULE hModule, HRSRC hResInfo);
@@ -312,6 +314,10 @@ extern int32_t __stdcall MulDiv(int32_t nNumber, int32_t nNumerator, int32_t nDe
 #define HTBOTTOMRIGHT 17
 
 #define MONITOR_DEFAULTTONULL 0x00000000
+#define MONITOR_DEFAULTTOPRIMARY 0x00000001
+#define MONITOR_DEFAULTTONEAREST 0x00000002
+
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (void *)-4
 
 #define ETO_CLIPPED 0x0004
 
@@ -406,6 +412,21 @@ typedef struct WINDOWPLACEMENT {
     RECT rcDevice;
 } WINDOWPLACEMENT;
 
+typedef struct {
+    void *lpCreateParams;
+    HINSTANCE hInstance;
+    HMENU hMenu;
+    HWND hwndParent;
+    int32_t cy;
+    int32_t cx;
+    int32_t y;
+    int32_t x;
+    uint32_t style;
+    const wchar_t *lpszName;
+    const wchar_t *lpszClass;
+    uint32_t dwExStyle;
+} CREATESTRUCTW;
+
 extern int32_t __stdcall MessageBoxW(HWND hWnd, wchar_t *lpText, wchar_t *lpCaption, uint32_t uType);
 extern void __stdcall PostQuitMessage(int32_t nExitCode);
 extern int32_t __stdcall DefWindowProcW(HWND hWnd, uint32_t Msg, WPARAM wParam, LPARAM lParam);
@@ -413,7 +434,7 @@ extern HICON __stdcall LoadIconW(HINSTANCE hInstance, wchar_t *lpIconName);
 extern HCURSOR __stdcall LoadCursorW(HINSTANCE hInstance, wchar_t *lpCursorName);
 extern HBITMAP __stdcall LoadBitmapW(HINSTANCE hInstance, wchar_t *lpIconName);
 extern HANDLE __stdcall LoadImageW(HINSTANCE hInst, wchar_t *name, uint32_t type, int32_t cx, int32_t cy, uint32_t fuLoad);
-extern void __stdcall RegisterClassExW(const WNDCLASSEXW *unnamedParam1);
+extern ATOM __stdcall RegisterClassExW(const WNDCLASSEXW *unnamedParam1);
 extern HWND __stdcall CreateWindowExW(uint32_t dwExStyle, wchar_t *lpClassName, wchar_t *lpWindowName, uint32_t dwStyle,
     int32_t X, int32_t Y, int32_t nWidth, int32_t nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPARAM lpParam);
 extern bool __stdcall ShowWindow(HWND hWnd, int32_t nCmdShow);
@@ -455,7 +476,9 @@ extern bool __stdcall InsertMenuW(HMENU hMenu, uint32_t uPosition, uint32_t uFla
 extern HACCEL __stdcall LoadAcceleratorsW(HINSTANCE hInstance, wchar_t *lpTableName);
 extern int32_t __stdcall TranslateAcceleratorW(HWND hWnd, HACCEL hAccTable, MSG *lpMsg);
 extern HWND __stdcall SetCapture(HWND hWnd);
+extern int32_t __stdcall ReleaseDC(HWND hWnd, HDC hDC);
 extern bool __stdcall ReleaseCapture(void);
+extern HMONITOR __stdcall MonitorFromPoint(POINT pt, uint32_t dwFlags);
 extern HMONITOR __stdcall MonitorFromWindow(HWND hwnd, uint32_t dwFlags);
 extern bool __stdcall GetMonitorInfoW(HMONITOR hMonitor, MONITORINFO *lpmi);
 extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
@@ -505,6 +528,7 @@ extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
 #define STRETCH_HALFTONE 4
 
 #define RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16))
+#define HEX(x) (((x >> 16) & 0xff) | (((x >> 8) & 0xff) << 8) | ((x & 0xff) << 16))
 
 #define GM_COMPATIBLE 1
 #define GM_ADVANCED 2
@@ -809,8 +833,6 @@ struct IUnknown {
 #define IUnknown_Release(this) ((IUnknown *)this)->lpVtbl->Release((IUnknown *)this);
 
 // Multimon, Windows 8.1 DPI shit...
-#define MONITOR_DEFAULTTONEAREST 0x00000002
-
 #define MDT_EFFECTIVE_DPI 0
 
 #define PROCESS_PER_MONITOR_DPI_AWARE 2

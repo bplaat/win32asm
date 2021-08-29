@@ -14,12 +14,14 @@ wchar_t *font_name = L"Segoe UI";
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
+#define WINDOW_MIN_WIDTH 640
+#define WINDOW_MIN_HEIGHT 480
 #define WINDOW_STYLE (WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION | WS_SYSMENU)
 
 typedef struct WindowData {
+    int32_t dpi;
     int32_t width;
     int32_t height;
-    int32_t dpi;
     bool active;
     Canvas *canvas;
 
@@ -37,19 +39,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     if (msg == WM_CREATE) {
-        // Create window data
-        window = malloc(sizeof(WindowData));
+        // Set window data struct as user data
+        WindowData *window = ((CREATESTRUCTW *)lParam)->lpCreateParams;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-
-        // Resize window when dpi is not 96
-        window->dpi = GetWindowDPI(hwnd);
-        if (window->dpi != 96) {
-            window->width = MulDiv(WINDOW_WIDTH, window->dpi, 96);
-            window->height = MulDiv(WINDOW_HEIGHT, window->dpi, 96);
-            SetWindowPos(hwnd, NULL, (GetSystemMetrics(SM_CXSCREEN) - window->width) / 2,
-                (GetSystemMetrics(SM_CYSCREEN) - window->height) / 2,
-                window->width, window->height, SWP_NOZORDER | SWP_NOACTIVATE);
-        }
 
         // Create canvas
         window->active = true;
@@ -154,11 +146,11 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     }
 
     if (msg == WM_DPICHANGED) {
+        // Update dpi and resize window
         window->dpi = HIWORD(wParam);
-
-        RECT *new_size = lParam;
-        SetWindowPos(hwnd, NULL, new_size->left, new_size->top, new_size->right - new_size->left,
-            new_size->bottom - new_size->top, SWP_NOZORDER | SWP_NOACTIVATE);
+        RECT *window_rect = lParam;
+        SetWindowPos(hwnd, NULL, window_rect->left, window_rect->top, window_rect->right - window_rect->left,
+            window_rect->bottom - window_rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
         return 0;
     }
 
@@ -180,8 +172,9 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
     if (msg == WM_GETMINMAXINFO) {
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        minMaxInfo->ptMinTrackSize.x = 640;
-        minMaxInfo->ptMinTrackSize.y = 480;
+        int32_t window_dpi = window != NULL ? window->dpi : GetDesktopDpi();
+        minMaxInfo->ptMinTrackSize.x = MulDiv(WINDOW_MIN_WIDTH, window_dpi, 96);
+        minMaxInfo->ptMinTrackSize.y = MulDiv(WINDOW_MIN_HEIGHT, window_dpi, 96);
         return 0;
     }
 
@@ -374,8 +367,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
-    SetDPIAware();
+    // Set process dpi aware
+    SetDpiAware();
 
+    // Register window class
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -387,13 +382,21 @@ void _start(void) {
     wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);
 
+    // Create window data struct
+    WindowData *window = malloc(sizeof(WindowData));
+    window->dpi = GetDesktopDpi();
+    window->width = MulDiv(WINDOW_WIDTH, window->dpi, 96);
+    window->height = MulDiv(WINDOW_HEIGHT, window->dpi, 96);
+
+    // Create centered window
     HWND hwnd = CreateWindowExW(0, window_class_name, window_title, WINDOW_STYLE,
-        (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2,
-        (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2,
-        WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL, wc.hInstance, NULL);
+        (GetSystemMetrics(SM_CXSCREEN) - window->width) / 2,
+        (GetSystemMetrics(SM_CYSCREEN) - window->height) / 2,
+        window->width, window->height, NULL, NULL, wc.hInstance, window);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
+    // Main message loop
     MSG message;
     while (GetMessageW(&message, NULL, 0, 0) > 0) {
         TranslateMessage(&message);
