@@ -121,14 +121,14 @@ libraries = {
         'SetThreadUILanguage', 'SizeofResource', 'Sleep', 'WideCharToMultiByte', 'WriteConsoleA', 'WriteConsoleW', 'WriteFile'
     ],
     'USER32.DLL': [
-        'AdjustWindowRectEx', 'BeginPaint', 'CreateWindowExW', 'DefWindowProcW', 'DestroyWindow', 'DispatchMessageW', 'DrawTextW',
-        'EndPaint', 'EnumChildWindows', 'FillRect', 'FindWindowW', 'FrameRect', 'GetClientRect', 'GetDC', 'GetDlgItem', 'GetMessageW',
+        'AdjustWindowRectEx', 'BeginPaint', 'ClientToScreen', 'CreateWindowExW', 'DefWindowProcW', 'DestroyWindow', 'DispatchMessageW', 'DrawTextW',
+        'EndPaint', 'EnumChildWindows', 'FillRect', 'FindWindowW', 'FrameRect', 'GetClientRect', 'GetCursorPos', 'GetDC', 'GetDlgItem', 'GetMessageW',
         'GetMonitorInfoW', 'GetSystemMenu', 'GetSystemMetrics', 'GetWindowPlacement', 'GetWindowRect', 'GetWindowTextW', 'InsertMenuW',
         'InvalidateRect', 'IsIconic', 'KillTimer', 'LoadAcceleratorsW', 'LoadBitmapW', 'LoadCursorW', 'LoadIconW', 'LoadImageW',
         'LoadStringW', 'MessageBeep', 'MessageBoxW', 'MonitorFromPoint', 'MonitorFromWindow', 'PeekMessageW', 'PostQuitMessage',
-        'RegisterClassExW', 'ReleaseCapture', 'ReleaseDC', 'SendMessageW', 'SetCapture', 'SetForegroundWindow', 'SetMenu', 'SetTimer',
-        'SetWindowPos', 'SetWindowTextW', 'ShowWindow', 'TranslateAcceleratorW', 'TranslateMessage', 'UpdateWindow',
-        'wsprintfA', 'wvsprintfA', 'wsprintfW', 'wvsprintfW'
+        'RegisterClassExW', 'ReleaseCapture', 'ReleaseDC', 'ScreenToClient', 'ShowCursor', 'SendMessageW', 'SetCapture', 'SetCursorPos',
+        'SetForegroundWindow', 'SetMenu', 'SetTimer', 'SetWindowPos', 'SetWindowTextW', 'ShowWindow', 'TranslateAcceleratorW',
+        'TranslateMessage', 'UpdateWindow', 'wsprintfA', 'wvsprintfA', 'wsprintfW', 'wvsprintfW'
     ],
     'GDI32.DLL': [
         'BeginPath', 'BitBlt', 'CloseFigure', 'CreateBitmap', 'CreateCompatibleBitmap', 'CreateCompatibleDC', 'CreateFontW', 'CreatePen',
