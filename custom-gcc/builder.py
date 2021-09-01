@@ -61,6 +61,10 @@ if conf != 'debug' and conf != 'release':
     print('[ERROR] Conf must be: debug or release')
     exit(1)
 
+if not os.path.isdir(path + '/src'):
+    print('[ERROR] No src folder found')
+    exit(1)
+
 os.makedirs(path + '/target/' + arch + '/' + conf, exist_ok=True)
 
 # Compile resources
@@ -78,35 +82,29 @@ if os.path.isdir(path + '/res'):
             exit(1)
 
 # Assemble c files
-if not os.path.isdir(path + '/src'):
-    print('[ERROR] No src folder found')
-    exit(1)
-
 assembly_files = []
-source_files = []
-for file in os.listdir(path + '/src'):
-    source_files.append(path + '/src/' + file)
-for file in libs:
-    source_files.append(script_folder + '/src/' + file + '.c')
+source_files = [ path + '/src/' + file for file in os.listdir(path + '/src') ]
+lib_source_files = [ script_folder + '/src/' + file + '.c' for file in libs ]
+source_files += lib_source_files
 for index, file in enumerate(source_files):
     if file.endswith('.c'):
-        file = file[:-2]
-        filename = os.path.basename(file) + str(index)
-        if conf == 'release':
-            if arch == 'x64':
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -DWIN64 ' + file + '.c -o ' + path + '/target/x64/release/' + filename + '.s -S -masm=intel') != 0:
-                    exit(1)
+        assembly_file = path + '/target/' + arch + '/' + conf + '/' + (file in lib_source_files and 'lib' or '') + os.path.basename(file[:-2]) + '.s'
+        if not os.path.isfile(assembly_file) or os.path.getmtime(file) > os.path.getmtime(assembly_file):
+            if conf == 'release':
+                if arch == 'x64':
+                    if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -DWIN64 ' + file + ' -o ' + assembly_file + ' -S -masm=intel') != 0:
+                        exit(1)
+                else:
+                    if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -m32 -mno-sse ' + file + ' -o ' + assembly_file + ' -S -masm=intel') != 0:
+                        exit(1)
             else:
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Os -nostdlib -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/release/' + filename + '.s -S -masm=intel') != 0:
-                    exit(1)
-        else:
-            if arch == 'x64':
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Werror -Os -nostdlib -DWIN64 -DDEBUG ' + file + '.c -o ' + path + '/target/x64/debug/' + filename + '.s -S -masm=intel') != 0:
-                    exit(1)
-            else:
-                if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Werror -Os -nostdlib -DDEBUG -m32 -mno-sse ' + file + '.c -o ' + path + '/target/x86/debug/' + filename + '.s -S -masm=intel') != 0:
-                    exit(1)
-        assembly_files.append(path + '/target/' + arch + '/' + conf + '/' + filename + '.s')
+                if arch == 'x64':
+                    if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Werror -Os -nostdlib -DWIN64 -DDEBUG ' + file + ' -o ' + assembly_file + ' -S -masm=intel') != 0:
+                        exit(1)
+                else:
+                    if os.system('gcc -I"' + path + '/include" -I"' + script_folder + '/include" -Wall -Wextra -Werror -Os -nostdlib -DDEBUG -m32 -mno-sse ' + file + ' -o ' + assembly_file + ' -S -masm=intel') != 0:
+                        exit(1)
+        assembly_files.append(assembly_file)
 
 if len(assembly_files) == 0:
     print('[ERROR] No C source files found')

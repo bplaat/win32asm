@@ -339,14 +339,14 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         // Draw centered text
         CanvasFont title_font = { .name = font_name, .size = (float)window->width / 32 };
         CanvasRect title_rect = { 0, (window->height - title_font.size * 2) / 2, window->width, title_font.size * 2 };
-        Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, CANVAS_ALIGN_HORIZONTAL_CENTER | CANVAS_ALIGN_VERTICAL_CENTER, active_text_color);
+        Canvas_DrawText(window->canvas, window_title,  -1, &title_rect, &title_font, CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_CENTER, active_text_color);
 
         // Draw footer text
         CanvasFont footer_font = { .name = font_name, .size = (float)window->width / 42 };
         CanvasRect footer_rect = { 0, window->height - footer_font.size * 2 - 24, window->width, footer_font.size * 2 };
         wchar_t string_buffer[64];
         wsprintfW(string_buffer, L"Window size: %dx%d at %d dpi", window->width, window->height, window->dpi);
-        Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, CANVAS_ALIGN_HORIZONTAL_CENTER | CANVAS_ALIGN_VERTICAL_BOTTOM, active_text_color);
+        Canvas_DrawText(window->canvas, string_buffer, -1, &footer_rect, &footer_font, CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM, active_text_color);
 
         Canvas_EndDraw(window->canvas);
         EndPaint(hwnd, &paint_struct);

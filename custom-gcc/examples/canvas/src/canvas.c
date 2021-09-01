@@ -104,34 +104,34 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         CanvasFont small_font = { .name = L"Georgia", .size = 16 };
         CanvasRect text_rect0 = { 16, 16, window->width - 32, window->height - 32 };
-        Canvas_DrawText(window->canvas, L"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur sed massa eu risus egestas ornare viverra in nisi. Aenean imperdiet eros sit amet enim ornare fringilla. Praesent iaculis mauris vitae ante commodo tincidunt. Morbi efficitur, lorem vel auctor dignissim, turpis erat rhoncus tortor, vitae suscipit nunc sem bibendum mauris. Mauris vitae tortor at dui rhoncus ullamcorper. Maecenas quis sagittis turpis. Donec a nisl turpis. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nulla et erat lorem. Integer a neque at nisl sagittis rhoncus rutrum a metus. Aenean sed urna in lorem auctor lobortis. Suspendisse faucibus rhoncus augue vitae blandit. Maecenas tincidunt id nunc vel tempor. Morbi porta ligula finibus odio gravida iaculis.",
-            -1, &text_rect0, &small_font, CANVAS_ALIGN_VERTICAL_BOTTOM | CANVAS_ALIGN_HORIZONTAL_CENTER, CANVAS_RGBA(255, 255, 255, 128));
+        Canvas_DrawText(window->canvas, L"Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit. Curabitur sed massa eu risus egestas ornare viverra in nisi. Aenean imperdiet eros sit amet enim ornare fringilla. Praesent iaculis mauris vitae ante commodo tincidunt. Morbi efficitur, lorem vel auctor dignissim, turpis erat rhoncus tortor, vitae suscipit nunc sem bibendum mauris. Mauris vitae tortor at dui rhoncus ullamcorper. Maecenas quis sagittis turpis. Donec a nisl turpis. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nulla et erat lorem. Integer a neque at nisl sagittis rhoncus rutrum a metus. Aenean sed urna in lorem auctor lobortis. Suspendisse faucibus rhoncus augue vitae blandit. Maecenas tincidunt id nunc vel tempor. Morbi porta ligula finibus odio gravida iaculis.",
+            -1, &text_rect0, &small_font, CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM | CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_WRAP, CANVAS_RGBA(255, 255, 255, 128));
 
         CanvasFont line_font = { .name = L"Segoe UI", .size = 18, .weight = CANVAS_FONT_WEIGHT_BOLD, .italic = true, .underline = true, .line_through = true };
         CanvasRect line_rect = { 16, 16, window->width - 32, 0 };
-        Canvas_DrawText(window->canvas, L"The quick brown fox jumps over the lazy dog.", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGB(255, 255, 255));
+        Canvas_DrawText(window->canvas, L"The quick brown fox jumps over the lazy dog.", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 1", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGB(255, 255, 255));
+        Canvas_DrawText(window->canvas, L"Line 1", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 2", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGB(255, 255, 255));
+        Canvas_DrawText(window->canvas, L"Line 2", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 3", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGB(255, 255, 255));
+        Canvas_DrawText(window->canvas, L"Line 3", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 4", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGB(255, 255, 255));
+        Canvas_DrawText(window->canvas, L"Line 4", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 5", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGB(255, 255, 255));
+        Canvas_DrawText(window->canvas, L"Line 5", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
         if (window->canvas->renderer == CANVAS_RENDERER_GDI) {
-            Canvas_DrawText(window->canvas, L"GDI backend", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGBA(255, 255, 0, 200));
+            Canvas_DrawText(window->canvas, L"GDI backend", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGBA(255, 255, 0, 200));
         }
         if (window->canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-            Canvas_DrawText(window->canvas, L"Direct2D backend", -1, &line_rect, &line_font, CANVAS_ALIGN_DEFAULT, CANVAS_RGBA(255, 255, 0, 200));
+            Canvas_DrawText(window->canvas, L"Direct2D backend", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGBA(255, 255, 0, 200));
         }
 
         Canvas_Clip(window->canvas, NULL);

@@ -206,7 +206,7 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, floa
     }
 }
 
-void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font) {
+void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format) {
     if (length == -1) length = wcslen(text);
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
@@ -216,10 +216,17 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
         SelectObject(canvas->gdi.buffer_hdc, hfont);
 
-        RECT measure_rect = { 0, 0, rect->width, rect->height };
-        DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | (rect->width == 0 ? 0 : DT_WORDBREAK));
-        rect->width = measure_rect.right;
-        rect->height = measure_rect.bottom;
+        if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) {
+            SIZE measure_rect = { 0 };
+            GetTextExtentPoint32W(canvas->gdi.buffer_hdc, text, length, &measure_rect);
+            rect->width = measure_rect.cx;
+            rect->height = measure_rect.cy;
+        } else {
+            RECT measure_rect = { 0, 0, rect->width, 0 };
+            DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
+            rect->width = measure_rect.right;
+            rect->height = measure_rect.bottom;
+        }
 
         DeleteObject(hfont);
     }
@@ -231,6 +238,7 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
         IDWriteFactory_CreateTextFormat(canvas->d2d.dwrite_factory, font->name, NULL, weight,
             font->italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
             (font->size / 72) * 96, L"", &text_format);
+        if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) IDWriteTextFormat_SetWordWrapping(text_format, DWRITE_WORD_WRAPPING_NO_WRAP);
 
         IDWriteTextLayout *text_layout;
         IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format, rect->width == 0 ? INT32_MAX : rect->width,
@@ -248,7 +256,7 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
     }
 }
 
-void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, CanvasColor color) {
+void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format, CanvasColor color) {
     if (length == -1) length = wcslen(text);
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
@@ -258,42 +266,82 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
         SelectObject(canvas->gdi.buffer_hdc, hfont);
 
-        int32_t options = rect->width == 0 ? 0 : DT_WORDBREAK;
-        RECT measure_rect = { 0, 0, rect->width, 0 };
-        if (rect->width == 0 || rect->height == 0 || (align & CANVAS_ALIGN_VERTICAL_CENTER) != 0 || (align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) {
-            DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | options);
-            if (rect->width == 0) rect->width = measure_rect.right;
-            if (rect->height == 0) rect->height = measure_rect.bottom;
-        }
+        if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) {
+            SIZE measure_rect = { 0 };
+            if (
+                rect->width == 0 || rect->height == 0 ||
+                (format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0 ||
+                (format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0
+            ) {
+                GetTextExtentPoint32W(canvas->gdi.buffer_hdc, text, length, &measure_rect);
+                if (rect->width == 0) rect->width = measure_rect.cx;
+                if (rect->height == 0) rect->height = measure_rect.cy;
+            }
 
-        int32_t y = 0;
-        if ((align & CANVAS_ALIGN_HORIZONTAL_CENTER) != 0) {
-            options |= DT_CENTER;
-        }
-        if ((align & CANVAS_ALIGN_HORIZONTAL_RIGHT) != 0) {
-            options |= DT_RIGHT;
-        }
-        if ((align & CANVAS_ALIGN_VERTICAL_CENTER) != 0) {
-            options |= DT_VCENTER;
-            y = (rect->height - measure_rect.bottom) / 2;
-        }
-        if ((align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) {
-            options |= DT_BOTTOM;
-            y = rect->height - measure_rect.bottom;
-        }
+            int32_t x = 0, y = 0;
+            SetTextAlign(canvas->gdi.buffer_hdc, TA_LEFT);
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) x = rect->width / 2;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) x = rect->width;
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0) y = (rect->height - measure_rect.cy) / 2;
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) y = rect->height - measure_rect.cy;
 
-        if ((color >> 24) == 0xff) {
-            SetTextColor(canvas->gdi.buffer_hdc, color & 0x00ffffff);
-            RECT real_rect = { rect->x, rect->y + y, rect->x + rect->width, rect->y + rect->height };
-            DrawTextW(canvas->gdi.buffer_hdc, text, length, &real_rect, options);
+            if ((color >> 24) == 0xff) {
+                SetTextColor(canvas->gdi.buffer_hdc, color & 0x00ffffff);
+                SetTextAlign(canvas->gdi.buffer_hdc, TA_LEFT);
+                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) SetTextAlign(canvas->gdi.buffer_hdc, TA_CENTER);
+                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) SetTextAlign(canvas->gdi.buffer_hdc, TA_RIGHT);
+                RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+                ExtTextOutW(canvas->gdi.buffer_hdc, real_rect.left + x, real_rect.top + y, ETO_CLIPPED, &real_rect, text, length, NULL);
+            } else {
+                BitBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, canvas->gdi.buffer_hdc, rect->x, rect->y, SRCCOPY);
+                SelectObject(canvas->gdi.alpha_hdc, hfont);
+                SetTextColor(canvas->gdi.alpha_hdc, color & 0x00ffffff);
+                SetTextAlign(canvas->gdi.alpha_hdc, TA_LEFT);
+                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) SetTextAlign(canvas->gdi.alpha_hdc, TA_CENTER);
+                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) SetTextAlign(canvas->gdi.alpha_hdc, TA_RIGHT);
+                RECT real_rect = { 0, 0, rect->width, rect->height };
+                ExtTextOutW(canvas->gdi.alpha_hdc, x, y, ETO_CLIPPED, &real_rect, text, length, NULL);
+                BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+                GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+            }
         } else {
-            BitBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, canvas->gdi.buffer_hdc, rect->x, rect->y, SRCCOPY);
-            SelectObject(canvas->gdi.alpha_hdc, hfont);
-            SetTextColor(canvas->gdi.alpha_hdc, color & 0x00ffffff);
-            RECT real_rect = { 0, y, rect->width, rect->height };
-            DrawTextW(canvas->gdi.alpha_hdc, text, length, &real_rect, options);
-            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-            GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+            int32_t options = DT_WORDBREAK;
+            RECT measure_rect = { 0, 0, rect->width, 0 };
+            if (
+                rect->width == 0 || rect->height == 0 ||
+                (format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0 ||
+                (format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0
+            ) {
+                DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | options);
+                if (rect->width == 0) rect->width = measure_rect.right;
+                if (rect->height == 0) rect->height = measure_rect.bottom;
+            }
+
+            int32_t y = 0;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) options |= DT_CENTER;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) options |= DT_RIGHT;
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0) {
+                options |= DT_VCENTER;
+                y = (rect->height - measure_rect.bottom) / 2;
+            }
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) {
+                options |= DT_BOTTOM;
+                y = rect->height - measure_rect.bottom;
+            }
+
+            if ((color >> 24) == 0xff) {
+                SetTextColor(canvas->gdi.buffer_hdc, color & 0x00ffffff);
+                RECT real_rect = { rect->x, rect->y + y, rect->x + rect->width, rect->y + rect->height };
+                DrawTextW(canvas->gdi.buffer_hdc, text, length, &real_rect, options);
+            } else {
+                BitBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, canvas->gdi.buffer_hdc, rect->x, rect->y, SRCCOPY);
+                SelectObject(canvas->gdi.alpha_hdc, hfont);
+                SetTextColor(canvas->gdi.alpha_hdc, color & 0x00ffffff);
+                RECT real_rect = { 0, y, rect->width, rect->height };
+                DrawTextW(canvas->gdi.alpha_hdc, text, length, &real_rect, options);
+                BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
+                GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+            }
         }
         DeleteObject(hfont);
     }
@@ -310,10 +358,11 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
         IDWriteFactory_CreateTextFormat(canvas->d2d.dwrite_factory, font->name, NULL, weight,
             font->italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
             (font->size / 72) * 96, L"", &text_format);
-        if ((align & CANVAS_ALIGN_HORIZONTAL_CENTER) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
-        if ((align & CANVAS_ALIGN_HORIZONTAL_RIGHT) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
-        if ((align & CANVAS_ALIGN_VERTICAL_CENTER) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-        if ((align & CANVAS_ALIGN_VERTICAL_BOTTOM) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+        if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_CENTER);
+        if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) IDWriteTextFormat_SetTextAlignment(text_format, DWRITE_TEXT_ALIGNMENT_TRAILING);
+        if ((format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) IDWriteTextFormat_SetParagraphAlignment(text_format, DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+        if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) IDWriteTextFormat_SetWordWrapping(text_format, DWRITE_WORD_WRAPPING_NO_WRAP);
 
         IDWriteTextLayout *text_layout;
         IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format, rect->width == 0 ? INT32_MAX : rect->width,

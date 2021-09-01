@@ -29,13 +29,13 @@ typedef struct CanvasRect {
     float height;
 } CanvasRect;
 
-#define CANVAS_POINT_COLLIDE(a, b) (b->x >= a->x && b->y >= a->x && \
-    b->x < a->x + a->width && b->y < a->y + a->height)
+#define CANVAS_POINT_COLLIDE(a, b) (b.x >= a.x && b.y >= a.y && \
+    b.x < a.x + a.width && b.y < a.y + a.height)
 
-#define CANVAS_RECT_COLLIDE(a, b) (a->x < b->x + b->width && \
-    a->x + a->width > b->x && \
-    a->y < b->y + b->height && \
-    a->y + a->height > b->y)
+#define CANVAS_RECT_COLLIDE(a, b) (a.x < b.x + b.width && \
+    a.x + a.width > b.x && \
+    a.y < b.y + b.height && \
+    a.y + a.height > b.y)
 
 typedef enum CanvasFontWeight {
     CANVAS_FONT_WEIGHT_NORMAL,
@@ -51,15 +51,17 @@ typedef struct CanvasFont {
     bool line_through;
 } CanvasFont;
 
-typedef enum CanvasAlign {
-    CANVAS_ALIGN_DEFAULT = 0,
-    CANVAS_ALIGN_HORIZONTAL_LEFT = 0,
-    CANVAS_ALIGN_HORIZONTAL_CENTER = 1,
-    CANVAS_ALIGN_HORIZONTAL_RIGHT = 2,
-    CANVAS_ALIGN_VERTICAL_TOP = 0,
-    CANVAS_ALIGN_VERTICAL_CENTER = 4,
-    CANVAS_ALIGN_VERTICAL_BOTTOM = 8
-} CanvasAlign;
+typedef enum CanvasTextFormat {
+    CANVAS_TEXT_FORMAT_DEFAULT = 0,
+    CANVAS_TEXT_FORMAT_HORIZONTAL_LEFT = 0,
+    CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER = 1,
+    CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT = 2,
+    CANVAS_TEXT_FORMAT_VERTICAL_TOP = 0,
+    CANVAS_TEXT_FORMAT_VERTICAL_CENTER = 4,
+    CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM = 8,
+    CANVAS_TEXT_FORMAT_NO_WRAP = 0,
+    CANVAS_TEXT_FORMAT_WRAP = 16
+} CanvasTextFormat;
 
 typedef struct CanvasTransform {
     float m11;
@@ -116,9 +118,9 @@ void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
 
 void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width);
 
-void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font);
+void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format);
 
-void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasAlign align, CanvasColor color);
+void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format, CanvasColor color);
 
 float Canvas_ParsePathFloat(char **string);
 
