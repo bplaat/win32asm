@@ -13,6 +13,9 @@
 #define DWRITE_PARAGRAPH_ALIGNMENT_FAR 1
 #define DWRITE_PARAGRAPH_ALIGNMENT_CENTER 2
 
+#define DWRITE_WORD_WRAPPING_WRAP 0
+#define DWRITE_WORD_WRAPPING_NO_WRAP 1
+
 #define DWRITE_FONT_WEIGHT_NORMAL 400
 #define DWRITE_FONT_WEIGHT_BOLD 700
 
@@ -48,7 +51,8 @@ typedef struct IDWriteTextFormatVtbl {
 
     int32_t __stdcall (*SetTextAlignment)(IDWriteTextFormat *this, uint32_t textAlignment);
     int32_t __stdcall (*SetParagraphAlignment)(IDWriteTextFormat *this, uint32_t paragraphAlignment);
-    uint8_t padding1[5 * sizeof(void *)];
+    int32_t __stdcall (*SetWordWrapping)(IDWriteTextFormat *this, uint32_t wrapping);
+    uint8_t padding1[4 * sizeof(void *)];
 
     int32_t __stdcall (*SetLineSpacing)(IDWriteTextFormat *this, uint32_t lineSpacingMethod, float lineSpacing, float baseline);
     uint8_t padding2[17 * sizeof(void *)];
@@ -56,6 +60,7 @@ typedef struct IDWriteTextFormatVtbl {
 
 #define IDWriteTextFormat_SetTextAlignment(this, textAlignment) ((IDWriteTextFormat *)this)->lpVtbl->SetTextAlignment((IDWriteTextFormat *)this, textAlignment)
 #define IDWriteTextFormat_SetParagraphAlignment(this, paragraphAlignment) ((IDWriteTextFormat *)this)->lpVtbl->SetParagraphAlignment((IDWriteTextFormat *)this, paragraphAlignment)
+#define IDWriteTextFormat_SetWordWrapping(this, wrapping) ((IDWriteTextFormat *)this)->lpVtbl->SetWordWrapping((IDWriteTextFormat *)this, wrapping)
 #define IDWriteTextFormat_SetLineSpacing(this, lineSpacingMethod, lineSpacing, baseline) ((IDWriteTextFormat *)this)->lpVtbl->SetLineSpacing((IDWriteTextFormat *)this, lineSpacingMethod, lineSpacing, baseline)
 
 struct IDWriteTextFormat {

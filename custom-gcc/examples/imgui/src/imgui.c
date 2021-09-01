@@ -51,7 +51,7 @@ void Jan_EndDraw(Jan *jan) {
 
 void Jan_Label(Jan *jan, wchar_t *text, CanvasFont *font, CanvasColor color) {
     CanvasRect rect = { jan->content_rect.x, jan->content_rect.y, jan->content_rect.width, 0 };
-    Canvas_DrawText(jan->canvas, text, -1, &rect, font, CANVAS_ALIGN_DEFAULT, color);
+    Canvas_DrawText(jan->canvas, text, -1, &rect, font, CANVAS_TEXT_FORMAT_WRAP, color);
     if (jan->orientation == JAN_ORIENTATION_VERTICAL) {
         jan->content_rect.y += rect.height;
         jan->content_rect.height -= rect.height;
