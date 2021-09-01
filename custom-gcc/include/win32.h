@@ -482,6 +482,11 @@ extern HMONITOR __stdcall MonitorFromPoint(POINT pt, uint32_t dwFlags);
 extern HMONITOR __stdcall MonitorFromWindow(HWND hwnd, uint32_t dwFlags);
 extern bool __stdcall GetMonitorInfoW(HMONITOR hMonitor, MONITORINFO *lpmi);
 extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
+extern bool __stdcall GetCursorPos(POINT *lpPoint);
+extern bool __stdcall SetCursorPos(int32_t X, int32_t Y);
+extern int32_t __stdcall ShowCursor(bool bShow);
+extern bool __stdcall ClientToScreen(HWND hWnd, POINT *lpPoint);
+extern bool __stdcall ScreenToClient(HWND hWnd, POINT *lpPoint);
 #ifdef WIN64
     extern void * __stdcall SetWindowLongPtrW(HWND hWnd, int32_t nIndex, void *dwNewLong);
     extern void * __stdcall GetWindowLongPtrW(HWND hWnd, int32_t nIndex);
@@ -516,6 +521,7 @@ extern bool __stdcall GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT *lpwndpl);
 #define TA_LEFT 0
 #define TA_RIGHT 2
 #define TA_CENTER 6
+#define TA_BASELINE 24
 
 #define SRCCOPY 0x00CC0020
 
