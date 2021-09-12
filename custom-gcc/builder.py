@@ -195,6 +195,7 @@ for index, filename in enumerate(assembly_files):
         output = re.sub(r'\s*\.align (.+)\n', '\n    align \\1, db 0\n', output)
         output = re.sub(r'\s*\.space (.+)\n', '\n    times \\1 db 0\n', output)
         output = output.replace('.ascii', 'db')
+        output = output.replace('.byte', 'db')
         output = output.replace('.word', 'dw')
         output = output.replace('.long', 'dd')
         output = output.replace('.quad', 'dq')
