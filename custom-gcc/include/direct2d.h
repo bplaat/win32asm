@@ -283,7 +283,10 @@ typedef struct ID2D1RenderTargetVtbl {
     void __stdcall (*Clear)(ID2D1RenderTarget *this, const D2D1_COLOR_F *clearColor);
     void __stdcall (*BeginDraw)(ID2D1RenderTarget *this);
     int32_t __stdcall (*EndDraw)(ID2D1RenderTarget *this, void *tag1, void *tag2);
-    uint8_t padding10[7 * sizeof(void *)];
+    uint8_t padding10[1 * sizeof(void *)];
+
+    void __stdcall (*SetDpi)(ID2D1RenderTarget *this, float dpiX, float dpiY);
+    uint8_t padding11[5 * sizeof(void *)];
 } ID2D1RenderTargetVtbl;
 
 #define ID2D1RenderTarget_CreateSolidColorBrush(this, color, brushProperties, solidColorBrush) \
@@ -314,6 +317,7 @@ typedef struct ID2D1RenderTargetVtbl {
 #define ID2D1RenderTarget_Clear(this, clearColor) ((ID2D1RenderTarget *)this)->lpVtbl->Clear((ID2D1RenderTarget *)this, clearColor)
 #define ID2D1RenderTarget_BeginDraw(this) ((ID2D1RenderTarget *)this)->lpVtbl->BeginDraw((ID2D1RenderTarget *)this)
 #define ID2D1RenderTarget_EndDraw(this, tag1, tag2) ((ID2D1RenderTarget *)this)->lpVtbl->EndDraw((ID2D1RenderTarget *)this, tag1, tag2)
+#define ID2D1RenderTarget_SetDpi(this, dpiX, dpiY) ((ID2D1RenderTarget *)this)->lpVtbl->SetDpi((ID2D1RenderTarget *)this, dpiX, dpiX)
 
 struct ID2D1RenderTarget {
     const ID2D1RenderTargetVtbl *lpVtbl;
