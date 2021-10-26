@@ -1,33 +1,41 @@
 #include "win32.h"
 #include "dpi.h"
 
-wchar_t *window_class_name = L"window-test";
-
-#ifdef WIN64
-    wchar_t *window_title = L"This is a test window 😍 (64-bit)";
-#else
-    wchar_t *window_title = L"This is a test window 😍 (32-bit)";
-#endif
-
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 #define WINDOW_MIN_WIDTH 640
 #define WINDOW_MIN_HEIGHT 480
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 
+wchar_t *window_class_name = L"window-test";
+
+#ifdef WIN64
+    wchar_t *window_title = L"This is a DPI aware GDI window 😍 (64-bit)";
+#else
+    wchar_t *window_title = L"This is a DPI aware GDI window 😍 (32-bit)";
+#endif
+
+wchar_t *font_name = L"Comic Sans MS";
+
 typedef struct WindowData {
     int32_t dpi;
     int32_t width;
     int32_t height;
+    int32_t real_width;
+    int32_t real_height;
     int32_t background_color;
 } WindowData;
+
+#define DP2PX(dp) MulDiv(dp, window->dpi, 96)
+#define PX2DP(px) MulDiv(px, 96, window->dpi)
+#define PT2PT(pt) -MulDiv(pt, window->dpi, 72)
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     if (msg == WM_CREATE) {
         // Set window data struct as user data
-        WindowData *window = ((CREATESTRUCTW *)lParam)->lpCreateParams;
+        window = ((CREATESTRUCTW *)lParam)->lpCreateParams;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
 
         // Generate random seed by time
@@ -51,8 +59,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
     if (msg == WM_SIZE) {
         // Save new window size
-        window->width = LOWORD(lParam);
-        window->height = HIWORD(lParam);
+        window->real_width = LOWORD(lParam);
+        window->real_height = HIWORD(lParam);
+        window->width = PX2DP(window->real_width);
+        window->height = PX2DP(window->real_height);
         return 0;
     }
 
@@ -79,39 +89,39 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 
         // Create back buffer
         HDC hdc_buffer = CreateCompatibleDC(hdc);
-        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window->width, window->height);
+        SetBkMode(hdc_buffer, TRANSPARENT);
+        HBITMAP bitmap_buffer = CreateCompatibleBitmap(hdc, window->real_width, window->real_height);
         SelectObject(hdc_buffer, bitmap_buffer);
 
         // Draw background color
         HBRUSH brush = CreateSolidBrush(window->background_color);
-        RECT rect = { 0, 0, window->width, window->height };
+        RECT rect = { 0, 0, DP2PX(window->width), DP2PX(window->height) };
         FillRect(hdc_buffer, &rect, brush);
         DeleteObject(brush);
 
         // Draw centered text
-        wchar_t *font_name = L"Comic Sans MS";
-        int32_t font_size = window->width / 16;
-        HFONT font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
+        HFONT font = CreateFontW(PT2PT(window->width * 3 / 100), 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
         SelectObject(hdc_buffer, font);
-        SetBkMode(hdc_buffer, TRANSPARENT);
-        SetTextColor(hdc_buffer, 0x00ffffff);
+        SetTextColor(hdc_buffer, HEX(0xffffff));
         SetTextAlign(hdc_buffer, TA_CENTER);
-        TextOutW(hdc_buffer, window->width / 2, (window->height - font_size) / 2, window_title, wcslen(window_title));
+        SIZE measure_rect;
+        GetTextExtentPoint32W(hdc_buffer, window_title, wcslen(window_title), &measure_rect);
+        TextOutW(hdc_buffer, DP2PX(window->width / 2), DP2PX(window->height / 2) - measure_rect.cy / 2, window_title, wcslen(window_title));
         DeleteObject(font);
 
         // Draw footer text
-        font_size = window->width / 24;
-        font = CreateFontW(font_size, 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
+        font = CreateFontW(PT2PT(window->width * 2 / 100), 0, 0, 0, FW_NORMAL, false, false, false, ANSI_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font_name);
         SelectObject(hdc_buffer, font);
+        SetTextAlign(hdc_buffer, TA_CENTER | TA_BOTTOM);
         wchar_t string_buffer[64];
-        wsprintfW(string_buffer, L"(%dx%d)", window->width, window->height);
-        TextOutW(hdc_buffer, window->width / 2, window->height - font_size - 24, string_buffer, wcslen(string_buffer));
+        wsprintfW(string_buffer, L"%dx%d at %d dpi is %dx%d", window->width, window->height, window->dpi, window->real_width, window->real_height);
+        TextOutW(hdc_buffer, DP2PX(window->width / 2), DP2PX(window->height - 16), string_buffer, wcslen(string_buffer));
         DeleteObject(font);
 
         // Draw and delete back buffer
-        BitBlt(hdc, 0, 0, window->width, window->height, hdc_buffer, 0, 0, SRCCOPY);
+        BitBlt(hdc, 0, 0, window->real_width, window->real_height, hdc_buffer, 0, 0, SRCCOPY);
         DeleteObject(bitmap_buffer);
         DeleteDC(hdc_buffer);
 
@@ -145,26 +155,28 @@ void _start(void) {
     wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
     wc.lpszClassName = window_class_name;
     wc.hIconSm = wc.hIcon;
-    RegisterClassExW(&wc);
+    ATOM window_class = RegisterClassExW(&wc);
 
     // Create window data struct
     WindowData *window = malloc(sizeof(WindowData));
     window->dpi = GetDesktopDpi();
-    window->width = MulDiv(WINDOW_WIDTH, window->dpi, 96);
-    window->height = MulDiv(WINDOW_HEIGHT, window->dpi, 96);
+    window->width = WINDOW_WIDTH;
+    window->height = WINDOW_HEIGHT;
+    window->real_width = DP2PX(window->width);
+    window->real_height = DP2PX(window->height);
 
     // Create centered window
     RECT window_rect;
-    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - window->width) / 2;
-    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - window->height) / 2;
-    window_rect.right = window_rect.left + window->width;
-    window_rect.bottom = window_rect.top + window->height;
+    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - window->real_width) / 2;
+    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - window->real_height) / 2;
+    window_rect.right = window_rect.left + window->real_width;
+    window_rect.bottom = window_rect.top + window->real_height;
     AdjustWindowRectExForDpi(&window_rect, WINDOW_STYLE, false, 0, window->dpi);
 
-    HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
+    HWND hwnd = CreateWindowExW(0, (wchar_t *)(uintptr_t)window_class, window_title,
         WINDOW_STYLE, window_rect.left, window_rect.top,
         window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
-        NULL, NULL, wc.hInstance, window);
+        HWND_DESKTOP, NULL, wc.hInstance, window);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 

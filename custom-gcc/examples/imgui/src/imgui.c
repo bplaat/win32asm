@@ -254,7 +254,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
-// Set process dpi aware
+    // Set process dpi aware
     SetDpiAware();
 
     // Register window class
