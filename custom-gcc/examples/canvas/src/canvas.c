@@ -1,36 +1,43 @@
 #include "win32.h"
+#include "dpi.h"
 #include "canvas.h"
-
-wchar_t *window_class_name = L"canvas-test";
-
-#ifdef WIN64
-    wchar_t *window_title = L"This is a test canvas window 😍 (64-bit)";
-#else
-    wchar_t *window_title = L"This is a test canvas window 😍 (32-bit)";
-#endif
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
+#define WINDOW_MIN_WIDTH 640
+#define WINDOW_MIN_HEIGHT 480
 #define WINDOW_STYLE WS_OVERLAPPEDWINDOW
 #define WINDOW_TIMER_ID 1
 
+wchar_t *window_class_name = L"window-canvas";
+
+#ifdef WIN64
+    wchar_t *window_title = L"This is a DPI aware canvas window 😜 (64-bit)";
+#else
+    wchar_t *window_title = L"This is a DPI aware canvas window 😜 (32-bit)";
+#endif
+
 typedef struct WindowData {
+    int32_t dpi;
     uint32_t width;
     uint32_t height;
-    uint32_t background_color;
-    Canvas *canvas;
+    int32_t real_width;
+    int32_t real_height;
     bool renderer;
+    Canvas *canvas;
+    uint32_t background_color;
 } WindowData;
+
+#define DP2PX(dp) MulDiv(dp, window->dpi, 96)
+#define PX2DP(px) MulDiv(px, 96, window->dpi)
 
 int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam) {
     WindowData *window = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     if (msg == WM_CREATE) {
-        // Create window data
-        window = malloc(sizeof(WindowData));
+        // Set window data struct as user data
+        WindowData *window = ((CREATESTRUCTW *)lParam)->lpCreateParams;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, window);
-        window->width = WINDOW_WIDTH;
-        window->height = WINDOW_HEIGHT;
 
         // Generate random seed by time
         SYSTEMTIME time;
@@ -51,25 +58,41 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             window->renderer = !window->renderer;
             Canvas_Free(window->canvas);
             window->canvas = Canvas_New(hwnd, window->renderer ? CANVAS_RENDERER_DIRECT2D : CANVAS_RENDERER_GDI);
-            Canvas_Resize(window->canvas, window->width, window->height);
+            Canvas_Resize(window->canvas, window->real_width, window->real_height, window->dpi);
             InvalidateRect(hwnd, NULL, true);
             return 0;
         }
     }
 
+    if (msg == WM_DPICHANGED) {
+        // Update dpi and resize window
+        window->dpi = HIWORD(wParam);
+        RECT *window_rect = lParam;
+        SetWindowPos(hwnd, NULL, window_rect->left, window_rect->top, window_rect->right - window_rect->left,
+            window_rect->bottom - window_rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
+        return 0;
+    }
+
     if (msg == WM_SIZE) {
         // Save new window size
-        window->width = LOWORD(lParam);
-        window->height = HIWORD(lParam);
-        Canvas_Resize(window->canvas, window->width, window->height);
+        window->real_width = LOWORD(lParam);
+        window->real_height = HIWORD(lParam);
+        window->width = PX2DP(window->real_width);
+        window->height = PX2DP(window->real_height);
+
+        // Resize canvas
+        Canvas_Resize(window->canvas, window->real_width, window->real_height, window->dpi);
         return 0;
     }
 
     if (msg == WM_GETMINMAXINFO) {
+        // Calculate window min size for dpi
+        int32_t window_dpi = window != NULL ? window->dpi : GetDesktopDpi();
+        RECT window_rect = { 0, 0, MulDiv(WINDOW_MIN_WIDTH, window_dpi, 96), MulDiv(WINDOW_MIN_HEIGHT, window_dpi, 96) };
+        AdjustWindowRectExForDpi(&window_rect, WINDOW_STYLE, false, 0, window_dpi);
+
         // Set window min size
         MINMAXINFO *minMaxInfo = (MINMAXINFO *)lParam;
-        RECT window_rect = { 0, 0, 640, 480 };
-        AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
         minMaxInfo->ptMinTrackSize.x = window_rect.right - window_rect.left;
         minMaxInfo->ptMinTrackSize.y = window_rect.bottom - window_rect.top;
         return 0;
@@ -87,7 +110,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         CanvasRect background_rect = { 0, 0, window->width, window->height };
         Canvas_FillRect(window->canvas, &background_rect, window->background_color);
 
-        Canvas_Transform(window->canvas, &(CanvasTransform){ 1, 0, 0, 1, 50, 50 });
+        Canvas_Transform(window->canvas, &(CanvasTransform){ 1, 0, 0, 1, 32, 32 });
         Canvas_Clip(window->canvas, &(CanvasRect){ 32, 32, window->width - 64, window->height - 64 });
 
         CanvasRect rect1 = { 100, 100, 200, 200 };
@@ -121,10 +144,8 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
         Canvas_DrawText(window->canvas, L"Line 3", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 4", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
-        line_rect.y += line_rect.height + 8;
-        line_rect.height = 0;
-        Canvas_DrawText(window->canvas, L"Line 5", -1, &line_rect, &line_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
+        CanvasFont emoji_font = { .name = L"Segoe UI", .size = 18 };
+        Canvas_DrawText(window->canvas, L"🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩", -1, &line_rect, &emoji_font, CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_RGB(255, 255, 255));
         line_rect.y += line_rect.height + 8;
         line_rect.height = 0;
         if (window->canvas->renderer == CANVAS_RENDERER_GDI) {
@@ -156,6 +177,10 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
 }
 
 void _start(void) {
+    // Set process dpi aware
+    SetDpiAware();
+
+    // Register window class
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -165,22 +190,32 @@ void _start(void) {
     wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
     wc.lpszClassName = window_class_name;
     wc.hIconSm = wc.hIcon;
-    RegisterClassExW(&wc);
+    ATOM window_class = RegisterClassExW(&wc);
 
+    // Create window data struct
+    WindowData *window = malloc(sizeof(WindowData));
+    window->dpi = GetDesktopDpi();
+    window->width = WINDOW_WIDTH;
+    window->height = WINDOW_HEIGHT;
+    window->real_width = DP2PX(window->width);
+    window->real_height = DP2PX(window->height);
+
+    // Create centered window
     RECT window_rect;
-    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - WINDOW_WIDTH) / 2;
-    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - WINDOW_HEIGHT) / 2;
-    window_rect.right = window_rect.left + WINDOW_WIDTH;
-    window_rect.bottom = window_rect.top + WINDOW_HEIGHT;
-    AdjustWindowRectEx(&window_rect, WINDOW_STYLE, false, 0);
+    window_rect.left = (GetSystemMetrics(SM_CXSCREEN) - window->real_width) / 2;
+    window_rect.top = (GetSystemMetrics(SM_CYSCREEN) - window->real_height) / 2;
+    window_rect.right = window_rect.left + window->real_width;
+    window_rect.bottom = window_rect.top + window->real_height;
+    AdjustWindowRectExForDpi(&window_rect, WINDOW_STYLE, false, 0, window->dpi);
 
-    HWND hwnd = CreateWindowExW(0, window_class_name, window_title,
+    HWND hwnd = CreateWindowExW(0, (wchar_t *)(uintptr_t)window_class, window_title,
         WINDOW_STYLE, window_rect.left, window_rect.top,
         window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
-        NULL, NULL, wc.hInstance, NULL);
+        HWND_DESKTOP, NULL, wc.hInstance, window);
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
+    // Main message loop
     MSG message;
     while (GetMessageW(&message, NULL, 0, 0) > 0) {
         TranslateMessage(&message);

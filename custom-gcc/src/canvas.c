@@ -1,5 +1,8 @@
 #include "canvas.h"
 
+#define DP2PX(dp) MulDiv(dp, canvas->dpi, 96)
+#define PX2DP(px) MulDiv(px, 96, canvas->dpi)
+
 Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
     Canvas *canvas = malloc(sizeof(Canvas));
     canvas->renderer = renderer;
@@ -56,7 +59,7 @@ void Canvas_Free(Canvas *canvas) {
     free(canvas);
 }
 
-void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
+void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height, int32_t dpi) {
     if (canvas->renderer == CANVAS_RENDERER_GDI && canvas->width != -1 && canvas->height != -1) {
         DeleteObject(canvas->gdi.alpha_bitmap);
         DeleteDC(canvas->gdi.alpha_hdc);
@@ -67,6 +70,7 @@ void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
 
     canvas->width = width;
     canvas->height = height;
+    canvas->dpi = dpi;
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         canvas->gdi.buffer_hdc = CreateCompatibleDC(canvas->gdi.hdc);
@@ -84,23 +88,14 @@ void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height) {
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        D2D1_SIZE_U size = { canvas->width, canvas->height };
-        ID2D1HwndRenderTarget_Resize(canvas->d2d.render_target, &size);
+        ID2D1HwndRenderTarget_Resize(canvas->d2d.render_target, (&(D2D1_SIZE_U){ canvas->width, canvas->height }));
+        ID2D1RenderTarget_SetDpi(canvas->d2d.render_target, canvas->dpi, canvas->dpi);
     }
 }
 
 void Canvas_BeginDraw(Canvas *canvas) {
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
         ID2D1RenderTarget_BeginDraw(canvas->d2d.render_target);
-        // D2D1_SIZE_F layer_size = { canvas->width, canvas->height };
-        // ID2D1RenderTarget_CreateLayer(canvas->d2d.render_target, &layer_size, &canvas->d2d.layer);
-        // D2D1_LAYER_PARAMETERS layer_parameters = {
-        //     .contentBounds = { canvas->width, canvas->height },
-        //     .maskAntialiasMode = D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
-        //     .maskTransform = { 1, 0, 0, 1, 0, 100 },
-        //     .opacity = 1
-        // };
-        // ID2D1RenderTarget_PushLayer(canvas->d2d.render_target, &layer_parameters, canvas->d2d.layer);
     }
 }
 
@@ -109,19 +104,23 @@ void Canvas_EndDraw(Canvas *canvas) {
         BitBlt(canvas->gdi.hdc, 0, 0, canvas->width, canvas->height, canvas->gdi.buffer_hdc, 0, 0, SRCCOPY);
     }
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        // ID2D1RenderTarget_PopLayer(canvas->d2d.render_target);
-        // IUnknown_Release(canvas->d2d.layer);
         ID2D1RenderTarget_EndDraw(canvas->d2d.render_target, NULL, NULL);
     }
 }
 
 void Canvas_Transform(Canvas *canvas, CanvasTransform *transform) {
     CanvasTransform identity = { 1, 0, 0, 1, 0, 0 };
-
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
-        SetWorldTransform(canvas->gdi.buffer_hdc, (XFORM *)(transform != NULL ? transform : &identity));
+        if (transform != NULL) {
+            SetWorldTransform(canvas->gdi.buffer_hdc, &(XFORM){
+                transform->m11, transform->m12,
+                transform->m21, transform->m22,
+                DP2PX(transform->dx), DP2PX(transform->dy)
+            });
+        } else {
+            SetWorldTransform(canvas->gdi.buffer_hdc, (XFORM *)&identity);
+        }
     }
-
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
         ID2D1RenderTarget_SetTransform(canvas->d2d.render_target, (D2D1_MATRIX_3X2_F *)(transform != NULL ? transform : &identity));
     }
@@ -130,7 +129,8 @@ void Canvas_Transform(Canvas *canvas, CanvasTransform *transform) {
 void Canvas_Clip(Canvas *canvas, CanvasRect *rect) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         if (rect != NULL) {
-            POINT points[] = { { rect->x, rect->y }, { rect->x + rect->width, rect->y + rect->height }};
+            CanvasRect real_rect = { DP2PX(rect->x), DP2PX(rect->y), DP2PX(rect->width), DP2PX(rect->height) };
+            POINT points[] = { { real_rect.x, real_rect.y }, { real_rect.x + real_rect.width, real_rect.y + real_rect.height } };
             LPtoDP(canvas->gdi.buffer_hdc, points, 2);
             HRGN clip_region = CreateRectRgn(points[0].x, points[0].y, points[1].x, points[1].y);
             SelectClipRgn(canvas->gdi.buffer_hdc, clip_region);
@@ -142,8 +142,9 @@ void Canvas_Clip(Canvas *canvas, CanvasRect *rect) {
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
         if (rect != NULL) {
-            D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-            ID2D1RenderTarget_PushAxisAlignedClip(canvas->d2d.render_target, &real_rect, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+            ID2D1RenderTarget_PushAxisAlignedClip(canvas->d2d.render_target,
+                (&(D2D1_RECT_F){ rect->x, rect->y, rect->x + rect->width, rect->y + rect->height }),
+                D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
         } else {
             ID2D1RenderTarget_PopAxisAlignedClip(canvas->d2d.render_target);
         }
@@ -152,45 +153,45 @@ void Canvas_Clip(Canvas *canvas, CanvasRect *rect) {
 
 void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        CanvasRect real_rect = { DP2PX(rect->x), DP2PX(rect->y), DP2PX(rect->width), DP2PX(rect->height) };
         HBRUSH brush = CreateSolidBrush(color & 0x00ffffff);
         if ((color >> 24) == 0xff) {
-            RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-            FillRect(canvas->gdi.buffer_hdc, &real_rect, brush);
+            FillRect(canvas->gdi.buffer_hdc, &(RECT){ real_rect.x, real_rect.y, real_rect.x + real_rect.width, real_rect.y + real_rect.height }, brush);
         } else {
-            RECT real_rect = { 0, 0, rect->width, rect->height };
-            FillRect(canvas->gdi.alpha_hdc, &real_rect, brush);
-            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-            GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+            FillRect(canvas->gdi.alpha_hdc, &(RECT){ 0, 0, real_rect.width, real_rect.height }, brush);
+            GdiAlphaBlend(canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.width, real_rect.height,
+                canvas->gdi.alpha_hdc, 0, 0, real_rect.width, real_rect.height, (BLENDFUNCTION){ AC_SRC_OVER, 0, color >> 24, 0 });
         }
         DeleteObject(brush);
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
-            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
-        ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, &color_float, NULL, &brush);
-        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-        ID2D1RenderTarget_FillRectangle(canvas->d2d.render_target, &real_rect, brush);
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, (&(D2D1_COLOR_F){
+            (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255
+        }), NULL, &brush);
+        ID2D1RenderTarget_FillRectangle(canvas->d2d.render_target,
+            (&(D2D1_RECT_F){ rect->x, rect->y, rect->x + rect->width, rect->y + rect->height }), brush);
         IUnknown_Release(brush);
     }
 }
 
 void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float stroke_width) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        CanvasRect real_rect = { DP2PX(rect->x), DP2PX(rect->y), DP2PX(rect->width), DP2PX(rect->height) };
         HPEN pen = CreatePen(PS_SOLID, stroke_width, color & 0x00ffffff);
         if ((color >> 24) == 0xff) {
             SelectObject(canvas->gdi.buffer_hdc, pen);
             SelectObject(canvas->gdi.buffer_hdc, GetStockObject(NULL_BRUSH));
-            Rectangle(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->x + rect->width + 1, rect->y + rect->height + 1);
+            Rectangle(canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.x + real_rect.width + 1, real_rect.y + real_rect.height + 1); // TODO
         } else {
-            BitBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width + stroke_width * 2, rect->height + stroke_width * 2, canvas->gdi.buffer_hdc, rect->x - stroke_width, rect->y - stroke_width, SRCCOPY);
+            BitBlt(canvas->gdi.alpha_hdc, 0, 0, real_rect.width + stroke_width * 2, real_rect.height + stroke_width * 2, canvas->gdi.buffer_hdc, real_rect.x - stroke_width, real_rect.y - stroke_width, SRCCOPY);
             SelectObject(canvas->gdi.alpha_hdc, pen);
             SelectObject(canvas->gdi.alpha_hdc, GetStockObject(NULL_BRUSH));
-            Rectangle(canvas->gdi.alpha_hdc, stroke_width, stroke_width, stroke_width + rect->width + 1, stroke_width + rect->height + 1);
-            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-            GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x - stroke_width, rect->y - stroke_width, rect->width + stroke_width * 2, rect->height + stroke_width * 2,
-                canvas->gdi.alpha_hdc, 0, 0, rect->width + stroke_width * 2, rect->height + stroke_width * 2, blend);
+            Rectangle(canvas->gdi.alpha_hdc, stroke_width, stroke_width, stroke_width + real_rect.width + 1, stroke_width + real_rect.height + 1);
+            GdiAlphaBlend(canvas->gdi.buffer_hdc, real_rect.x - stroke_width, real_rect.y - stroke_width, real_rect.width + stroke_width * 2, real_rect.height + stroke_width * 2,
+                canvas->gdi.alpha_hdc, 0, 0, real_rect.width + stroke_width * 2, real_rect.height + stroke_width * 2, (BLENDFUNCTION){ AC_SRC_OVER, 0, color >> 24, 0 });
         }
         DeleteObject(pen);
     }
@@ -200,8 +201,8 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, floa
             (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
         ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, &color_float, NULL, &brush);
-        D2D1_RECT_F real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-        ID2D1RenderTarget_DrawRectangle(canvas->d2d.render_target, &real_rect, brush, stroke_width, NULL);
+        D2D1_RECT_F stroke_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
+        ID2D1RenderTarget_DrawRectangle(canvas->d2d.render_target, &stroke_rect, brush, stroke_width, NULL);
         IUnknown_Release(brush);
     }
 }
@@ -212,20 +213,20 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         int32_t weight = FW_NORMAL;
         if (font->weight == CANVAS_FONT_WEIGHT_BOLD) weight = FW_BOLD;
-        HFONT hfont = CreateFontW(-MulDiv(font->size, 96, 72), 0, 0, 0, weight, font->italic, font->underline, font->line_through,
+        HFONT hfont = CreateFontW(-MulDiv(font->size, canvas->dpi, 72), 0, 0, 0, weight, font->italic, font->underline, font->line_through,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
         SelectObject(canvas->gdi.buffer_hdc, hfont);
 
-        if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) {
+        if ((format & CANVAS_TEXT_FORMAT_WRAP) != 0) {
+            RECT measure_rect = { 0, 0, DP2PX(rect->width), 0 };
+            DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
+            rect->width = PX2DP(measure_rect.right);
+            rect->height = PX2DP(measure_rect.bottom);
+        } else {
             SIZE measure_rect = { 0 };
             GetTextExtentPoint32W(canvas->gdi.buffer_hdc, text, length, &measure_rect);
-            rect->width = measure_rect.cx;
-            rect->height = measure_rect.cy;
-        } else {
-            RECT measure_rect = { 0, 0, rect->width, 0 };
-            DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | DT_WORDBREAK);
-            rect->width = measure_rect.right;
-            rect->height = measure_rect.bottom;
+            rect->width = PX2DP(measure_rect.cx);
+            rect->height = PX2DP(measure_rect.cy);
         }
 
         DeleteObject(hfont);
@@ -241,8 +242,8 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
         if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) IDWriteTextFormat_SetWordWrapping(text_format, DWRITE_WORD_WRAPPING_NO_WRAP);
 
         IDWriteTextLayout *text_layout;
-        IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format, rect->width == 0 ? INT32_MAX : rect->width,
-            canvas->height == 0 ? INT32_MAX : canvas->height, &text_layout);
+        IDWriteFactory_CreateTextLayout(canvas->d2d.dwrite_factory, text, length, text_format,
+            (format & CANVAS_TEXT_FORMAT_WRAP) != 0 ? rect->width : INT32_MAX, INT32_MAX, &text_layout);
         if (font->underline) IDWriteTextLayout_SetUnderline(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
         if (font->line_through) IDWriteTextLayout_SetStrikethrough(text_layout, true, ((DWRITE_TEXT_RANGE){ 0, length}));
 
@@ -251,8 +252,8 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
         rect->width = metrics.width;
         rect->height = metrics.height;
 
-        IUnknown_Release(text_format);
         IUnknown_Release(text_layout);
+        IUnknown_Release(text_format);
     }
 }
 
@@ -260,61 +261,71 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
     if (length == -1) length = wcslen(text);
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        CanvasRect real_rect = { DP2PX(rect->x), DP2PX(rect->y), DP2PX(rect->width), DP2PX(rect->height) };
+
         int32_t weight = FW_NORMAL;
         if (font->weight == CANVAS_FONT_WEIGHT_BOLD) weight = FW_BOLD;
-        HFONT hfont = CreateFontW(-MulDiv(font->size, 96, 72), 0, 0, 0, weight, font->italic, font->underline, font->line_through,
+        HFONT hfont = CreateFontW(-MulDiv(font->size, canvas->dpi, 72), 0, 0, 0, weight, font->italic, font->underline, font->line_through,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
         SelectObject(canvas->gdi.buffer_hdc, hfont);
 
         if ((format & CANVAS_TEXT_FORMAT_WRAP) == 0) {
-            SIZE measure_rect = { 0 };
+            SIZE measure_rect;
             if (
-                rect->width == 0 || rect->height == 0 ||
-                (format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0 ||
-                (format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0
+                rect->width == 0 ||
+                rect->height == 0 ||
+                (format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0
             ) {
                 GetTextExtentPoint32W(canvas->gdi.buffer_hdc, text, length, &measure_rect);
-                if (rect->width == 0) rect->width = measure_rect.cx;
-                if (rect->height == 0) rect->height = measure_rect.cy;
+                if (rect->width == 0) {
+                    rect->width = PX2DP(measure_rect.cx);
+                    real_rect.width = measure_rect.cx;
+                }
+                if (rect->height == 0) {
+                    rect->height = PX2DP(measure_rect.cy);
+                    real_rect.height = measure_rect.cy;
+                }
             }
 
             int32_t x = 0, y = 0;
             SetTextAlign(canvas->gdi.buffer_hdc, TA_LEFT);
-            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) x = rect->width / 2;
-            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) x = rect->width;
-            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0) y = (rect->height - measure_rect.cy) / 2;
-            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) y = rect->height - measure_rect.cy;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) x = real_rect.width / 2;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) x = real_rect.width;
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0) y = (real_rect.height - measure_rect.cy) / 2;
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) y = real_rect.height;
+
+            uint32_t align = TA_LEFT;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) align = TA_CENTER;
+            if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) align = TA_RIGHT;
+            if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) align |= TA_BOTTOM;
 
             if ((color >> 24) == 0xff) {
                 SetTextColor(canvas->gdi.buffer_hdc, color & 0x00ffffff);
-                SetTextAlign(canvas->gdi.buffer_hdc, TA_LEFT);
-                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) SetTextAlign(canvas->gdi.buffer_hdc, TA_CENTER);
-                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) SetTextAlign(canvas->gdi.buffer_hdc, TA_RIGHT);
-                RECT real_rect = { rect->x, rect->y, rect->x + rect->width, rect->y + rect->height };
-                ExtTextOutW(canvas->gdi.buffer_hdc, real_rect.left + x, real_rect.top + y, ETO_CLIPPED, &real_rect, text, length, NULL);
+                SetTextAlign(canvas->gdi.buffer_hdc, align);
+                ExtTextOutW(canvas->gdi.buffer_hdc, real_rect.x + x, real_rect.y + y, ETO_CLIPPED,
+                    &(RECT){ real_rect.x, real_rect.y, real_rect.x + real_rect.width, real_rect.y + real_rect.height }, text, length, NULL);
             } else {
-                BitBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, canvas->gdi.buffer_hdc, rect->x, rect->y, SRCCOPY);
+                BitBlt(canvas->gdi.alpha_hdc, 0, 0, real_rect.width, real_rect.height, canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, SRCCOPY);
                 SelectObject(canvas->gdi.alpha_hdc, hfont);
                 SetTextColor(canvas->gdi.alpha_hdc, color & 0x00ffffff);
-                SetTextAlign(canvas->gdi.alpha_hdc, TA_LEFT);
-                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER) != 0) SetTextAlign(canvas->gdi.alpha_hdc, TA_CENTER);
-                if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) SetTextAlign(canvas->gdi.alpha_hdc, TA_RIGHT);
-                RECT real_rect = { 0, 0, rect->width, rect->height };
-                ExtTextOutW(canvas->gdi.alpha_hdc, x, y, ETO_CLIPPED, &real_rect, text, length, NULL);
-                BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-                GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+                SetTextAlign(canvas->gdi.alpha_hdc, align);
+                ExtTextOutW(canvas->gdi.alpha_hdc, x, y, ETO_CLIPPED, &(RECT){ 0, 0, real_rect.width, real_rect.height }, text, length, NULL);
+                GdiAlphaBlend(canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.width, real_rect.height,
+                    canvas->gdi.alpha_hdc, 0, 0, real_rect.width, real_rect.height, (BLENDFUNCTION){ AC_SRC_OVER, 0, color >> 24, 0 });
             }
         } else {
             int32_t options = DT_WORDBREAK;
-            RECT measure_rect = { 0, 0, rect->width, 0 };
+            RECT measure_rect = { 0, 0, real_rect.width, 0 };
             if (
-                rect->width == 0 || rect->height == 0 ||
+                rect->height == 0 ||
                 (format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0 ||
                 (format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0
             ) {
                 DrawTextW(canvas->gdi.buffer_hdc, text, length, &measure_rect, DT_CALCRECT | options);
-                if (rect->width == 0) rect->width = measure_rect.right;
-                if (rect->height == 0) rect->height = measure_rect.bottom;
+                if (rect->height == 0) {
+                    rect->height = PX2DP(measure_rect.bottom);
+                    real_rect.height = measure_rect.bottom;
+                }
             }
 
             int32_t y = 0;
@@ -322,35 +333,36 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
             if ((format & CANVAS_TEXT_FORMAT_HORIZONTAL_RIGHT) != 0) options |= DT_RIGHT;
             if ((format & CANVAS_TEXT_FORMAT_VERTICAL_CENTER) != 0) {
                 options |= DT_VCENTER;
-                y = (rect->height - measure_rect.bottom) / 2;
+                y = (real_rect.height - measure_rect.bottom) / 2;
             }
             if ((format & CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM) != 0) {
                 options |= DT_BOTTOM;
-                y = rect->height - measure_rect.bottom;
+                y = real_rect.height - measure_rect.bottom;
             }
 
             if ((color >> 24) == 0xff) {
                 SetTextColor(canvas->gdi.buffer_hdc, color & 0x00ffffff);
-                RECT real_rect = { rect->x, rect->y + y, rect->x + rect->width, rect->y + rect->height };
-                DrawTextW(canvas->gdi.buffer_hdc, text, length, &real_rect, options);
+                DrawTextW(canvas->gdi.buffer_hdc, text, length,
+                    &(RECT){real_rect.x, real_rect.y + y, real_rect.x + real_rect.width, real_rect.y + real_rect.height }, options);
             } else {
-                BitBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, canvas->gdi.buffer_hdc, rect->x, rect->y, SRCCOPY);
+                BitBlt(canvas->gdi.alpha_hdc, 0, 0, real_rect.width, real_rect.height, canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, SRCCOPY);
                 SelectObject(canvas->gdi.alpha_hdc, hfont);
                 SetTextColor(canvas->gdi.alpha_hdc, color & 0x00ffffff);
-                RECT real_rect = { 0, y, rect->width, rect->height };
-                DrawTextW(canvas->gdi.alpha_hdc, text, length, &real_rect, options);
-                BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-                GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width, rect->height, blend);
+                DrawTextW(canvas->gdi.alpha_hdc, text, length, &(RECT){ 0, y, real_rect.width, real_rect.height }, options);
+                GdiAlphaBlend(canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.width, real_rect.height,
+                    canvas->gdi.alpha_hdc, 0, 0, real_rect.width, real_rect.height, (BLENDFUNCTION){ AC_SRC_OVER, 0, color >> 24, 0 });
             }
         }
+
         DeleteObject(hfont);
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
-        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
-            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
-        ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, &color_float, NULL, &brush);
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, (&(D2D1_COLOR_F){
+            (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255
+        }), NULL, &brush);
 
         IDWriteTextFormat *text_format;
         int32_t weight = DWRITE_FONT_WEIGHT_NORMAL;
@@ -376,11 +388,11 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
             if (rect->height == 0) rect->height = metrics.height;
         }
 
-        ID2D1RenderTarget_DrawTextLayout(canvas->d2d.render_target, ((D2D1_POINT_2F){ rect->x, rect->y }), text_layout, brush,
-            D2D1_DRAW_TEXT_OPTIONS_CLIP | D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+        ID2D1RenderTarget_DrawTextLayout(canvas->d2d.render_target, ((D2D1_POINT_2F){ rect->x, rect->y }),
+            text_layout, brush, D2D1_DRAW_TEXT_OPTIONS_CLIP | D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
 
-        IUnknown_Release(text_format);
         IUnknown_Release(text_layout);
+        IUnknown_Release(text_format);
         IUnknown_Release(brush);
     }
 }
@@ -412,13 +424,16 @@ float Canvas_ParsePathFloat(char **string) {
 
 void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewport_width, int32_t viewport_height, char *path, CanvasColor color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        CanvasRect real_rect = { DP2PX(rect->x), DP2PX(rect->y), DP2PX(rect->width), DP2PX(rect->height) };
+
         int32_t smooth_scale = 2; // Experimental smoothing feature gives dark border artifacts
-        StretchBlt(canvas->gdi.alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, SRCCOPY);
+        StretchBlt(canvas->gdi.alpha_hdc, 0, 0, real_rect.width * smooth_scale, real_rect.height * smooth_scale,
+            canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.width, real_rect.height, SRCCOPY);
         BeginPath(canvas->gdi.alpha_hdc);
         float x = 0;
         float y = 0;
-        float scale_x = (float)(rect->width * smooth_scale) / viewport_width;
-        float scale_y = (float)(rect->height * smooth_scale) / viewport_height;
+        float scale_x = (float)(real_rect.width * smooth_scale) / viewport_width;
+        float scale_y = (float)(real_rect.height * smooth_scale) / viewport_height;
         char *c = path;
         while (*c != '\0') {
             if (*c == 'M') {
@@ -471,10 +486,11 @@ void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewport_width, i
         FillPath(canvas->gdi.alpha_hdc);
         DeleteObject(brush);
         if ((color >> 24) == 0xff) {
-            StretchBlt(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, SRCCOPY);
+            StretchBlt(canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.width, real_rect.height,
+                canvas->gdi.alpha_hdc, 0, 0, real_rect.width * smooth_scale, real_rect.height * smooth_scale, SRCCOPY);
         } else {
-            BLENDFUNCTION blend = { AC_SRC_OVER, 0, color >> 24, 0 };
-            GdiAlphaBlend(canvas->gdi.buffer_hdc, rect->x, rect->y, rect->width, rect->height, canvas->gdi.alpha_hdc, 0, 0, rect->width * smooth_scale, rect->height * smooth_scale, blend);
+            GdiAlphaBlend(canvas->gdi.buffer_hdc, real_rect.x, real_rect.y, real_rect.width, real_rect.height,
+                canvas->gdi.alpha_hdc, 0, 0, real_rect.width * smooth_scale, real_rect.height * smooth_scale, (BLENDFUNCTION){ AC_SRC_OVER, 0, color >> 24, 0 });
         }
     }
 
@@ -555,10 +571,11 @@ void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewport_width, i
         ID2D1SimplifiedGeometrySink_Close(sink);
         IUnknown_Release(sink);
 
-        D2D1_COLOR_F color_float = { (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
-            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255 };
         ID2D1Brush *brush;
-        ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, &color_float, NULL, &brush);
+        ID2D1RenderTarget_CreateSolidColorBrush(canvas->d2d.render_target, (&(D2D1_COLOR_F){
+            (float)(color & 0xff) / 255, (float)((color >> 8) & 0xff) / 255,
+            (float)((color >> 16) & 0xff) / 255, (float)((color >> 24) & 0xff) / 255
+        }), NULL, &brush);
         ID2D1RenderTarget_FillGeometry(canvas->d2d.render_target, (ID2D1Geometry *)path_geometry, brush, NULL);
         IUnknown_Release(brush);
         IUnknown_Release(path_geometry);
