@@ -77,6 +77,7 @@ typedef struct Canvas {
     HWND hwnd;
     int32_t width;
     int32_t height;
+    int32_t dpi;
 
     union {
         struct {
@@ -91,7 +92,6 @@ typedef struct Canvas {
             ID2D1Factory *d2d_factory;
             IDWriteFactory *dwrite_factory;
             ID2D1HwndRenderTarget *render_target;
-            // ID2D1Layer *layer;
         } d2d;
     };
 } Canvas;
@@ -104,7 +104,7 @@ Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
 
 void Canvas_Free(Canvas *canvas);
 
-void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height);
+void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height, int32_t dpi);
 
 void Canvas_BeginDraw(Canvas *canvas);
 
@@ -121,8 +121,6 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, floa
 void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format);
 
 void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format, CanvasColor color);
-
-float Canvas_ParsePathFloat(char **string);
 
 void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewport_width, int32_t viewport_height, char *path, CanvasColor color);
 
