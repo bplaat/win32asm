@@ -128,6 +128,7 @@ typedef struct WIN32_FIND_DATAW {
     extern void __stdcall ExitProcess(uint32_t uExitCode);
 #endif
 extern HMODULE __stdcall GetModuleHandleW(wchar_t *lpModuleName);
+extern uint32_t __stdcall GetModuleFileNameW(HMODULE hModule, wchar_t *lpFilename, uint32_t nSize);
 extern HANDLE __stdcall GetProcessHeap(void);
 extern bool __stdcall SetThreadLocale(uint32_t Locale);
 extern uint32_t __stdcall SetThreadUILanguage(uint32_t LangId);

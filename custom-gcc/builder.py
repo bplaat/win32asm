@@ -115,9 +115,9 @@ if len(assembly_files) == 0:
 libraries = {
     'KERNEL32.DLL': [
         'CloseHandle', 'CreateFileW', 'CreateMutexW', 'ExitProcess', 'FindClose', 'FindFirstFileW', 'FindNextFileW', 'FindResourceW',
-        'FreeLibrary', 'GetFileSize', 'GetFullPathNameW', 'GetLastError', 'GetLocalTime', 'GetModuleHandleW', 'GetProcAddress',
-        'GetProcessHeap', 'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree', 'HeapReAlloc', 'LoadLibraryW', 'LoadResource',
-        'LockResource', 'MulDiv', 'MultiByteToWideChar', 'ReadFile', 'ReleaseMutex', 'SetFilePointer', 'SetThreadLocale',
+        'FreeLibrary', 'GetFileSize', 'GetFullPathNameW', 'GetLastError', 'GetLocalTime', 'GetModuleFileNameW', 'GetModuleHandleW',
+        'GetProcAddress', 'GetProcessHeap', 'GetStdHandle', 'GetVersionExW', 'HeapAlloc', 'HeapFree', 'HeapReAlloc', 'LoadLibraryW',
+        'LoadResource', 'LockResource', 'MulDiv', 'MultiByteToWideChar', 'ReadFile', 'ReleaseMutex', 'SetFilePointer', 'SetThreadLocale',
         'SetThreadUILanguage', 'SizeofResource', 'Sleep', 'WideCharToMultiByte', 'WriteConsoleA', 'WriteConsoleW', 'WriteFile'
     ],
     'USER32.DLL': [
