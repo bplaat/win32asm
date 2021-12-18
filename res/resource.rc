@@ -7,6 +7,9 @@ LANGUAGE 0, 0
 // Icon
 1 ICON "icon.ico"
 
+// Images
+1 IMAGE "bassiebas.jpg"
+
 // Version Information
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION 0,1,0,0
