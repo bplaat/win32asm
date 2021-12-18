@@ -4,6 +4,5 @@ BassieImage a simple and fast image viewer for Windows because the Windows UWP P
 ## Todo list:
 - 32-bit & no SSE2 SIMD so Windows 2000+ support
 - Animated gifs
-- Back button
 - Next / Previous buttons indexing and working
 - Zoom & scrollbars

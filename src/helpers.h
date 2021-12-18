@@ -15,6 +15,13 @@
 #include <stdint.h>
 
 // Some general stuff that is not in the MinGW includes
+#ifndef MAX
+    #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#endif
+#ifndef MIN
+    #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#endif
+
 #ifndef GET_X_LPARAM
     #define GET_X_LPARAM(lParam) ((int32_t)(int16_t)LOWORD(lParam))
 #endif

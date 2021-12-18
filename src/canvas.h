@@ -34,12 +34,20 @@ typedef enum CanvasRenderer {
 #define CANVAS_HEX(x) (((x >> 16) & 0xff) | (((x >> 8) & 0xff) << 8) | ((x & 0xff) << 16) | (0xff << 24))
 #define CANVAS_HEXA(x) (((x >> 24) & 0xff) | (((x >> 16) & 0xff) << 8) | (((x >> 8) & 0xff) << 16) | ((x & 0xff) << 24))
 
+typedef struct CanvasPoint {
+    float x;
+    float y;
+} CanvasPoint;
+
 typedef struct CanvasRect {
     float x;
     float y;
     float width;
     float height;
 } CanvasRect;
+
+#define CANVAS_POINT_IN_RECT(point, rect) (point.x >= rect.x && point.y >= rect.y \
+    && point.x < rect.x + rect.width && point.y < rect.y + rect.height)
 
 typedef uint32_t CanvasColor;
 
@@ -176,7 +184,7 @@ void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *
 #endif
 
 #ifdef CANVAS_ENABLE_PATH
-void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewportWidth, int32_t viewportHeight, char *path, CanvasColor color);
+void Canvas_FillPath(Canvas *canvas, char *path, int32_t viewportWidth, int32_t viewportHeight, CanvasRect *rect, CanvasColor color);
 #endif
 
 // ##########################################################################################################
@@ -715,7 +723,7 @@ float _Canvas_ParsePathFloat(char **string) {
     return negative ? -number : number;
 }
 
-void Canvas_FillPath(Canvas *canvas, CanvasRect *rect, int32_t viewportWidth, int32_t viewportHeight, char *path, CanvasColor color) {
+void Canvas_FillPath(Canvas *canvas, char *path, int32_t viewportWidth, int32_t viewportHeight, CanvasRect *rect, CanvasColor color) {
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
         CanvasRect realRect = { DP2PX(rect->x), DP2PX(rect->y), DP2PX(rect->width), DP2PX(rect->height) };
 

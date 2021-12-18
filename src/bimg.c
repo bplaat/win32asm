@@ -6,6 +6,7 @@
 #define CANVAS_ENABLE_BITMAP
 #define CANVAS_ENABLE_STBI_IMAGE
 #define CANVAS_ENABLE_TEXT
+#define CANVAS_ENABLE_PATH
 #include "canvas.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -22,6 +23,7 @@
 #include "helpers.h"
 
 #define ID_ICON 1
+#define ID_IMAGE_BASSIEBAS 1
 #define ID_MENU_ABOUT 1001
 
 #define WINDOW_WIDTH 1024
@@ -37,16 +39,26 @@ wchar_t *font_name = L"Segoe UI";
 wchar_t *drag_image_text = L"Drag an image to view it!";
 wchar_t *image_error_text = L"Could not load that image!";
 wchar_t *footer_text = L"Made by Bastiaan van der Plaat";
+wchar_t *about_header_text = L"About BassieImage";
+wchar_t *about_description_text = L"BassieImage a simple and fast image viewer for Windows because the Windows UWP Photos app is fucking slow and the .NET Windows Photo Library app don't has a dark mode";
+wchar_t *copyright_text = L"Copyright \xA9 2021 PlaatSoft";
+
+char *close_icon = "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z";
 
 typedef struct WindowData {
     int32_t dpi;
     int32_t width_dp;
     int32_t height_dp;
+    int32_t min_dp;
     int32_t width_px;
     int32_t height_px;
     Canvas *canvas;
-    CanvasBitmap *bitmap;
+
     bool error;
+    CanvasBitmap *bitmap;
+
+    bool about;
+    CanvasBitmap *bassiebasBitmap;
 } WindowData;
 
 #define DP2PX(dp) MulDiv(dp, window->dpi, 96)
@@ -65,6 +77,7 @@ void OpenImage(HWND hwnd, wchar_t *path) {
         window->bitmap = NULL;
         window->error = false;
     }
+    window->about = false;
 
     if (window->bitmap != NULL) {
         wchar_t full_path[MAX_PATH];
@@ -82,6 +95,25 @@ void OpenImage(HWND hwnd, wchar_t *path) {
     InvalidateRect(hwnd, NULL, FALSE);
 }
 
+void GoBack(HWND hwnd) {
+    WindowData *window = (WindowData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!(GetWindowLong(hwnd, GWL_STYLE) & WS_OVERLAPPEDWINDOW)) {
+        SetWindowFullscreen(hwnd, FALSE);
+        return;
+    }
+    if (window->bitmap != NULL) {
+        OpenImage(hwnd, NULL);
+        return;
+    }
+    if (window->error || window->about) {
+        window->error = false;
+        window->about = false;
+        InvalidateRect(hwnd, NULL, FALSE);
+        return;
+    }
+    DestroyWindow(hwnd);
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     WindowData *window = (WindowData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
@@ -92,8 +124,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         // Create canvas
         window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DEFAULT);
-        window->bitmap = NULL;
         window->error = false;
+        window->bitmap = NULL;
+        window->about = false;
+        window->bassiebasBitmap = NULL;
 
         // Open image from args
         int32_t argc;
@@ -114,23 +148,58 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_SYSCOMMAND) {
         int32_t id = LOWORD(wParam);
         if (id == ID_MENU_ABOUT) {
-            MessageBox(hwnd, TEXT("Made by Bastiaan van der Plaat\nCopyright (c) 2021 PlaatSoft"), TEXT("About BassieImage"), MB_OK | MB_ICONINFORMATION);
+            window->about = true;
+            InvalidateRect(hwnd, NULL, FALSE);
             return 0;
         }
     }
 
     // Open click listener
     if (msg == WM_LBUTTONUP) {
+        int x = GET_X_LPARAM(lParam);
         int y = GET_Y_LPARAM(lParam);
+        CanvasPoint mouse = { PX2DP(x), PX2DP(y) };
+
+        if (window->about) {
+            float padding = window->min_dp * 40 / 1000;
+            float imageSize = window->min_dp * 350 / 1000;
+            CanvasRect dialogRect;
+            dialogRect.width = window->min_dp - padding * 2;
+            dialogRect.height = imageSize + padding * 2;
+            dialogRect.x = (window->width_dp - dialogRect.width) / 2;
+            dialogRect.y = (window->height_dp - dialogRect.height) / 2;
+
+            CanvasRect bassiebasRect = { dialogRect.x + padding, dialogRect.y + padding, imageSize, imageSize };
+            if (CANVAS_POINT_IN_RECT(mouse, bassiebasRect)) {
+                ShellExecute(hwnd, TEXT("open"), TEXT("https://bastiaan.ml/"), NULL, NULL, SW_SHOWNORMAL);
+            }
+
+            CanvasRect closeButtonRect = { dialogRect.x + dialogRect.width - padding, dialogRect.y, padding, padding };
+            if (CANVAS_POINT_IN_RECT(mouse, closeButtonRect)) {
+                window->about = false;
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
+
+            return 0;
+        }
+
+        if (window->bitmap != NULL || window->error) {
+            float closeButtonSize = window->min_dp * 40 / 1000;
+            CanvasRect closeButtonRect = { window->width_dp - closeButtonSize * 1.25, closeButtonSize / 4, closeButtonSize, closeButtonSize };
+            if (CANVAS_POINT_IN_RECT(mouse, closeButtonRect)) {
+                GoBack(hwnd);
+                return 0;
+            }
+        }
 
         if (window->bitmap == NULL) {
             // Measure footer height
             CanvasRect footer_rect = { 0, 0, window->width_dp, 0 };
             Canvas_MeasureText(window->canvas, footer_text, -1, &footer_rect,
-                &(CanvasFont){ .name = font_name, .size = window->width_dp * 15 / 1000 },
+                &(CanvasFont){ .name = font_name, .size = window->min_dp * 20 / 1000 },
                 CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM);
 
-            if (y < window->height_px - footer_rect.height - DP2PX(24 * 2)) {
+            if (y < window->height_px - footer_rect.height - (window->min_dp * 30 / 1000) * 2) {
                 OPENFILENAME open_file_dialog = { sizeof(OPENFILENAME) };
                 wchar_t path[MAX_PATH] = L"";
                 open_file_dialog.hwndOwner = hwnd;
@@ -146,29 +215,19 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     OpenImage(hwnd, path);
                 }
             } else {
-                ShellExecute(hwnd, TEXT("open"), TEXT("https://bastiaan.ml/"), NULL, NULL, SW_SHOWNORMAL);
+                window->about = true;
+                InvalidateRect(hwnd, NULL, FALSE);
             }
+            return 0;
         }
+
         return 0;
     }
 
     // Keyboard shortcuts
     if (msg == WM_KEYDOWN) {
         if (wParam == VK_ESCAPE || wParam == VK_BACK) {
-            if (!(GetWindowLong(hwnd, GWL_STYLE) & WS_OVERLAPPEDWINDOW)) {
-                SetWindowFullscreen(hwnd, FALSE);
-                return 0;
-            }
-            if (window->bitmap != NULL) {
-                OpenImage(hwnd, NULL);
-                return 0;
-            }
-            if (window->error) {
-                window->error = false;
-                InvalidateRect(hwnd, NULL, FALSE);
-                return 0;
-            }
-            DestroyWindow(hwnd);
+            GoBack(hwnd);
             return 0;
         }
 
@@ -184,6 +243,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         wchar_t path[MAX_PATH];
         DragQueryFile(hdrop, 0, path, MAX_PATH);
         DragFinish(hdrop);
+        SetForegroundWindow(hwnd);
         OpenImage(hwnd, path);
         return 0;
     }
@@ -203,6 +263,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         window->height_px = HIWORD(lParam);
         window->width_dp = PX2DP(window->width_px);
         window->height_dp = PX2DP(window->height_px);
+        window->min_dp = MIN(window->width_dp, window->height_dp);
 
         // Resize canvas
         Canvas_Resize(window->canvas, window->width_px, window->height_px, window->dpi);
@@ -236,8 +297,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         if (window->bitmap != NULL) {
             // Draw bitmap
-            int32_t scale_width = window->height_dp * window->bitmap->width / window->bitmap->height;
-            int32_t scale_height = window->height_dp;
+            float scale_width = window->height_dp * window->bitmap->width / window->bitmap->height;
+            float scale_height = window->height_dp;
             if (scale_width > window->width_dp) {
                 scale_width = window->width_dp;
                 scale_height = window->width_dp * window->bitmap->height / window->bitmap->width;
@@ -252,14 +313,87 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             // Draw header text
             Canvas_DrawText(window->canvas, window->error ? image_error_text : drag_image_text, -1,
                 &(CanvasRect){ 0, 0, window->width_dp, window->height_dp },
-                &(CanvasFont){ .name = font_name, .size = window->width_dp * 30 / 1000 },
+                &(CanvasFont){ .name = font_name, .size = window->min_dp * 40 / 1000 },
                 CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_CENTER, CANVAS_HEX(0xffffff));
 
             // Draw footer text
             Canvas_DrawText(window->canvas, footer_text, -1,
-                &(CanvasRect){ 0, 0, window->width_dp, window->height_dp - 24 },
-                &(CanvasFont){ .name = font_name, .size = window->width_dp * 15 / 1000 },
-                CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM, CANVAS_HEX(0x777777));
+                &(CanvasRect){ 0, 0, window->width_dp, window->height_dp - (window->min_dp * 30 / 1000) },
+                &(CanvasFont){ .name = font_name, .size = window->min_dp * 20 / 1000 },
+                CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM, CANVAS_HEX(0x888888));
+        }
+
+        // Draw close button
+        if (window->bitmap != NULL || window->error) {
+            float closeButtonSize = window->min_dp * 40 / 1000;
+            Canvas_FillRect(window->canvas, &(CanvasRect){ window->width_dp - closeButtonSize * 1.25, closeButtonSize / 4, closeButtonSize, closeButtonSize}, CANVAS_HEX(0x222222));
+            Canvas_FillPath(window->canvas, close_icon, 24, 24, &(CanvasRect){ window->width_dp - closeButtonSize * 1.25, closeButtonSize / 4, closeButtonSize, closeButtonSize}, CANVAS_HEX(0xffffff));
+        }
+
+        // Draw about dialog
+        if (window->about) {
+            // Draw about dialog shadow
+            Canvas_FillRect(window->canvas, &(CanvasRect){ 0, 0, window->width_dp, window->height_dp }, CANVAS_RGBA(0, 0, 0, 200));
+
+            float padding = window->min_dp * 40 / 1000;
+            float imageSize = window->min_dp * 350 / 1000;
+
+            // Draw about dialog
+            CanvasRect dialogRect;
+            dialogRect.width = window->min_dp - padding * 2;
+            dialogRect.height = imageSize + padding * 2;
+            dialogRect.x = (window->width_dp - dialogRect.width) / 2;
+            dialogRect.y = (window->height_dp - dialogRect.height) / 2;
+            Canvas_FillRect(window->canvas, &dialogRect, CANVAS_HEX(0x222222));
+
+            // Draw about dialog bassiebas image
+            if (window->bassiebasBitmap == NULL) {
+                window->bassiebasBitmap = CanvasBitmap_NewFromResource(window->canvas, L"IMAGE", MAKEINTRESOURCE(ID_IMAGE_BASSIEBAS));
+            }
+            Canvas_DrawBitmap(window->canvas, window->bassiebasBitmap, &(CanvasRect){ dialogRect.x + padding, dialogRect.y + padding, imageSize, imageSize }, NULL);
+
+            // Calculate text height
+            float contentHeight = 0;
+            CanvasFont headerFont = { .name = font_name, .size = window->min_dp * 25 / 1000 };
+            CanvasFont textFont = { .name = font_name, .size = window->min_dp * 15 / 1000 };
+            CanvasRect measureRect = { 0, 0, 0, 0 };
+
+            Canvas_MeasureText(window->canvas, about_header_text, -1, &measureRect, &headerFont, CANVAS_TEXT_FORMAT_DEFAULT);
+            contentHeight += measureRect.height + padding / 2;
+
+            measureRect.width = dialogRect.width - imageSize - padding * 3;
+            Canvas_MeasureText(window->canvas, about_description_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_DEFAULT | CANVAS_TEXT_FORMAT_WRAP);
+            contentHeight += measureRect.height + padding / 2;
+
+            Canvas_MeasureText(window->canvas, copyright_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_DEFAULT);
+            contentHeight += measureRect.height;
+
+            Canvas_MeasureText(window->canvas, footer_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_DEFAULT);
+            contentHeight += measureRect.height;
+
+            // Draw about dialog header text
+            CanvasRect headerRect = { dialogRect.x + padding + imageSize + padding, dialogRect.y + (dialogRect.height - contentHeight) / 2, 0, 0 };
+            Canvas_DrawText(window->canvas, about_header_text, -1, &headerRect, &headerFont,
+                CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_HEX(0xffffff));
+
+            // Draw about dialog description text
+            CanvasRect descriptionRect = { headerRect.x, headerRect.y + headerRect.height + padding / 2, dialogRect.width - imageSize - padding * 3, 0 };
+            Canvas_DrawText(window->canvas, about_description_text, -1, &descriptionRect, &textFont,
+                CANVAS_TEXT_FORMAT_DEFAULT | CANVAS_TEXT_FORMAT_WRAP, CANVAS_HEX(0xffffff));
+
+            // Draw about dialog copyright text
+            CanvasRect copyrightRect = { headerRect.x, descriptionRect.y + descriptionRect.height + padding / 2, 0, 0 };
+            Canvas_DrawText(window->canvas, copyright_text, -1, &copyrightRect, &textFont,
+                CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_HEX(0xffffff));
+
+            // Draw about dialog footer text
+            CanvasRect footerRect = { headerRect.x, copyrightRect.y + copyrightRect.height + padding / 2, 0, 0 };
+            Canvas_DrawText(window->canvas, footer_text, -1, &footerRect, &textFont,
+                CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_HEX(0xffffff));
+
+            // Draw close button
+            Canvas_FillRect(window->canvas, &(CanvasRect){ dialogRect.x + dialogRect.width - padding, dialogRect.y, padding, padding}, CANVAS_HEX(0x444444));
+            Canvas_FillPath(window->canvas, close_icon, 24, 24, &(CanvasRect){ dialogRect.x + dialogRect.width - padding, dialogRect.y, padding, padding}, CANVAS_HEX(0xffffff));
         }
 
         Canvas_EndDraw(window->canvas);
@@ -270,6 +404,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // Free window data
         if (window->bitmap != NULL) {
             CanvasBitmap_Free(window->bitmap);
+        }
+        if (window->bassiebasBitmap != NULL) {
+            CanvasBitmap_Free(window->bassiebasBitmap);
         }
         Canvas_Free(window->canvas);
         free(window);

@@ -28,7 +28,7 @@ FILESUBTYPE VFT2_UNKNOWN
             VALUE "FileDescription", "BassieImage"
             VALUE "FileVersion", "0.1.0.0"
             VALUE "InternalName", "BassieImage"
-            VALUE "LegalCopyright", "Copyright (c) 2021 PlaatSoft"
+            VALUE "LegalCopyright", "Copyright \xA9 2021 PlaatSoft"
             VALUE "OriginalFilename", "bimg.exe"
             VALUE "ProductName", "BassieImage"
             VALUE "ProductVersion", "0.1.0.0"
