@@ -13,12 +13,10 @@
 #define CANVAS_H
 
 #include <windows.h>
-#define D2D_USE_C_DEFINITIONS
-#include <d2d1.h>
-#define COBJMACROS
-#include <dwrite.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "direct2d.h"
+#include "directwrite.h"
 #ifdef CANVAS_ENABLE_STBI_IMAGE
 #include "stb_image.h"
 #endif
@@ -151,9 +149,9 @@ void CanvasBitmap_Free(CanvasBitmap *bitmap);
 
 #endif
 
-typedef int32_t (STDMETHODCALLTYPE *_D2D1CreateFactory)(D2D1_FACTORY_TYPE factoryType, REFIID riid, const D2D1_FACTORY_OPTIONS *pFactoryOptions, ID2D1Factory **ppIFactory);
+typedef int32_t (STDMETHODCALLTYPE *_D2D1CreateFactory)(uint32_t factoryType, REFIID riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
 
-typedef int32_t (STDMETHODCALLTYPE *_DWriteCreateFactory)(DWRITE_FACTORY_TYPE factoryType, REFIID riid, IDWriteFactory **factory);
+typedef int32_t (STDMETHODCALLTYPE *_DWriteCreateFactory)(uint32_t factoryType, REFIID riid, IDWriteFactory **factory);
 
 Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
 

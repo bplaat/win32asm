@@ -5,6 +5,7 @@
 // Define options:
 // HELPERS_IMPLEMENTATION: Use this once in your project for the c code
 // HELPERS_ENABLE_DPI: Enable DPI aware helpers
+// HELPERS_ENABLE_VERSION: Enable Windows version helpers
 // HELPERS_ENABLE_FULLSCREEN: Enable fullscreen window helper
 // HELPERS_ENABLE_IMMERSIVE_DARK_MODE: Enable dark window decoration helper for Windows 10+
 
@@ -14,7 +15,7 @@
 #include <windows.h>
 #include <stdint.h>
 
-// Some general stuff that is not in the MinGW includes
+// Some general stuff that is not in the Tiny C Compiler / MinGW includes
 #ifndef MAX
     #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #endif
@@ -29,6 +30,10 @@
     #define GET_Y_LPARAM(lParam) ((int32_t)(int16_t)HIWORD(lParam))
 #endif
 
+#ifndef WM_DPICHANGED
+    #define WM_DPICHANGED 0x02e0
+#endif
+
 #ifdef HELPERS_ENABLE_DPI
 
 int32_t GetPrimaryDesktopDpi(void);
@@ -36,6 +41,12 @@ int32_t GetPrimaryDesktopDpi(void);
 typedef BOOL (STDMETHODCALLTYPE *_AdjustWindowRectExForDpi)(RECT *lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
 
 BOOL AdjustWindowRectExForDpi(RECT *lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
+
+#endif
+
+#ifdef HELPERS_ENABLE_VERSION
+
+bool IsVistaOrHigher(void);
 
 #endif
 
@@ -82,6 +93,17 @@ BOOL AdjustWindowRectExForDpi(RECT *lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwE
         return AdjustWindowRectExForDpi(lpRect, dwStyle, bMenu, dwExStyle, dpi);
     }
     return AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle);
+}
+
+#endif
+
+#ifdef HELPERS_ENABLE_VERSION
+
+bool IsVistaOrHigher(void) {
+    OSVERSIONINFOW osver = {0};
+    osver.dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
+    GetVersionExW(&osver);
+    return osver.dwMajorVersion >= 6;
 }
 
 #endif
