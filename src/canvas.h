@@ -1,9 +1,10 @@
-// ### Canvas Renderer v0.2.0-dev ###
-// A simple dpi aware / alpha blending 2D Win32 Canvas library with a pure GDI and Direct2d backend
+// ### Canvas Renderer v0.2.1-dev ###
+// A simple dpi aware / alpha blending 2D Win32 Canvas library with a pure GDI and Direct2D backend
 // ~ Made by Bastiaan van der Plaat (https://bastiaan.ml/)
 
 // Define options:
 // CANVAS_IMPLEMENTATION: Use this once in your project for the c code
+// CANVAS_USE_CUSTOM_HEADERS: Use custom Direct2D and DirectWrite header files
 // CANVAS_ENABLE_BITMAP: Enable bitmap loading and rendering code
 // CANVAS_ENABLE_STBI_IMAGE: Enable code that uses the STBI image library (needs CANVAS_ENABLE_BITMAP)
 // CANVAS_ENABLE_TEXT: Enable text measuring and rendering code
@@ -15,17 +16,20 @@
 #include <windows.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+#ifdef CANVAS_USE_CUSTOM_HEADERS
 #include "direct2d.h"
 #include "directwrite.h"
+#else
+#define D2D_USE_C_DEFINITIONS
+#include <d2d1.h>
+#define COBJMACROS
+#include <dwrite.h>
+#endif
+
 #ifdef CANVAS_ENABLE_STBI_IMAGE
 #include "stb_image.h"
 #endif
-
-typedef enum CanvasRenderer {
-    CANVAS_RENDERER_DEFAULT,
-    CANVAS_RENDERER_GDI,
-    CANVAS_RENDERER_DIRECT2D
-} CanvasRenderer;
 
 #define CANVAS_RGB(r, g, b) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | (0xff << 24))
 #define CANVAS_RGBA(r, g, b, a) ((r & 0xff) | ((g & 0xff) << 8) | ((b & 0xff) << 16) | ((a & 0xff) << 24))
@@ -48,8 +52,6 @@ typedef struct CanvasRect {
     && point.x < rect.x + rect.width && point.y < rect.y + rect.height)
 
 typedef uint32_t CanvasColor;
-
-#ifdef CANVAS_ENABLE_TEXT
 
 typedef enum CanvasFontWeight {
     CANVAS_FONT_WEIGHT_NORMAL,
@@ -77,8 +79,6 @@ typedef enum CanvasTextFormat {
     CANVAS_TEXT_FORMAT_WRAP = 16
 } CanvasTextFormat;
 
-#endif
-
 typedef struct CanvasTransform {
     float m11;
     float m12;
@@ -88,30 +88,13 @@ typedef struct CanvasTransform {
     float dy;
 } CanvasTransform;
 
-typedef struct Canvas Canvas;
+typedef enum CanvasRenderer {
+    CANVAS_RENDERER_DEFAULT,
+    CANVAS_RENDERER_GDI,
+    CANVAS_RENDERER_DIRECT2D
+} CanvasRenderer;
 
-#ifdef CANVAS_ENABLE_BITMAP
-
-typedef struct CanvasBitmap {
-    Canvas *canvas;
-    int32_t width;
-    int32_t height;
-
-    union {
-        struct {
-            uint8_t *data;
-            HBITMAP bitmap;
-        } gdi;
-
-        struct {
-            ID2D1Bitmap *bitmap;
-        } d2d;
-    };
-} CanvasBitmap;
-
-#endif
-
-struct Canvas {
+typedef struct Canvas {
     CanvasRenderer renderer;
     HWND hwnd;
     int32_t width;
@@ -133,60 +116,59 @@ struct Canvas {
             ID2D1HwndRenderTarget *renderTarget;
         } d2d;
     };
-};
+} Canvas;
 
-#ifdef CANVAS_ENABLE_BITMAP
+typedef struct CanvasBitmap {
+    Canvas *canvas;
+    int32_t width;
+    int32_t height;
 
-CanvasBitmap *CanvasBitmap_NewFromMemory(Canvas *canvas, int32_t width, int32_t height, uint8_t *data);
+    union {
+        struct {
+            uint8_t *data;
+            HBITMAP bitmap;
+        } gdi;
 
-#ifdef CANVAS_ENABLE_STBI_IMAGE
-CanvasBitmap *CanvasBitmap_NewFromFile(Canvas *canvas, wchar_t *path);
+        struct {
+            ID2D1Bitmap *bitmap;
+        } d2d;
+    };
+} CanvasBitmap;
 
-CanvasBitmap *CanvasBitmap_NewFromResource(Canvas *canvas, wchar_t *type, wchar_t *name);
-#endif
+extern CanvasBitmap *CanvasBitmap_NewFromMemory(Canvas *canvas, int32_t width, int32_t height, uint8_t *data);
 
-void CanvasBitmap_Free(CanvasBitmap *bitmap);
+extern CanvasBitmap *CanvasBitmap_NewFromFile(Canvas *canvas, wchar_t *path);
 
-#endif
+extern CanvasBitmap *CanvasBitmap_NewFromResource(Canvas *canvas, wchar_t *type, wchar_t *name);
 
-typedef int32_t (STDMETHODCALLTYPE *_D2D1CreateFactory)(uint32_t factoryType, REFIID riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+extern void CanvasBitmap_Free(CanvasBitmap *bitmap);
 
-typedef int32_t (STDMETHODCALLTYPE *_DWriteCreateFactory)(uint32_t factoryType, REFIID riid, IDWriteFactory **factory);
+extern Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
 
-Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer);
+extern void Canvas_Free(Canvas *canvas);
 
-void Canvas_Free(Canvas *canvas);
+extern void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height, int32_t dpi);
 
-void Canvas_Resize(Canvas *canvas, int32_t width, int32_t height, int32_t dpi);
+extern void Canvas_BeginDraw(Canvas *canvas);
 
-void Canvas_BeginDraw(Canvas *canvas);
+extern void Canvas_EndDraw(Canvas *canvas);
 
-void Canvas_EndDraw(Canvas *canvas);
+extern void Canvas_Transform(Canvas *canvas, CanvasTransform *transform);
 
-void Canvas_Transform(Canvas *canvas, CanvasTransform *transform);
+extern void Canvas_Clip(Canvas *canvas, CanvasRect *rect);
 
-void Canvas_Clip(Canvas *canvas, CanvasRect *rect);
+extern void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
 
-void Canvas_FillRect(Canvas *canvas, CanvasRect *rect, CanvasColor color);
+extern void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float strokeWidth);
 
-void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, float strokeWidth);
+extern void Canvas_DrawBitmap(Canvas *canvas, CanvasBitmap *bitmap, CanvasRect *destinationRect, CanvasRect *sourceRect);
 
-#ifdef CANVAS_ENABLE_BITMAP
-void Canvas_DrawBitmap(Canvas *canvas, CanvasBitmap *bitmap, CanvasRect *destinationRect, CanvasRect *sourceRect);
-#endif
+extern void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format);
 
-#ifdef CANVAS_ENABLE_TEXT
-void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format);
+extern void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format, CanvasColor color);
 
-void Canvas_DrawText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRect *rect, CanvasFont *font, CanvasTextFormat format, CanvasColor color);
-#endif
+extern void Canvas_FillPath(Canvas *canvas, char *path, int32_t viewportWidth, int32_t viewportHeight, CanvasRect *rect, CanvasColor color);
 
-#ifdef CANVAS_ENABLE_PATH
-void Canvas_FillPath(Canvas *canvas, char *path, int32_t viewportWidth, int32_t viewportHeight, CanvasRect *rect, CanvasColor color);
-#endif
-
-// ##########################################################################################################
-// ##########################################################################################################
 // ##########################################################################################################
 // ##########################################################################################################
 // ##########################################################################################################
@@ -277,6 +259,10 @@ void CanvasBitmap_Free(CanvasBitmap *bitmap) {
 
 #endif
 
+typedef int32_t (STDMETHODCALLTYPE *_D2D1CreateFactory)(uint32_t factoryType, REFIID riid, const void *pFactoryOptions, ID2D1Factory **ppIFactory);
+
+typedef int32_t (STDMETHODCALLTYPE *_DWriteCreateFactory)(uint32_t factoryType, REFIID riid, IDWriteFactory **factory);
+
 Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
     Canvas *canvas = malloc(sizeof(Canvas));
     canvas->renderer = renderer;
@@ -310,10 +296,9 @@ Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
 }
 
 void Canvas_Free(Canvas *canvas) {
-    if (canvas->renderer == CANVAS_RENDERER_GDI) {
+    if (canvas->renderer == CANVAS_RENDERER_GDI && canvas->gdi.bufferHdc != NULL) {
         DeleteObject(canvas->gdi.alphaBitmap);
         DeleteDC(canvas->gdi.alphaHdc);
-
         DeleteObject(canvas->gdi.bufferBitmap);
         DeleteDC(canvas->gdi.bufferHdc);
     }
@@ -455,7 +440,7 @@ void Canvas_StrokeRect(Canvas *canvas, CanvasRect *rect, CanvasColor color, floa
         if ((color >> 24) == 0xff) {
             SelectObject(canvas->gdi.bufferHdc, pen);
             SelectObject(canvas->gdi.bufferHdc, GetStockObject(NULL_BRUSH));
-            Rectangle(canvas->gdi.bufferHdc, realRect.x, realRect.y, realRect.x + realRect.width + 1, realRect.y + realRect.height + 1); // TODO: Dont no why?
+            Rectangle(canvas->gdi.bufferHdc, realRect.x, realRect.y, realRect.x + realRect.width + 1, realRect.y + realRect.height + 1);
         } else {
             BitBlt(canvas->gdi.alphaHdc, 0, 0, realRect.width + strokeWidth * 2, realRect.height + strokeWidth * 2, canvas->gdi.bufferHdc, realRect.x - strokeWidth, realRect.y - strokeWidth, SRCCOPY);
             SelectObject(canvas->gdi.alphaHdc, pen);
@@ -506,25 +491,27 @@ void Canvas_MeasureText(Canvas *canvas, wchar_t *text, int32_t length, CanvasRec
     if (length == -1) length = wcslen(text);
 
     if (canvas->renderer == CANVAS_RENDERER_GDI) {
+        HDC hdc = canvas->gdi.bufferHdc != NULL ? canvas->gdi.bufferHdc : GetDC(canvas->hwnd);
         int32_t weight = FW_NORMAL;
         if (font->weight == CANVAS_FONT_WEIGHT_BOLD) weight = FW_BOLD;
         HFONT hfont = CreateFontW(-MulDiv(font->size, canvas->dpi, 72), 0, 0, 0, weight, font->italic, font->underline, font->lineThrough,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, font->name);
-        SelectObject(canvas->gdi.bufferHdc, hfont);
+        SelectObject(hdc, hfont);
 
         if ((format & CANVAS_TEXT_FORMAT_WRAP) != 0) {
             RECT measureRect = { 0, 0, DP2PX(rect->width), 0 };
-            DrawTextW(canvas->gdi.bufferHdc, text, length, &measureRect, DT_CALCRECT | DT_WORDBREAK);
+            DrawTextW(hdc, text, length, &measureRect, DT_CALCRECT | DT_WORDBREAK);
             rect->width = PX2DP(measureRect.right);
             rect->height = PX2DP(measureRect.bottom);
         } else {
-            SIZE measureRect = { 0 };
-            GetTextExtentPoint32W(canvas->gdi.bufferHdc, text, length, &measureRect);
+            SIZE measureRect;
+            GetTextExtentPoint32W(hdc, text, length, &measureRect);
             rect->width = PX2DP(measureRect.cx);
             rect->height = PX2DP(measureRect.cy);
         }
 
         DeleteObject(hfont);
+        if (canvas->gdi.bufferHdc == NULL) ReleaseDC(canvas->hwnd, hdc);
     }
 
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
