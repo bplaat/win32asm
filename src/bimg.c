@@ -230,17 +230,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 open_file_dialog.lpstrFile = path;
                 open_file_dialog.nMaxFile = MAX_PATH;
                 open_file_dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-
-                wchar_t *open_files_filter_text;
-                int open_files_filter_size = LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_files_filter_text, 0) + 1;
-                open_file_dialog.lpstrFilter = malloc(open_files_filter_size * sizeof(wchar_t));
-                memcpy((void *)open_file_dialog.lpstrFilter, open_files_filter_text, open_files_filter_size * sizeof(wchar_t));
-
+                LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_file_dialog.lpstrFilter, 0);
                 if (GetOpenFileName(&open_file_dialog)) {
                     OpenImage(hwnd, path);
                 }
-
-                free((void *)open_file_dialog.lpstrFilter);
             } else {
                 OpenAbout(hwnd);
             }

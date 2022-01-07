@@ -23,7 +23,7 @@ STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 JPEG Files (*.jpg; *.jpeg)\x00*.jpg;*.jpeg\x00\
 PNG Files (*.png)\x00*.png\x00\
 GIF Files (*.gif)\x00*.gif\x00\
-BMP Files (*.bmp)\x00*.bmp\x00"
+BMP Files (*.bmp)\x00*.bmp\x00\x00"
 }
 
 // Dutch Strings
@@ -40,5 +40,5 @@ STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
 JPEG Bestanden (*.jpg; *.jpeg)\x00*.jpg;*.jpeg\x00\
 PNG Bestanden (*.png)\x00*.png\x00\
 GIF Bestanden (*.gif)\x00*.gif\x00\
-BMP Bestanden (*.bmp)\x00*.bmp\x00"
+BMP Bestanden (*.bmp)\x00*.bmp\x00\x00"
 }
