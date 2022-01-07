@@ -14,6 +14,7 @@ STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 {
     ID_STRING_MENU_ABOUT, "About\x00"
     ID_STRING_DRAG_IMAGE, "Drag an image to view it!\x00"
+    ID_STRING_IMAGE_LOADING, "Loading image...\x00"
     ID_STRING_IMAGE_ERROR, "Could not load that image!\x00"
     ID_STRING_FOOTER, "Made by Bastiaan van der Plaat\x00"
     ID_STRING_ABOUT_HEADER, "About BassieImage\x00"
@@ -31,6 +32,7 @@ STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
 {
     ID_STRING_MENU_ABOUT, "Over\x00"
     ID_STRING_DRAG_IMAGE, "Sleep een afbeelding om deze te bekijken!\x00"
+    ID_STRING_IMAGE_LOADING, "Afbeelding laden...\x00"
     ID_STRING_IMAGE_ERROR, "Kan die afbeelding niet laden!\x00"
     ID_STRING_FOOTER, "Gemaakt door Bastiaan van der Plaat\x00"
     ID_STRING_ABOUT_HEADER, "Over BassieImage\x00"

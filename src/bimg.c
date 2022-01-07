@@ -42,6 +42,7 @@ char *close_icon = "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.4
 
 typedef struct WindowData {
     HINSTANCE instance;
+    HWND hwnd;
     int32_t dpi;
     int32_t width_dp;
     int32_t height_dp;
@@ -50,16 +51,26 @@ typedef struct WindowData {
     int32_t height_px;
     Canvas *canvas;
 
-    bool error;
     CanvasBitmap *imageBitmap;
+    wchar_t *imagePath;
     wchar_t *imageBasename;
+    bool imageLoading;
+    bool imageError;
 
-    bool about;
+    bool showAboutDialog;
     CanvasBitmap *bassiebasBitmap;
 } WindowData;
 
 #define DP2PX(dp) MulDiv(dp, window->dpi, 96)
 #define PX2DP(px) MulDiv(px, 96, window->dpi)
+
+DWORD WINAPI LoadImageAsync(LPVOID lpParameter) {
+    WindowData *window = lpParameter;
+    window->imageBitmap = CanvasBitmap_NewFromFile(window->canvas, window->imagePath);
+    window->imageError = window->imageBitmap == NULL;
+    InvalidateRect(window->hwnd, NULL, FALSE);
+    return 0;
+}
 
 void OpenImage(HWND hwnd, wchar_t *path) {
     WindowData *window = (WindowData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -67,43 +78,45 @@ void OpenImage(HWND hwnd, wchar_t *path) {
     if (window->imageBitmap != NULL) {
         CanvasBitmap_Free(window->imageBitmap);
     }
-    if (window->imageBasename != NULL) {
-        free(window->imageBasename);
-        window->imageBasename = NULL;
+    if (window->imagePath != NULL) {
+        free(window->imagePath);
     }
 
     if (path != NULL) {
-        window->imageBitmap = CanvasBitmap_NewFromFile(window->canvas, path);
-        window->error = window->imageBitmap == NULL;
-    } else {
         window->imageBitmap = NULL;
-        window->error = false;
-    }
-    window->about = false;
+        window->imageLoading = true;
 
-    if (window->imageBitmap != NULL) {
-        wchar_t full_path[MAX_PATH];
-        GetFullPathName(path, MAX_PATH, full_path, NULL);
+        window->imagePath = malloc((MAX_PATH + 1) * sizeof(wchar_t));
+        GetFullPathName(path, MAX_PATH, window->imagePath, NULL);
 
-        wchar_t *c = full_path + wcslen(full_path);
+        wchar_t *c = window->imagePath + wcslen(window->imagePath);
         while (*c != '\\') c--;
-        window->imageBasename = wcsdup(c + 1);
+        window->imageBasename = c + 1;
 
         wchar_t window_title[512];
-        wcscpy(window_title, full_path);
+        wcscpy(window_title, window->imagePath);
         wcscat(window_title, L" - ");
         wcscat(window_title, app_name);
         SetWindowText(hwnd, window_title);
     } else {
+        window->imageBitmap = NULL;
+        window->imagePath = NULL;
+        window->imageLoading = false;
         SetWindowText(hwnd, app_name);
     }
+    window->imageError = false;
+    window->showAboutDialog = false;
 
     InvalidateRect(hwnd, NULL, FALSE);
+
+    if (path != NULL) {
+        CloseHandle(CreateThread(NULL, 0, LoadImageAsync, window, 0, NULL));
+    }
 }
 
 void OpenAbout(HWND hwnd) {
     WindowData *window = (WindowData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-    window->about = true;
+    window->showAboutDialog = true;
     if (window->bassiebasBitmap == NULL) {
         window->bassiebasBitmap = CanvasBitmap_NewFromResource(window->canvas, L"IMAGE", MAKEINTRESOURCE(ID_IMAGE_BASSIEBASE));
     }
@@ -120,9 +133,9 @@ void GoBack(HWND hwnd) {
         OpenImage(hwnd, NULL);
         return;
     }
-    if (window->error || window->about) {
-        window->error = false;
-        window->about = false;
+    if (window->imageError || window->showAboutDialog) {
+        window->imageError = false;
+        window->showAboutDialog = false;
         InvalidateRect(hwnd, NULL, FALSE);
         return;
     }
@@ -142,10 +155,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         // Create canvas
         window->canvas = Canvas_New(hwnd, CANVAS_RENDERER_DEFAULT);
-        window->error = false;
         window->imageBitmap = NULL;
+        window->imagePath = NULL;
         window->imageBasename = NULL;
-        window->about = false;
+        window->imageLoading = false;
+        window->imageError = false;
+        window->showAboutDialog = false;
         window->bassiebasBitmap = NULL;
 
         // Open image from args
@@ -182,7 +197,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         int y = GET_Y_LPARAM(lParam);
         CanvasPoint mouse = { PX2DP(x), PX2DP(y) };
 
-        if (window->about) {
+        if (window->showAboutDialog) {
             float padding = window->min_dp * 40 / 1000;
             float imageSize = window->min_dp * 350 / 1000;
             CanvasRect dialogRect;
@@ -198,14 +213,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             CanvasRect closeButtonRect = { dialogRect.x + dialogRect.width - padding, dialogRect.y, padding, padding };
             if (CANVAS_POINT_IN_RECT(mouse, closeButtonRect)) {
-                window->about = false;
+                window->showAboutDialog = false;
                 InvalidateRect(hwnd, NULL, FALSE);
             }
 
             return 0;
         }
 
-        if (window->imageBitmap != NULL || window->error) {
+        if (window->imageBitmap != NULL || window->imageError) {
             float closeButtonSize = window->min_dp * 40 / 1000;
             CanvasRect closeButtonRect = { window->width_dp - closeButtonSize * 1.25, closeButtonSize / 4, closeButtonSize, closeButtonSize };
             if (CANVAS_POINT_IN_RECT(mouse, closeButtonRect)) {
@@ -214,7 +229,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
         }
 
-        if (window->imageBitmap == NULL) {
+        if (window->imageBitmap == NULL && !window->imageLoading) {
             // Measure footer height
             CanvasRect footer_rect = { 0, 0, window->width_dp, 0 };
             wchar_t *footer_text;
@@ -337,11 +352,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CANVAS_TEXT_FORMAT_VERTICAL_CENTER, CANVAS_HEX(0xffffff));
         } else {
             // Draw header text
+            wchar_t *image_loading_text;
+            LoadStringW(window->instance, ID_STRING_IMAGE_LOADING, (wchar_t *)&image_loading_text, 0);
             wchar_t *image_error_text;
             LoadStringW(window->instance, ID_STRING_IMAGE_ERROR, (wchar_t *)&image_error_text, 0);
             wchar_t *drag_image_text;
             LoadStringW(window->instance, ID_STRING_DRAG_IMAGE, (wchar_t *)&drag_image_text, 0);
-            Canvas_DrawText(window->canvas, window->error ? image_error_text : drag_image_text, -1,
+            Canvas_DrawText(window->canvas, window->imageLoading ? image_loading_text : (window->imageError ? image_error_text : drag_image_text), -1,
                 &(CanvasRect){ 0, 0, window->width_dp, window->height_dp },
                 &(CanvasFont){ .name = font_name, .size = window->min_dp * 40 / 1000 },
                 CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_CENTER, CANVAS_HEX(0xffffff));
@@ -356,14 +373,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
 
         // Draw close button
-        if (window->imageBitmap != NULL || window->error) {
+        if (window->imageBitmap != NULL || window->imageError) {
             float closeButtonSize = window->min_dp * 40 / 1000;
             Canvas_FillRect(window->canvas, &(CanvasRect){ window->width_dp - closeButtonSize * 1.25, closeButtonSize / 4, closeButtonSize, closeButtonSize}, CANVAS_HEX(0x222222));
             Canvas_FillPath(window->canvas, close_icon, 24, 24, &(CanvasRect){ window->width_dp - closeButtonSize * 1.25, closeButtonSize / 4, closeButtonSize, closeButtonSize}, CANVAS_HEX(0xffffff));
         }
 
         // Draw about dialog
-        if (window->about) {
+        if (window->showAboutDialog) {
             // Draw about dialog shadow
             Canvas_FillRect(window->canvas, &(CanvasRect){ 0, 0, window->width_dp, window->height_dp }, CANVAS_RGBA(0, 0, 0, 200));
 
@@ -492,13 +509,13 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     window_rect.bottom = window_rect.top + window->height_px;
     AdjustWindowRectExForDpi(&window_rect, WINDOW_STYLE, FALSE, WINDOW_EX_STYLE, window->dpi);
 
-    HWND hwnd = CreateWindowEx(WINDOW_EX_STYLE, window_class_name, app_name,
+    window->hwnd = CreateWindowEx(WINDOW_EX_STYLE, window_class_name, app_name,
         WINDOW_STYLE, window_rect.left, window_rect.top,
         window_rect.right - window_rect.left, window_rect.bottom - window_rect.top,
         HWND_DESKTOP, NULL, wc.hInstance, window);
-    SetWindowImmersiveDarkMode(hwnd, TRUE);
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
+    SetWindowImmersiveDarkMode(window->hwnd, TRUE);
+    ShowWindow(window->hwnd, nCmdShow);
+    UpdateWindow(window->hwnd);
 
     // Main window event loop
     MSG message;
