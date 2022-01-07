@@ -1,11 +1,4 @@
-// Manifest
-1 MANIFEST "res/app.manifest"
-
-// Icon
-1 ICON "res/icon.ico"
-
-// Images
-1 IMAGE "res/bassiebas.jpg"
+#include "res/resource-shared.rc"
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO

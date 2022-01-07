@@ -25,9 +25,8 @@
 #define HELPERS_ENABLE_IMMERSIVE_DARK_MODE
 #include "helpers.h"
 
-#define ID_ICON 1
-#define ID_IMAGE_BASSIEBAS 1
-#define ID_MENU_ABOUT 1001
+#include "../res/resource.h"
+#define ID_MENU_ABOUT 0x1001
 
 #define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 768
@@ -39,16 +38,10 @@
 wchar_t *window_class_name = L"bimg";
 wchar_t *app_name = L"BassieImage";
 wchar_t *font_name;
-wchar_t *drag_image_text = L"Drag an image to view it!";
-wchar_t *image_error_text = L"Could not load that image!";
-wchar_t *footer_text = L"Made by Bastiaan van der Plaat";
-wchar_t *about_header_text = L"About BassieImage";
-wchar_t *about_description_text = L"BassieImage a simple and fast image viewer for Windows because the Windows UWP Photos app is fucking slow and the .NET Windows Photo Library app don't has a dark mode";
-wchar_t *copyright_text = L"Copyright \xA9 2021 PlaatSoft";
-
 char *close_icon = "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z";
 
 typedef struct WindowData {
+    HINSTANCE instance;
     int32_t dpi;
     int32_t width_dp;
     int32_t height_dp;
@@ -112,7 +105,7 @@ void OpenAbout(HWND hwnd) {
     WindowData *window = (WindowData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     window->about = true;
     if (window->bassiebasBitmap == NULL) {
-        window->bassiebasBitmap = CanvasBitmap_NewFromResource(window->canvas, L"IMAGE", MAKEINTRESOURCE(ID_IMAGE_BASSIEBAS));
+        window->bassiebasBitmap = CanvasBitmap_NewFromResource(window->canvas, L"IMAGE", MAKEINTRESOURCE(ID_IMAGE_BASSIEBASE));
     }
     InvalidateRect(hwnd, NULL, FALSE);
 }
@@ -166,7 +159,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // Create system about menu
         HMENU sysMenu = GetSystemMenu(hwnd, FALSE);
         InsertMenu(sysMenu, 5, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-        InsertMenu(sysMenu, 6, MF_BYPOSITION, ID_MENU_ABOUT, L"About");
+
+        wchar_t *menu_about_text;
+        LoadStringW(window->instance, ID_STRING_MENU_ABOUT, (wchar_t *)&menu_about_text, 0);
+        InsertMenu(sysMenu, 6, MF_BYPOSITION, ID_MENU_ABOUT, menu_about_text);
+
         return 0;
     }
 
@@ -220,6 +217,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         if (window->imageBitmap == NULL) {
             // Measure footer height
             CanvasRect footer_rect = { 0, 0, window->width_dp, 0 };
+            wchar_t *footer_text;
+            LoadStringW(window->instance, ID_STRING_FOOTER, (wchar_t *)&footer_text, 0);
             Canvas_MeasureText(window->canvas, footer_text, -1, &footer_rect,
                 &(CanvasFont){ .name = font_name, .size = window->min_dp * 20 / 1000 },
                 CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM);
@@ -228,17 +227,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 OPENFILENAME open_file_dialog = { sizeof(OPENFILENAME) };
                 wchar_t path[MAX_PATH] = L"";
                 open_file_dialog.hwndOwner = hwnd;
-                open_file_dialog.lpstrFilter = L"All Image Files\0*.jpg;*.jpeg;*.png;*.gif;*.bmp\0"
-                    "JPEG Files (*.jpg; *.jpeg)\0*.jpg;*.jpeg\0"
-                    "PNG Files (*.png)\0*.png\0"
-                    "GIF Files (*.gif)\0*.gif\0"
-                    "BMP Files (*.bmp)\0*.bmp\0";
                 open_file_dialog.lpstrFile = path;
                 open_file_dialog.nMaxFile = MAX_PATH;
                 open_file_dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+
+                wchar_t *open_files_filter_text;
+                int open_files_filter_size = LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_files_filter_text, 0) + 1;
+                open_file_dialog.lpstrFilter = malloc(open_files_filter_size * sizeof(wchar_t));
+                memcpy((void *)open_file_dialog.lpstrFilter, open_files_filter_text, open_files_filter_size * sizeof(wchar_t));
+
                 if (GetOpenFileName(&open_file_dialog)) {
                     OpenImage(hwnd, path);
                 }
+
+                free((void *)open_file_dialog.lpstrFilter);
             } else {
                 OpenAbout(hwnd);
             }
@@ -342,12 +344,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CANVAS_TEXT_FORMAT_VERTICAL_CENTER, CANVAS_HEX(0xffffff));
         } else {
             // Draw header text
+            wchar_t *image_error_text;
+            LoadStringW(window->instance, ID_STRING_IMAGE_ERROR, (wchar_t *)&image_error_text, 0);
+            wchar_t *drag_image_text;
+            LoadStringW(window->instance, ID_STRING_DRAG_IMAGE, (wchar_t *)&drag_image_text, 0);
             Canvas_DrawText(window->canvas, window->error ? image_error_text : drag_image_text, -1,
                 &(CanvasRect){ 0, 0, window->width_dp, window->height_dp },
                 &(CanvasFont){ .name = font_name, .size = window->min_dp * 40 / 1000 },
                 CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_CENTER, CANVAS_HEX(0xffffff));
 
             // Draw footer text
+            wchar_t *footer_text;
+            LoadStringW(window->instance, ID_STRING_FOOTER, (wchar_t *)&footer_text, 0);
             Canvas_DrawText(window->canvas, footer_text, -1,
                 &(CanvasRect){ 0, 0, window->width_dp, window->height_dp - (window->min_dp * 30 / 1000) },
                 &(CanvasFont){ .name = font_name, .size = window->min_dp * 20 / 1000 },
@@ -386,16 +394,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             CanvasFont textFont = { .name = font_name, .size = window->min_dp * 15 / 1000 };
             CanvasRect measureRect = { 0, 0, 0, 0 };
 
+            wchar_t *about_header_text;
+            LoadStringW(window->instance, ID_STRING_ABOUT_HEADER, (wchar_t *)&about_header_text, 0);
             Canvas_MeasureText(window->canvas, about_header_text, -1, &measureRect, &headerFont, CANVAS_TEXT_FORMAT_DEFAULT);
             contentHeight += measureRect.height + padding / 2;
 
             measureRect.width = dialogRect.width - imageSize - padding * 3;
+            wchar_t *about_description_text;
+            LoadStringW(window->instance, ID_STRING_ABOUT_DESCRIPTION, (wchar_t *)&about_description_text, 0);
             Canvas_MeasureText(window->canvas, about_description_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_WRAP);
             contentHeight += measureRect.height + padding / 2;
 
-            Canvas_MeasureText(window->canvas, copyright_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_DEFAULT);
+            wchar_t *about_copyright_text;
+            LoadStringW(window->instance, ID_STRING_ABOUT_COPYRIGHT, (wchar_t *)&about_copyright_text, 0);
+            Canvas_MeasureText(window->canvas, about_copyright_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_DEFAULT);
             contentHeight += measureRect.height;
 
+            wchar_t *footer_text;
+            LoadStringW(window->instance, ID_STRING_FOOTER, (wchar_t *)&footer_text, 0);
             Canvas_MeasureText(window->canvas, footer_text, -1, &measureRect, &textFont, CANVAS_TEXT_FORMAT_DEFAULT);
             contentHeight += measureRect.height;
 
@@ -411,7 +427,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // Draw about dialog copyright text
             CanvasRect copyrightRect = { headerRect.x, descriptionRect.y + descriptionRect.height + padding / 2, 0, 0 };
-            Canvas_DrawText(window->canvas, copyright_text, -1, &copyrightRect, &textFont,
+            Canvas_DrawText(window->canvas, about_copyright_text, -1, &copyrightRect, &textFont,
                 CANVAS_TEXT_FORMAT_DEFAULT, CANVAS_HEX(0xffffff));
 
             // Draw about dialog footer text
@@ -460,14 +476,15 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
-    wc.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(ID_ICON), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_DEFAULTCOLOR | LR_SHARED);
+    wc.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(ID_ICON_APP), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_DEFAULTCOLOR | LR_SHARED);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.lpszClassName = window_class_name;
-    wc.hIconSm = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(ID_ICON), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED);
+    wc.hIconSm = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(ID_ICON_APP), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED);
     RegisterClassEx(&wc);
 
     // Create window data struct
     WindowData *window = malloc(sizeof(WindowData));
+    window->instance = hInstance;
     window->dpi = GetPrimaryDesktopDpi();
     window->width_dp = WINDOW_WIDTH;
     window->height_dp = WINDOW_HEIGHT;

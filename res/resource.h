@@ -1,0 +1,23 @@
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+// Manifests
+#define ID_MANIFEST 1
+
+// Icons
+#define ID_ICON_APP 1
+
+// Images
+#define ID_IMAGE_BASSIEBASE 1
+
+// Strings
+#define ID_STRING_MENU_ABOUT 1
+#define ID_STRING_DRAG_IMAGE 2
+#define ID_STRING_IMAGE_ERROR 3
+#define ID_STRING_FOOTER 4
+#define ID_STRING_ABOUT_HEADER 5
+#define ID_STRING_ABOUT_DESCRIPTION 6
+#define ID_STRING_ABOUT_COPYRIGHT 7
+#define ID_STRING_OPEN_FILES_FILTER 8
+
+#endif

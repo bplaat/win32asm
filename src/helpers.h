@@ -6,6 +6,7 @@
 // HELPERS_IMPLEMENTATION: Use this once in your project for the c code
 // HELPERS_ENABLE_DPI: Enable DPI aware helpers
 // HELPERS_ENABLE_VERSION: Enable Windows version helpers
+// HELPERS_ENABLE_LANGUAGE: Enable resource language helper (needs HELPERS_ENABLE_VERSION)
 // HELPERS_ENABLE_FULLSCREEN: Enable fullscreen window helper
 // HELPERS_ENABLE_IMMERSIVE_DARK_MODE: Enable dark window decoration helper for Windows 10+
 
@@ -34,31 +35,21 @@
     #define WM_DPICHANGED 0x02e0
 #endif
 
-#ifdef HELPERS_ENABLE_DPI
-
 int32_t GetPrimaryDesktopDpi(void);
 
 typedef BOOL (STDMETHODCALLTYPE *_AdjustWindowRectExForDpi)(RECT *lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
 
 BOOL AdjustWindowRectExForDpi(RECT *lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
 
-#endif
-
-#ifdef HELPERS_ENABLE_VERSION
-
 bool IsVistaOrHigher(void);
 
-#endif
+typedef LANGID (STDMETHODCALLTYPE *_SetThreadUILanguage)(LANGID LangId);
 
-#ifdef HELPERS_ENABLE_FULLSCREEN
+void SetThreadLanguage(LANGID language);
 
 extern WINDOWPLACEMENT previousPlacement;
 
 void SetWindowFullscreen(HWND hwnd, BOOL enabled);
-
-#endif
-
-#ifdef HELPERS_ENABLE_IMMERSIVE_DARK_MODE
 
 #define DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 19
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
@@ -66,8 +57,6 @@ void SetWindowFullscreen(HWND hwnd, BOOL enabled);
 typedef HRESULT (STDMETHODCALLTYPE *_DwmSetWindowAttribute)(HWND hwnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
 
 void SetWindowImmersiveDarkMode(HWND hwnd, BOOL enabled);
-
-#endif
 
 // ##########################################################################################################
 // ##########################################################################################################
@@ -105,6 +94,20 @@ bool IsVistaOrHigher(void) {
     GetVersionExW(&osver);
     return osver.dwMajorVersion >= 6;
 }
+
+#ifdef HELPERS_ENABLE_LANGUAGE
+
+void SetThreadLanguage(LANGID language) {
+    if (IsVistaOrHigher()) {
+        HMODULE kernel32 = LoadLibraryW(L"kernel32.dll");
+        _SetThreadUILanguage SetThreadUILanguage = (_SetThreadUILanguage)GetProcAddress(kernel32, "SetThreadUILanguage");
+        SetThreadUILanguage(language);
+    } else {
+        SetThreadLocale(language);
+    }
+}
+
+#endif
 
 #endif
 
