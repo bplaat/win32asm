@@ -1,7 +1,7 @@
 #include "res/resource.h"
 
 // Manifests
-ID_MANIFEST MANIFEST "res/app.manifest"
+ID_MANIFEST MANIFEST "res/app.min.manifest"
 
 // Icons
 ID_ICON_APP ICON "res/icon.ico"

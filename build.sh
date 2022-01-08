@@ -3,6 +3,7 @@ rm -rf build
 mkdir build
 
 # magick convert res/icon.png -define icon:auto-resize="16,32,48,256" res/icon.ico
+# minify-xml res/app.manifest > res/app.min.manifest
 
 if [[ $1 == 'release' ]]; then
     tcc -m32 -lcomctl32 -lcomdlg32 -lshell32 src/bimg.c -o build/bimg-x86.exe
