@@ -67,7 +67,7 @@ struct IWindowsXamlManagerStatics {
     const IWindowsXamlManagerStaticsVtbl *lpVtbl;
 };
 
-const GUID IID_IWindowsXamlManagerStatics = { 0x28258A12,0x7D82,0x505B,{ 0xB2,0x10,0x71,0x2B,0x04,0xA5,0x88,0x82 } };
+const GUID IID_IWindowsXamlManagerStatics = { 0x28258A12, 0x7D82, 0x505B, { 0xB2, 0x10, 0x71, 0x2B, 0x04, 0xA5, 0x88, 0x82 } };
 
 #define IWindowsXamlManagerStatics_InitializeForCurrentThread(This, result) ((IWindowsXamlManagerStatics *)This)->lpVtbl\
     ->InitializeForCurrentThread((IWindowsXamlManagerStatics *)This, result)
@@ -103,7 +103,7 @@ struct IDesktopWindowXamlSourceFactory {
     const IDesktopWindowXamlSourceFactoryVtbl *lpVtbl;
 };
 
-const GUID IID_IDesktopWindowXamlSourceFactory = { 0x5CD61DC0,0x2561,0x56E1,{ 0x8E,0x75,0x6E,0x44,0x17,0x38,0x05,0xE3 } };
+const GUID IID_IDesktopWindowXamlSourceFactory = { 0x5CD61DC0, 0x2561, 0x56E1, { 0x8E, 0x75, 0x6E, 0x44, 0x17, 0x38, 0x05, 0xE3 } };
 
 #define IDesktopWindowXamlSourceFactory_CreateInstance(This, baseInterface, innerInterface, value) ((IDesktopWindowXamlSourceFactory *)This)->lpVtbl\
     ->CreateInstance((IDesktopWindowXamlSourceFactory *)This, baseInterface, innerInterface, value)
@@ -122,7 +122,7 @@ struct IDesktopWindowXamlSourceNative {
     const IDesktopWindowXamlSourceNativeVtbl *lpVtbl;
 };
 
-const GUID IID_IDesktopWindowXamlSourceNative = { 0x3cbcf1bf,0x2f76,0x4e9c,{ 0x96,0xab,0xe8,0x4b,0x37,0x97,0x25,0x54 } };
+const GUID IID_IDesktopWindowXamlSourceNative = { 0x3cbcf1bf, 0x2f76, 0x4e9c, { 0x96, 0xab, 0xe8, 0x4b, 0x37, 0x97, 0x25, 0x54 } };
 
 #define IDesktopWindowXamlSourceNative_AttachToWindow(This, parentWnd) ((IDesktopWindowXamlSourceNative *)This)->lpVtbl\
     ->AttachToWindow((IDesktopWindowXamlSourceNative *)This, parentWnd)
@@ -143,7 +143,7 @@ struct IXamlReaderStatics {
     const IXamlReaderStaticsVtbl *lpVtbl;
 };
 
-const GUID IID_IXamlReaderStatics = { 0x9891C6BD, 0x534F, 0x4955,{ 0xb8,0x5a,0x8a,0x8d,0xc0,0xdc,0xa6,0x02 } };
+const GUID IID_IXamlReaderStatics = { 0x9891C6BD, 0x534F, 0x4955, { 0xb8, 0x5a, 0x8a, 0x8d, 0xc0, 0xdc, 0xa6, 0x02 } };
 
 #define IXamlReaderStatics_Load(This, xaml, result) ((IXamlReaderStatics *)This)->lpVtbl->Load((IXamlReaderStatics *)This, xaml, result)
 #define IXamlReaderStatics_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
@@ -166,6 +166,10 @@ const GUID IID_IUIElement = { 0x676D0BE9,0xB65C,0x41C6,{ 0xba,0x40,0x58,0xcf,0x8
 // ####################################################################################
 // ####################################################################################
 // ####################################################################################
+
+#ifndef WS_EX_NOREDIRECTIONBITMAP
+    #define WS_EX_NOREDIRECTIONBITMAP 0x00200000L
+#endif
 
 #define DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 19
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
@@ -221,13 +225,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     WNDCLASSEX wc = {0};
     wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
-    wc.lpszMenuName = NULL;
     wc.lpszClassName = L"xaml-example";
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
     RegisterClassEx(&wc);
@@ -241,7 +242,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     windowRect.bottom = windowRect.top + WINDOW_HEIGHT;
     AdjustWindowRectEx(&windowRect, WS_OVERLAPPEDWINDOW, FALSE, 0);
 
-    HWND hwnd = CreateWindowEx(0, wc.lpszClassName, L"Windows WinRT XAML Island Example",
+    HWND hwnd = CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP, wc.lpszClassName, L"Windows WinRT XAML Island Example",
         WS_OVERLAPPEDWINDOW, windowRect.left, windowRect.top,
         windowRect.right - windowRect.left, windowRect.bottom - windowRect.top,
         HWND_DESKTOP, NULL, hInstance, NULL);
@@ -255,14 +256,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
     }
 
-    IWindowsXamlManagerStatics *windowsXamlManagerStatics;
-    HSTRING windowsXamlManagerClassId = hstr(L"Windows.UI.Xaml.Hosting.WindowsXamlManager");
-    RoGetActivationFactory(windowsXamlManagerClassId, &IID_IWindowsXamlManagerStatics, &windowsXamlManagerStatics);
-    WindowsDeleteString(windowsXamlManagerClassId);
+    // Not needed?
+    // IWindowsXamlManagerStatics *windowsXamlManagerStatics;
+    // HSTRING windowsXamlManagerClassId = hstr(L"Windows.UI.Xaml.Hosting.WindowsXamlManager");
+    // RoGetActivationFactory(windowsXamlManagerClassId, &IID_IWindowsXamlManagerStatics, &windowsXamlManagerStatics);
+    // WindowsDeleteString(windowsXamlManagerClassId);
 
-    IWindowsXamlManager *windowsXamlManager;
-    IWindowsXamlManagerStatics_InitializeForCurrentThread(windowsXamlManagerStatics, &windowsXamlManager);
-    IWindowsXamlManagerStatics_Release(windowsXamlManagerStatics);
+    // IWindowsXamlManager *windowsXamlManager;
+    // IWindowsXamlManagerStatics_InitializeForCurrentThread(windowsXamlManagerStatics, &windowsXamlManager);
+    // IWindowsXamlManagerStatics_Release(windowsXamlManagerStatics);
 
     IDesktopWindowXamlSourceFactory *desktopWindowXamlSourceFactory;
     HSTRING desktopWindowXamlSourceClassId = hstr(L"Windows.UI.Xaml.Hosting.DesktopWindowXamlSource");
