@@ -1,16 +1,59 @@
 <ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <StackPanel>
+    <StackPanel Margin="16">
+        <CommandBar Background="Transparent" IsOpen="False" DefaultLabelPosition="Right">
+            <AppBarButton Icon="Add" Label="Add"/>
+            <AppBarButton Icon="Edit" Label="Edit"/>
+            <AppBarButton Icon="Share" Label="Share"/>
+            <CommandBar.SecondaryCommands>
+                <AppBarButton Icon="Setting" Label="Settings">
+                    <AppBarButton.KeyboardAccelerators>
+                            <KeyboardAccelerator Modifiers="Control" Key="I" />
+                    </AppBarButton.KeyboardAccelerators>
+                </AppBarButton>
+            </CommandBar.SecondaryCommands>
+        </CommandBar>
+
         <TextBlock Text="Hello from UWP XAML!" />
 
-        <HyperlinkButton Content="Bastiaan's Website" NavigateUri="https://bastiaan.ml/" />
+        <HyperlinkButton Margin="8" Content="Bastiaan's Website" NavigateUri="https://bastiaan.ml/" />
 
         <Button Margin="8" Padding="16" Content="Play" />
         <Button Margin="8" Padding="16" Content="Settings" />
         <Button Margin="8" Padding="16" Content="Exit" />
+        <ToggleButton Margin="8" Content="ToggleButton" />
 
-        <DatePicker />
-        <CalendarView />
+        <ComboBox SelectionChanged="ColorComboBox_SelectionChanged" Header="Colors" PlaceholderText="Pick a color" Width="200">
+        <x:String>Blue</x:String>
+        <x:String>Green</x:String>
+        <x:String>Red</x:String>
+        <x:String>Yellow</x:String>
+        </ComboBox>
+
+        <RichEditBox Margin="0,16,0,16" Height="200" />
+
+        <Slider Minimum="500" Maximum="1000" StepFrequency="10"
+        SmallChange="10" LargeChange="100" Value="800" />
+
+        <DatePicker Margin="0,0,0,16" />
+
+        <CalendarView SelectionMode="Single"
+            IsGroupLabelVisible="True"
+            IsOutOfScopeEnabled="True"
+            Language="en"
+            CalendarIdentifier="GregorianCalendar"
+            Margin="0,0,0,16"/>
+
+        <Button Content="Empty cart">
+            <Button.Flyout>
+                <Flyout>
+                    <StackPanel>
+                        <TextBlock Text="All items will be removed. Do you want to continue?" Margin="0,0,0,12" />
+                        <Button Click="DeleteConfirmation_Click" Content="Yes, empty my cart" />
+                    </StackPanel>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
     </StackPanel>
 </ScrollViewer>
