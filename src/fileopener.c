@@ -152,7 +152,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.hInstance = hInstance;
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = CreateSolidBrush(0);
+    wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
     wc.lpszMenuName = NULL;
     wc.lpszClassName = L"fileopener";
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);

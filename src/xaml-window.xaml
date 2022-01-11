@@ -1,0 +1,16 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel>
+        <TextBlock Text="Hello from UWP XAML!" />
+
+        <HyperlinkButton Content="Bastiaan's Website" NavigateUri="https://bastiaan.ml/" />
+
+        <Button Margin="8" Padding="16" Content="Play" />
+        <Button Margin="8" Padding="16" Content="Settings" />
+        <Button Margin="8" Padding="16" Content="Exit" />
+
+        <DatePicker />
+        <CalendarView />
+    </StackPanel>
+</ScrollViewer>
