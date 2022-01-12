@@ -1,9 +1,7 @@
 // A simple Windows application which has a WinRT XAML island
 // tcc xaml.c -lcombase && ./xaml
 #define UNICODE
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <unknwn.h>
 #include <stdio.h>
 
 // ####################################################################################

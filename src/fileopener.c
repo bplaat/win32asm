@@ -1,9 +1,7 @@
 // A simple Windows application which opens a COM file picker
 // tcc fileopener.c -lole32 && ./fileopener
 #define UNICODE
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <unknwn.h>
 
 // ####################################################################################
 // ########################## COM Open File Dialog Header #############################
@@ -41,13 +39,21 @@ struct IModalWindow {
 };
 
 // IFileDialog
+typedef struct _COMDLG_FILTERSPEC {
+    LPCWSTR pszName;
+    LPCWSTR pszSpec;
+} COMDLG_FILTERSPEC;
+
 typedef struct IFileDialog IFileDialog;
 
 typedef struct IFileDialogVtbl {
     IModalWindowVtbl base;
-    void *padding1[16];
+    HRESULT (STDMETHODCALLTYPE *SetFileTypes)(IFileDialog *This, UINT cFileTypes, const COMDLG_FILTERSPEC *rgFilterSpec);
+    void *padding1[12];
+    HRESULT (STDMETHODCALLTYPE *SetTitle)(IFileDialog *This, LPCWSTR pszText);
+    void *padding2[2];
     HRESULT (STDMETHODCALLTYPE *GetResult)(IFileDialog *This, IShellItem **ppsi);
-    void *padding2[6];
+    void *padding3[6];
 } IFileDialogVtbl;
 
 struct IFileDialog {
@@ -70,6 +76,8 @@ struct IFileOpenDialog {
 };
 
 #define IFileOpenDialog_Show(This, hwndOwner) ((IModalWindow *)This)->lpVtbl->Show((IModalWindow *)This, hwndOwner)
+#define IFileOpenDialog_SetFileTypes(This, cFileTypes, rgFilterSpec) ((IFileDialog *)This)->lpVtbl->SetFileTypes((IFileDialog *)This, cFileTypes, rgFilterSpec)
+#define IFileOpenDialog_SetTitle(This, pszText) ((IFileDialog *)This)->lpVtbl->SetTitle((IFileDialog *)This, pszText)
 #define IFileOpenDialog_GetResult(This, ppsi) ((IFileDialog *)This)->lpVtbl->GetResult((IFileDialog *)This, ppsi)
 #define IFileOpenDialog_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
 
@@ -82,11 +90,11 @@ struct IFileOpenDialog {
 typedef HRESULT (STDMETHODCALLTYPE *_DwmSetWindowAttribute)(HWND hwnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
 
 void OpenFileDialog(HWND hwnd) {
-    IFileOpenDialog *pFileOpen;
-    if (SUCCEEDED(CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_ALL, &IID_IFileOpenDialog, (void *)&pFileOpen))) {
-        if (SUCCEEDED(IFileOpenDialog_Show(pFileOpen, NULL))) {
+    IFileOpenDialog *fileDialog;
+    if (SUCCEEDED(CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_ALL, &IID_IFileOpenDialog, (void *)&fileDialog))) {
+        if (SUCCEEDED(IFileOpenDialog_Show(fileDialog, NULL))) {
             IShellItem *item;
-            if (SUCCEEDED(IFileOpenDialog_GetResult(pFileOpen, &item))) {
+            if (SUCCEEDED(IFileOpenDialog_GetResult(fileDialog, &item))) {
                 LPWSTR filePath;
                 if (SUCCEEDED(IShellItem_GetDisplayName(item, SIGDN_FILESYSPATH, &filePath))) {
                     MessageBox(hwnd, filePath, L"File Path", MB_ICONINFORMATION | MB_OK);
@@ -95,7 +103,7 @@ void OpenFileDialog(HWND hwnd) {
                 IShellItem_Release(item);
             }
         }
-        IFileOpenDialog_Release(pFileOpen);
+        IFileOpenDialog_Release(fileDialog);
     }
 }
 
