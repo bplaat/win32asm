@@ -42,36 +42,36 @@ struct IInspectable {
 #define IInspectable_QueryInterface(This, riid, ppvObject) ((IUnknown *)This)->lpVtbl->QueryInterface((IUnknown *)This, riid, ppvObject)
 #define IInspectable_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
 
-// IWindowsXamlManager
-typedef struct IWindowsXamlManager IWindowsXamlManager;
+// // IWindowsXamlManager
+// typedef struct IWindowsXamlManager IWindowsXamlManager;
 
-typedef struct IWindowsXamlManagerVtbl {
-    IInspectableVtbl base;
-} IWindowsXamlManagerVtbl;
+// typedef struct IWindowsXamlManagerVtbl {
+//     IInspectableVtbl base;
+// } IWindowsXamlManagerVtbl;
 
-struct IWindowsXamlManager {
-    const IWindowsXamlManagerVtbl *lpVtbl;
-};
+// struct IWindowsXamlManager {
+//     const IWindowsXamlManagerVtbl *lpVtbl;
+// };
 
-#define IWindowsXamlManager_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
+// #define IWindowsXamlManager_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
 
-// IWindowsXamlManagerStatics
-typedef struct IWindowsXamlManagerStatics IWindowsXamlManagerStatics;
+// // IWindowsXamlManagerStatics
+// typedef struct IWindowsXamlManagerStatics IWindowsXamlManagerStatics;
 
-typedef struct IWindowsXamlManagerStaticsVtbl {
-    IInspectableVtbl base;
-    HRESULT (STDMETHODCALLTYPE *InitializeForCurrentThread)(IWindowsXamlManagerStatics *This, IWindowsXamlManager **result);
-} IWindowsXamlManagerStaticsVtbl;
+// typedef struct IWindowsXamlManagerStaticsVtbl {
+//     IInspectableVtbl base;
+//     HRESULT (STDMETHODCALLTYPE *InitializeForCurrentThread)(IWindowsXamlManagerStatics *This, IWindowsXamlManager **result);
+// } IWindowsXamlManagerStaticsVtbl;
 
-struct IWindowsXamlManagerStatics {
-    const IWindowsXamlManagerStaticsVtbl *lpVtbl;
-};
+// struct IWindowsXamlManagerStatics {
+//     const IWindowsXamlManagerStaticsVtbl *lpVtbl;
+// };
 
-const GUID IID_IWindowsXamlManagerStatics = { 0x28258A12, 0x7D82, 0x505B, { 0xB2, 0x10, 0x71, 0x2B, 0x04, 0xA5, 0x88, 0x82 } };
+// const GUID IID_IWindowsXamlManagerStatics = { 0x28258A12, 0x7D82, 0x505B, { 0xB2, 0x10, 0x71, 0x2B, 0x04, 0xA5, 0x88, 0x82 } };
 
-#define IWindowsXamlManagerStatics_InitializeForCurrentThread(This, result) ((IWindowsXamlManagerStatics *)This)->lpVtbl\
-    ->InitializeForCurrentThread((IWindowsXamlManagerStatics *)This, result)
-#define IWindowsXamlManagerStatics_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
+// #define IWindowsXamlManagerStatics_InitializeForCurrentThread(This, result) ((IWindowsXamlManagerStatics *)This)->lpVtbl\
+//     ->InitializeForCurrentThread((IWindowsXamlManagerStatics *)This, result)
+// #define IWindowsXamlManagerStatics_Release(This) ((IUnknown *)This)->lpVtbl->Release((IUnknown *)This)
 
 // IDesktopWindowXamlSource
 typedef struct IDesktopWindowXamlSource IDesktopWindowXamlSource;
@@ -256,7 +256,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
     }
 
-    // Not needed?
     // IWindowsXamlManagerStatics *windowsXamlManagerStatics;
     // HSTRING windowsXamlManagerClassId = hstr(L"Windows.UI.Xaml.Hosting.WindowsXamlManager");
     // RoGetActivationFactory(windowsXamlManagerClassId, &IID_IWindowsXamlManagerStatics, &windowsXamlManagerStatics);
@@ -272,9 +271,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     WindowsDeleteString(desktopWindowXamlSourceClassId);
 
     IDesktopWindowXamlSource *desktopSource;
-    IInspectable *baseInterface = NULL;
     IInspectable *innerInterface = NULL;
-    IDesktopWindowXamlSourceFactory_CreateInstance(desktopWindowXamlSourceFactory, baseInterface, &innerInterface, &desktopSource);
+    IDesktopWindowXamlSourceFactory_CreateInstance(desktopWindowXamlSourceFactory, NULL, &innerInterface, &desktopSource);
     IDesktopWindowXamlSourceFactory_Release(desktopWindowXamlSourceFactory);
 
     IDesktopWindowXamlSourceNative *interop;
