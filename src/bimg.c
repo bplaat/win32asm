@@ -67,6 +67,7 @@ typedef struct WindowData {
 DWORD WINAPI LoadImageAsync(LPVOID lpParameter) {
     WindowData *window = lpParameter;
     window->imageBitmap = CanvasBitmap_NewFromFile(window->canvas, window->imagePath);
+    window->imageLoading = false;
     window->imageError = window->imageBitmap == NULL;
     InvalidateRect(window->hwnd, NULL, FALSE);
     return 0;
