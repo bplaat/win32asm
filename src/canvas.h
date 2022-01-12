@@ -281,17 +281,33 @@ Canvas *Canvas_New(HWND hwnd, CanvasRenderer renderer) {
     if (canvas->renderer == CANVAS_RENDERER_DIRECT2D) {
         _D2D1CreateFactory D2D1CreateFactory = (_D2D1CreateFactory)GetProcAddress(hd2d1, "D2D1CreateFactory");
         IID IID_ID2D1Factory = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
-        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &IID_ID2D1Factory, NULL, &canvas->d2d.d2dFactory);
+        if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &IID_ID2D1Factory, NULL, &canvas->d2d.d2dFactory))) {
+            canvas->renderer = CANVAS_RENDERER_GDI;
+            canvas->gdi.bufferHdc = NULL;
+            return canvas;
+        }
 
         _DWriteCreateFactory DWriteCreateFactory = (_DWriteCreateFactory)GetProcAddress(hdwrite, "DWriteCreateFactory");
         IID IID_IDWriteFactory = { 0xb859ee5a, 0xd838, 0x4b5b, { 0xa2, 0xe8, 0x1a, 0xdc, 0x7d, 0x93, 0xdb, 0x48 } };
-        DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, &IID_IDWriteFactory, &canvas->d2d.dwriteFactory);
+        if (FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, &IID_IDWriteFactory, &canvas->d2d.dwriteFactory))) {
+            ID2D1Factory_Release(canvas->d2d.d2dFactory);
+            canvas->renderer = CANVAS_RENDERER_GDI;
+            canvas->gdi.bufferHdc = NULL;
+            return canvas;
+        }
 
-        ID2D1Factory_CreateHwndRenderTarget(canvas->d2d.d2dFactory, (&(D2D1_RENDER_TARGET_PROPERTIES){ D2D1_RENDER_TARGET_TYPE_DEFAULT,
+        if (FAILED(
+            ID2D1Factory_CreateHwndRenderTarget(canvas->d2d.d2dFactory, (&(D2D1_RENDER_TARGET_PROPERTIES){ D2D1_RENDER_TARGET_TYPE_DEFAULT,
             { DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_UNKNOWN }, 96, 96, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT }),
-            (&(D2D1_HWND_RENDER_TARGET_PROPERTIES){ hwnd, { 0, 0 }, D2D1_PRESENT_OPTIONS_NONE }), &canvas->d2d.renderTarget);
+            (&(D2D1_HWND_RENDER_TARGET_PROPERTIES){ hwnd, { 0, 0 }, D2D1_PRESENT_OPTIONS_NONE }), &canvas->d2d.renderTarget)
+        )) {
+            IDWriteFactory_Release(canvas->d2d.dwriteFactory);
+            ID2D1Factory_Release(canvas->d2d.d2dFactory);
+            canvas->renderer = CANVAS_RENDERER_GDI;
+            canvas->gdi.bufferHdc = NULL;
+            return canvas;
+        }
     }
-
     return canvas;
 }
 

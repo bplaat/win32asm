@@ -12,7 +12,7 @@ if [[ $1 == 'release' ]]; then
     rm build/resource-x86.res
 fi
 
-tcc -lcomctl32 -lcomdlg32 -lshell32 src/bimg.c -o build/bimg-x64.exe
+tcc -lole32 -lcomdlg32 -lshell32 src/bimg.c -o build/bimg-x64.exe
 ResourceHacker -open res/resource-x64.rc -save build/resource-x64.res -action compile -log NUL
 ResourceHacker -open build/bimg-x64.exe -save build/bimg-x64.exe -action addskip -res build/resource-x64.res -log NUL
 rm build/resource-x64.res

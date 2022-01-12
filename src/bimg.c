@@ -1,6 +1,6 @@
 #define UNICODE
 #include <windows.h>
-#include <commctrl.h>
+#include "filedialog.h"
 
 #define CANVAS_IMPLEMENTATION
 #define CANVAS_USE_CUSTOM_HEADERS
@@ -239,15 +239,55 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CANVAS_TEXT_FORMAT_HORIZONTAL_CENTER | CANVAS_TEXT_FORMAT_VERTICAL_BOTTOM);
 
             if (y < window->height_px - footer_rect.height - (window->min_dp * 30 / 1000) * 2) {
-                OPENFILENAME open_file_dialog = { sizeof(OPENFILENAME) };
-                wchar_t path[MAX_PATH] = L"";
-                open_file_dialog.hwndOwner = hwnd;
-                open_file_dialog.lpstrFile = path;
-                open_file_dialog.nMaxFile = MAX_PATH;
-                open_file_dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-                LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_file_dialog.lpstrFilter, 0);
-                if (GetOpenFileName(&open_file_dialog)) {
-                    OpenImage(hwnd, path);
+                if (IsVistaOrHigher()) {
+                    IFileOpenDialog *file_dialog;
+                    if (SUCCEEDED(CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_ALL, &IID_IFileOpenDialog, (void *)&file_dialog))) {
+                        wchar_t *openfile_text;
+                        LoadStringW(window->instance, ID_STRING_OPEN_FILE, (wchar_t *)&openfile_text, 0);
+                        IFileOpenDialog_SetTitle(file_dialog, openfile_text);
+
+                        wchar_t *open_files_filter;
+                        LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_files_filter, 0);
+
+                        COMDLG_FILTERSPEC open_filters[10];
+                        int32_t open_filters_size = 0;
+                        wchar_t *c = open_files_filter;
+                        while (*c != L'\0') {
+                            open_filters[open_filters_size].pszName = c;
+                            while (*c != L'\0') c++;
+                            c++;
+                            open_filters[open_filters_size].pszSpec = c;
+                            while (*c != L'\0') c++;
+                            c++;
+                            open_filters_size++;
+                        }
+                        IFileOpenDialog_SetFileTypes(file_dialog, open_filters_size, open_filters);
+
+                        if (SUCCEEDED(IFileOpenDialog_Show(file_dialog, NULL))) {
+                            IShellItem *item;
+                            if (SUCCEEDED(IFileOpenDialog_GetResult(file_dialog, &item))) {
+                                LPWSTR path;
+                                if (SUCCEEDED(IShellItem_GetDisplayName(item, SIGDN_FILESYSPATH, &path))) {
+                                    OpenImage(hwnd, path);
+                                    CoTaskMemFree(path);
+                                }
+                                IShellItem_Release(item);
+                            }
+                        }
+                        IFileOpenDialog_Release(file_dialog);
+                    }
+                } else {
+                    wchar_t path[MAX_PATH] = L"";
+                    OPENFILENAME open_file_dialog = { sizeof(OPENFILENAME) };
+                    open_file_dialog.hwndOwner = hwnd;
+                    LoadStringW(window->instance, ID_STRING_OPEN_FILE, (wchar_t *)&open_file_dialog.lpstrTitle, 0);
+                    open_file_dialog.lpstrFile = path;
+                    open_file_dialog.nMaxFile = MAX_PATH;
+                    open_file_dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+                    LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_file_dialog.lpstrFilter, 0);
+                    if (GetOpenFileName(&open_file_dialog)) {
+                        OpenImage(hwnd, path);
+                    }
                 }
             } else {
                 OpenAbout(hwnd);
@@ -474,11 +514,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow) {
-    // Init common controls
-    INITCOMMONCONTROLSEX icc;
-    icc.dwSize = sizeof(icc);
-    icc.dwICC = ICC_WIN95_CLASSES;
-    InitCommonControlsEx(&icc);
+    // Init COM
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     // Register window class
     WNDCLASSEX wc = {0};
@@ -523,5 +560,6 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         TranslateMessage(&message);
         DispatchMessage(&message);
     }
+    CoUninitialize();
     return message.wParam;
 }
