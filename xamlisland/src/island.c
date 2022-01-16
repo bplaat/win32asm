@@ -1,8 +1,7 @@
-// A simple Windows application which has a WinRT XAML island
-// tcc xaml.c -lcombase && ./xaml
 #define UNICODE
 #include <windows.h>
 #include <stdio.h>
+#include "../res/resource.h"
 
 // ####################################################################################
 // ######################## Windows Runtime UWP XAML Header ###########################
@@ -173,22 +172,6 @@ const GUID IID_IUIElement = { 0x676D0BE9,0xB65C,0x41C6,{ 0xba,0x40,0x58,0xcf,0x8
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 typedef HRESULT (STDMETHODCALLTYPE *_DwmSetWindowAttribute)(HWND hwnd, DWORD dwAttribute, LPCVOID pvAttribute, DWORD cbAttribute);
 
-// Read whole file to buffer
-uint8_t *ReadFileToBuffer(char *path) {
-    FILE *file = fopen(path, "r");
-    if (file == NULL) {
-        return NULL;
-    }
-    fseek(file, 0, SEEK_END);
-    size_t file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    uint8_t *file_buffer = malloc(file_size + 1);
-    fread(file_buffer, 1, file_size, file);
-    file_buffer[file_size] = 0;
-    fclose(file);
-    return file_buffer;
-}
-
 HWND xamlHwnd = NULL;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -225,10 +208,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hIcon = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(ID_ICON_APP), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_DEFAULTCOLOR | LR_SHARED);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.lpszClassName = L"xaml-example";
-    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    wc.lpszClassName = L"xaml-island";
+    wc.hIconSm = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(ID_ICON_APP), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED);
     RegisterClassEx(&wc);
 
     #define WINDOW_WIDTH 1024
@@ -285,15 +268,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     RoGetActivationFactory(xamlReaderClassId, &IID_IXamlReaderStatics, &xamlReaderStatics);
     WindowsDeleteString(xamlReaderClassId);
 
-    char *xamlStringAscii = ReadFileToBuffer("xaml-window.xaml");
-    if (xamlStringAscii == NULL) {
-        MessageBox(hwnd, L"Can't read the XAML file!", L"XAML Error!", MB_ICONERROR | MB_OK);
-        return 1;
-    }
-    size_t xamlStringAsciiSize = strlen(xamlStringAscii);
+    HRSRC hsrc = FindResource(NULL, (wchar_t *)ID_XAML_WINDOW, L"XAML");
+    HGLOBAL hresource = LoadResource(NULL, hsrc);
+    char *xamlStringAscii = LockResource(hresource);
+    DWORD xamlStringAsciiSize = SizeofResource(NULL, hsrc);
     wchar_t *xamlStringWide = malloc((xamlStringAsciiSize + 1) * sizeof(wchar_t));
     MultiByteToWideChar(CP_ACP, 0, xamlStringAscii, xamlStringAsciiSize, xamlStringWide, xamlStringAsciiSize + 1);
-    free(xamlStringAscii);
 
     IInspectable *rootInstance;
     HSTRING xamlHstring = hstr(xamlStringWide);
