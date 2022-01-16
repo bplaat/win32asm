@@ -232,9 +232,8 @@ CanvasBitmap *CanvasBitmap_NewFromFile(Canvas *canvas, wchar_t *path) {
 CanvasBitmap *CanvasBitmap_NewFromResource(Canvas *canvas, wchar_t *type, wchar_t *name) {
     HRSRC hsrc = FindResourceW(NULL, name, type);
     if (hsrc == NULL) return NULL;
-    HGLOBAL hresource = LoadResource(NULL, hsrc);
-    uint8_t *data = (uint8_t *)LockResource(hresource);
-    DWORD size = SizeofResource(NULL, hresource);
+    uint8_t *data = (uint8_t *)LockResource(LoadResource(NULL, hsrc));
+    DWORD size = SizeofResource(NULL, hsrc);
 
     int32_t width, height, channels;
     uint8_t *pixels = stbi_load_from_memory(data, size, &width, &height, &channels, 4);
