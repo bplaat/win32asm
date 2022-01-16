@@ -6,14 +6,11 @@ mkdir build
 # magick convert res/icon.png -define icon:auto-resize="16,32,48,256" res/icon.ico
 # minify-xml res/app.manifest > res/app.min.manifest
 
-if [[ $1 == 'release' ]]; then
-    tcc -m32 -lcombase src/island.c -o build/island-x86.exe
-    ResourceHacker -open res/resource-x86.rc -save build/resource-x86.res -action compile -log NUL
-    ResourceHacker -open build/island-x86.exe -save build/island-x86.exe -action addskip -res build/resource-x86.res -log NUL
-    rm build/resource-x86.res
+if [[ $1 != 'release' ]]; then
+    tcc -lcombase src/island.c -Wl,-subsystem=console -o build/island-x64.exe
+else
+    tcc -lcombase src/island.c -o build/island-x64.exe
 fi
-
-tcc -lcombase src/island.c -o build/island-x64.exe
 ResourceHacker -open res/resource-x64.rc -save build/resource-x64.res -action compile -log NUL
 ResourceHacker -open build/island-x64.exe -save build/island-x64.exe -action addskip -res build/resource-x64.res -log NUL
 rm build/resource-x64.res

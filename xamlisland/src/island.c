@@ -269,8 +269,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     WindowsDeleteString(xamlReaderClassId);
 
     HRSRC hsrc = FindResource(NULL, (wchar_t *)ID_XAML_WINDOW, L"XAML");
-    HGLOBAL hresource = LoadResource(NULL, hsrc);
-    char *xamlStringAscii = LockResource(hresource);
+    char *xamlStringAscii = LockResource(LoadResource(NULL, hsrc));
     DWORD xamlStringAsciiSize = SizeofResource(NULL, hsrc);
     wchar_t *xamlStringWide = malloc((xamlStringAsciiSize + 1) * sizeof(wchar_t));
     MultiByteToWideChar(CP_ACP, 0, xamlStringAscii, xamlStringAsciiSize, xamlStringWide, xamlStringAsciiSize + 1);
