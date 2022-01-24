@@ -46,7 +46,7 @@
         <Slider Minimum="500" Maximum="1000" StepFrequency="10"
         SmallChange="10" LargeChange="100" Value="800" />
 
-        <DatePicker Margin="0,0,0,16" />
+        <CalendarDatePicker Margin="0,0,0,16" />
 
         <CalendarView SelectionMode="Single"
             IsOutOfScopeEnabled="True"

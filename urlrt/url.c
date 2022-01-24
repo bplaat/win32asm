@@ -1,5 +1,5 @@
 // A simple Windows application which parses an URL via the WinRT APIs
-// tcc url.c -lcombase && ./url.exe
+// tcc url.c -lcombase && ./url
 
 #include <unknwn.h>
 #include <stdio.h>
