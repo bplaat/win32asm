@@ -6,7 +6,7 @@ mkdir build
 # minify-xml res/app.manifest > res/app.min.manifest
 
 if [[ $1 == 'release' ]]; then
-    tcc -m32 -lcomctl32 -lcomdlg32 -lshell32 src/bimg.c -o build/bimg-x86.exe
+    tcc -m32 -lole32 -lcomdlg32 -lshell32 src/bimg.c -o build/bimg-x86.exe
     ResourceHacker -open res/resource-x86.rc -save build/resource-x86.res -action compile -log NUL
     ResourceHacker -open build/bimg-x86.exe -save build/bimg-x86.exe -action addskip -res build/resource-x86.res -log NUL
     rm build/resource-x86.res
