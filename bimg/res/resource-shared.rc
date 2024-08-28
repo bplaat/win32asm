@@ -1,0 +1,48 @@
+#include "res/resource.h"
+
+// Manifests
+ID_MANIFEST MANIFEST "res/app.min.manifest"
+
+// Icons
+ID_ICON_APP ICON "res/icon.ico"
+
+// Images
+ID_IMAGE_BASSIEBASE IMAGE "res/bassiebas.jpg"
+
+// English Strings
+STRINGTABLE LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+{
+    ID_STRING_MENU_ABOUT, "About\x00"
+    ID_STRING_DRAG_IMAGE, "Drag an image to view it!\x00"
+    ID_STRING_IMAGE_LOADING, "Loading image...\x00"
+    ID_STRING_IMAGE_ERROR, "Could not load that image!\x00"
+    ID_STRING_FOOTER, "Made by Bastiaan van der Plaat\x00"
+    ID_STRING_ABOUT_HEADER, "About BassieImage\x00"
+    ID_STRING_ABOUT_DESCRIPTION, "BassieImage a simple and fast image viewer for Windows because the Windows UWP Photos app is fucking slow and the .NET Windows Photo Library app don't has a dark mode\x00"
+    ID_STRING_ABOUT_COPYRIGHT, "Copyright \xA9 2021 - 2022 PlaatSoft\x00"
+    ID_STRING_OPEN_FILE, "Open an image file to display it...\x00"
+    ID_STRING_OPEN_FILES_FILTER, "All Image Files (*.jpg; *.jpeg; *.png; *.gif; *.bmp)\x00*.jpg;*.jpeg;*.png;*.gif;*.bmp\x00\
+JPEG Files (*.jpg; *.jpeg)\x00*.jpg;*.jpeg\x00\
+PNG Files (*.png)\x00*.png\x00\
+GIF Files (*.gif)\x00*.gif\x00\
+BMP Files (*.bmp)\x00*.bmp\x00\x00"
+}
+
+// Dutch Strings
+STRINGTABLE LANGUAGE LANG_DUTCH, SUBLANG_DUTCH
+{
+    ID_STRING_MENU_ABOUT, "Over\x00"
+    ID_STRING_DRAG_IMAGE, "Sleep een afbeelding om deze te bekijken!\x00"
+    ID_STRING_IMAGE_LOADING, "Afbeelding laden...\x00"
+    ID_STRING_IMAGE_ERROR, "Kan die afbeelding niet laden!\x00"
+    ID_STRING_FOOTER, "Gemaakt door Bastiaan van der Plaat\x00"
+    ID_STRING_ABOUT_HEADER, "Over BassieImage\x00"
+    ID_STRING_ABOUT_DESCRIPTION, "BassieImage een eenvoudige en snelle afbeeldingsviewer voor Windows omdat de Windows UWP Photos-app facking traag is en de .NET Windows Photo Library-app geen donkere modus heeft\x00"
+    ID_STRING_ABOUT_COPYRIGHT, "Copyright \xA9 2021 - 2022 PlaatSoft\x00"
+    ID_STRING_OPEN_FILE, "Open een afbeeldingsbestand om het weer te geven...\x00"
+    ID_STRING_OPEN_FILES_FILTER, "Alle Afbeeldingsbestanden (*.jpg; *.jpeg; *.png; *.gif; *.bmp)\x00*.jpg;*.jpeg;*.png;*.gif;*.bmp\x00\
+JPEG Bestanden (*.jpg; *.jpeg)\x00*.jpg;*.jpeg\x00\
+PNG Bestanden (*.png)\x00*.png\x00\
+GIF Bestanden (*.gif)\x00*.gif\x00\
+BMP Bestanden (*.bmp)\x00*.bmp\x00\x00"
+}
