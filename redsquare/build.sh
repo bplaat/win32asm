@@ -1,8 +1,9 @@
+#!/bin/sh
 # RedSquare game build script
 
 # Assets
-magick convert icon.png -define icon:auto-resize="16,32,48,256" icon.ico
-magick convert bassiebas.png -colors 16 -define bmp:format=bmp3 bassiebas.bmp
+magick icon.png -define icon:auto-resize="16,32,48,256" icon.ico
+magick bassiebas.png -colors 16 -define bmp:format=bmp3 bassiebas.bmp
 
 # x86
 nasm -f bin redsquare.asm -o redsquare-x86.exe
