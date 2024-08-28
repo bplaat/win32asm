@@ -1,5 +1,5 @@
     ; redsquare.asm - An pure 32-bit and 64-bit win32 assembly RedSquare game
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin redsquare.asm -o redsquare-x86.exe && ./redsquare-x86
     ; 64-bit: nasm -DWIN64 -f bin redsquare.asm -o redsquare-x64.exe && ./redsquare-x64
     ; Use the build script to embed the resources
@@ -807,7 +807,7 @@ data_section
     help_label db "Help: move the red square avoid the edge and the blue squares", 0
     footer_label db "Made by Bastiaan van der Plaat with a lot of love for you, the Windows API is weird but in a cool way!", 0
     open_operation db "open", 0
-    website_url db "https://bastiaan.ml/", 0
+    website_url db "https://bplaat.nl/", 0
     gameover_title db "Game over!", 0
     gameover_message db "You are game over!", 0
 

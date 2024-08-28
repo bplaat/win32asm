@@ -1,5 +1,5 @@
     ; console.asm - An pure 32-bit and 64-bit win32 console program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin console.asm -o console-x86.exe && ./console-x86
     ; 64-bit: nasm -DWIN64 -f bin console.asm -o console-x64.exe && ./console-x64
 

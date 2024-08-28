@@ -1,5 +1,5 @@
     ; socket.asm - An pure 32-bit and 64-bit win32 windows socket program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin socket.asm -o socket-x86.exe && ./socket-x86
     ; 64-bit: nasm -DWIN64 -f bin socket.asm -o socket-x64.exe && ./socket-x64
 

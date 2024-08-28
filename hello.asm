@@ -1,5 +1,5 @@
     ; hello.asm - An pure 32-bit and 64-bit win32 assembly hello world program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin hello.asm -o hello-x86.exe && ./hello-x86
     ; 64-bit: nasm -DWIN64 -f bin hello.asm -o hello-x64.exe && ./hello-x64
 

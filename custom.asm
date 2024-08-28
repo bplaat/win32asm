@@ -1,5 +1,5 @@
     ; custom.asm - An pure 32-bit and 64-bit win32 assembly custom UI program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin custom.asm -o custom-x86.exe && ./custom-x86
     ; 64-bit: nasm -DWIN64 -f bin custom.asm -o custom-x64.exe && ./custom-x64
 

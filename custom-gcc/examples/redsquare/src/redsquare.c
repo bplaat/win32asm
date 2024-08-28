@@ -641,7 +641,7 @@ int32_t __stdcall WndProc(HWND hwnd, uint32_t msg, WPARAM wParam, LPARAM lParam)
             float y = HIWORD(lParam) / window->vh;
 
             if (y > 424) {
-                ShellExecuteW(hwnd, L"open", L"https://bastiaan.ml/", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(hwnd, L"open", L"https://bplaat.nl/", NULL, NULL, SW_SHOWNORMAL);
             }
         }
 

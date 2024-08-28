@@ -1,5 +1,5 @@
     ; window.asm - An pure 32-bit and 64-bit win32 assembly window program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin window.asm -o window-x86.exe && ./window-x86
     ; 64-bit: nasm -DWIN64 -f bin window.asm -o window-x64.exe && ./window-x64
 

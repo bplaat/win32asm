@@ -1,5 +1,5 @@
     ; controls.asm - An pure 32-bit and 64-bit win32 assembly GUI controls program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin controls.asm -o controls-x86.exe && ./controls-x86
     ; 64-bit: nasm -DWIN64 -f bin controls.asm -o controls-x64.exe && ./controls-x64
 
@@ -355,7 +355,7 @@ data_section
 
     open_operation db "open", 0
     about_message db "Made by Bastiaan van der Plaat", 13, 10
-        website_url db "https://bastiaan.ml/", 0
+        website_url db "https://bplaat.nl/", 0
 
     listview_class_name db "SysListView32", 0
     item_format db "Item %d", 0

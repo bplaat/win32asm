@@ -1,5 +1,5 @@
     ; graphics.asm - An pure 32-bit and 64-bit win32 assembly GDI+ program
-    ; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+    ; Made by Bastiaan van der Plaat (https://bplaat.nl/)
     ; 32-bit: nasm -f bin graphics.asm -o graphics-x86.exe && ./graphics-x86
     ; 64-bit: nasm -DWIN64 -f bin graphics.asm -o graphics-x64.exe && ./graphics-x64
 

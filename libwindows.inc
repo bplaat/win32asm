@@ -1,5 +1,5 @@
 ; libwindows.inc - A 32-bit and 64-bit win32 assembly helper library
-; Made by Bastiaan van der Plaat (https://bastiaan.ml/)
+; Made by Bastiaan van der Plaat (https://bplaat.nl/)
 ; Use -DWIN64 to enable 64-bit mode
 
 ; Setup instruction set
