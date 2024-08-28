@@ -3,8 +3,7 @@
 // Only a very limited set of methods and interfaces are supported!
 // ~ Made by Bastiaan van der Plaat (https://bastiaan.ml/)
 
-#ifndef DIRECT2D_H
-#define DIRECT2D_H
+#pragma once
 
 #include <windows.h>
 #include <stdint.h>
@@ -384,5 +383,3 @@ typedef struct ID2D1FactoryVtbl {
 struct ID2D1Factory {
     const ID2D1FactoryVtbl *lpVtbl;
 };
-
-#endif

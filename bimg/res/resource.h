@@ -1,5 +1,4 @@
-#ifndef RESOURCE_H
-#define RESOURCE_H
+#pragma once
 
 // Manifests
 #define ID_MANIFEST 1
@@ -21,5 +20,3 @@
 #define ID_STRING_ABOUT_COPYRIGHT 8
 #define ID_STRING_OPEN_FILE 9
 #define ID_STRING_OPEN_FILES_FILTER 10
-
-#endif

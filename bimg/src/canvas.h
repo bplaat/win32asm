@@ -10,12 +10,18 @@
 // CANVAS_ENABLE_TEXT: Enable text measuring and rendering code
 // CANVAS_ENABLE_PATH: Enable basic SVG path string rendering
 
-#ifndef CANVAS_H
-#define CANVAS_H
+#pragma once
 
 #include <windows.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+// stringapiset.h
+#define CP_ACP 0
+int WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar);
+
+// wingdi.h
+BOOL GdiAlphaBlend(HDC hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION ftn);
 
 #ifdef CANVAS_USE_CUSTOM_HEADERS
 #include "direct2d.h"
@@ -885,7 +891,5 @@ void Canvas_FillPath(Canvas *canvas, char *path, int32_t viewportWidth, int32_t 
 
 #undef DP2PX
 #undef PX2DP
-
-#endif
 
 #endif

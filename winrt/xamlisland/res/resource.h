@@ -1,5 +1,4 @@
-#ifndef RESOURCE_H
-#define RESOURCE_H
+#pragma once
 
 // Manifests
 #define ID_MANIFEST 1
@@ -9,5 +8,3 @@
 
 // XAMLs
 #define ID_XAML_WINDOW 1
-
-#endif

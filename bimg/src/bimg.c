@@ -2,6 +2,46 @@
 #include <windows.h>
 #include "filedialog.h"
 
+// commdlg.h
+#define OFN_EXPLORER (DWORD)0x80000
+#define OFN_FILEMUSTEXIST (DWORD)0x1000
+#define OFN_HIDEREADONLY (DWORD)0x4
+typedef struct tagOFNW {
+  DWORD         lStructSize;
+  HWND          hwndOwner;
+  HINSTANCE     hInstance;
+  LPCWSTR       lpstrFilter;
+  LPWSTR        lpstrCustomFilter;
+  DWORD         nMaxCustFilter;
+  DWORD         nFilterIndex;
+  LPWSTR        lpstrFile;
+  DWORD         nMaxFile;
+  LPWSTR        lpstrFileTitle;
+  DWORD         nMaxFileTitle;
+  LPCWSTR       lpstrInitialDir;
+  LPCWSTR       lpstrTitle;
+  DWORD         Flags;
+  WORD          nFileOffset;
+  WORD          nFileExtension;
+  LPCWSTR       lpstrDefExt;
+  LPARAM        lCustData;
+  LPVOID        lpfnHook;
+  LPCWSTR       lpTemplateName;
+  LPVOID        lpEditInfo;
+  LPCSTR        lpstrPrompt;
+  void          *pvReserved;
+  DWORD         dwReserved;
+  DWORD         FlagsEx;
+} OPENFILENAMEW, *LPOPENFILENAMEW;
+BOOL GetOpenFileNameW(LPOPENFILENAMEW unnamedParam1);
+
+// shellapi.h
+typedef HANDLE HDROP;
+LPWSTR *CommandLineToArgvW(LPCWSTR lpCmdLine, int *pNumArgs);
+HINSTANCE ShellExecuteW(HWND hwnd, LPCWSTR lpOperation, LPCWSTR lpFile, LPCWSTR lpParameters, LPCWSTR lpDirectory, INT nShowCmd);
+UINT DragQueryFileW(HDROP hDrop, UINT iFile, LPWSTR lpszFile, UINT cch);
+void DragFinish(HDROP hDrop);
+
 #define CANVAS_IMPLEMENTATION
 #define CANVAS_USE_CUSTOM_HEADERS
 #define CANVAS_ENABLE_BITMAP
@@ -209,7 +249,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             CanvasRect bassiebasRect = { dialogRect.x + padding, dialogRect.y + padding, imageSize, imageSize };
             if (CANVAS_POINT_IN_RECT(mouse, bassiebasRect)) {
-                ShellExecute(hwnd, L"open", L"https://bastiaan.ml/", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecuteW(hwnd, L"open", L"https://bastiaan.ml/", NULL, NULL, SW_SHOWNORMAL);
             }
 
             CanvasRect closeButtonRect = { dialogRect.x + dialogRect.width - padding, dialogRect.y, padding, padding };
@@ -279,14 +319,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     }
                 } else {
                     wchar_t path[MAX_PATH] = L"";
-                    OPENFILENAME open_file_dialog = { sizeof(OPENFILENAME) };
+                    OPENFILENAMEW open_file_dialog = { sizeof(OPENFILENAMEW) };
                     open_file_dialog.hwndOwner = hwnd;
                     LoadStringW(window->instance, ID_STRING_OPEN_FILE, (wchar_t *)&open_file_dialog.lpstrTitle, 0);
                     open_file_dialog.lpstrFile = path;
                     open_file_dialog.nMaxFile = MAX_PATH;
                     open_file_dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
                     LoadStringW(window->instance, ID_STRING_OPEN_FILES_FILTER, (wchar_t *)&open_file_dialog.lpstrFilter, 0);
-                    if (GetOpenFileName(&open_file_dialog)) {
+                    if (GetOpenFileNameW(&open_file_dialog)) {
                         OpenImage(hwnd, path);
                     }
                 }
@@ -316,7 +356,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_DROPFILES) {
         HDROP hdrop = (HDROP)wParam;
         wchar_t path[MAX_PATH];
-        DragQueryFile(hdrop, 0, path, MAX_PATH);
+        DragQueryFileW(hdrop, 0, path, MAX_PATH);
         DragFinish(hdrop);
         SetForegroundWindow(hwnd);
         OpenImage(hwnd, path);

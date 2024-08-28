@@ -3,8 +3,7 @@
 // Only a very limited set of methods and interfaces are supported!
 // ~ Made by Bastiaan van der Plaat (https://bastiaan.ml/)
 
-#ifndef DIRECTWRITE_H
-#define DIRECTWRITE_H
+#pragma once
 
 #include <windows.h>
 #include <stdint.h>
@@ -122,5 +121,3 @@ typedef struct IDWriteFactoryVtbl {
 struct IDWriteFactory {
     const IDWriteFactoryVtbl *lpVtbl;
 };
-
-#endif

@@ -10,8 +10,7 @@
 // HELPERS_ENABLE_FULLSCREEN: Enable fullscreen window helper
 // HELPERS_ENABLE_IMMERSIVE_DARK_MODE: Enable dark window decoration helper for Windows 10+
 
-#ifndef HELPERS_H
-#define HELPERS_H
+#pragma once
 
 #include <windows.h>
 #include <stdint.h>
@@ -148,8 +147,6 @@ void SetWindowImmersiveDarkMode(HWND hwnd, BOOL enabled) {
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &enabled, sizeof(BOOL));
     }
 }
-
-#endif
 
 #endif
 
