@@ -1,7 +1,30 @@
 // A simple Windows application which opens a COM file picker
 // tcc fileopener.c -lole32 && ./fileopener
+
 #define UNICODE
 #include <windows.h>
+
+// combaseapi.h
+#define COINIT_APARTMENTTHREADED (DWORD)0x2
+#define COINIT_DISABLE_OLE1DDE (DWORD)0x4
+#define CLSCTX_ALL (DWORD)0x17
+HRESULT CoInitializeEx(LPVOID pvReserved, DWORD dwCoInit);
+void CoUninitialize(void);
+HRESULT CoCreateInstance(REFIID rclsid, LPVOID pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
+HRESULT CoTaskMemFree(LPVOID pv);
+
+// unknwn.h
+typedef struct IUnknown IUnknown;
+
+typedef struct IUnknownVtbl {
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)(IUnknown *This, REFIID riid, void **ppvObject);
+    ULONG (STDMETHODCALLTYPE *AddRef)(IUnknown *This);
+    ULONG (STDMETHODCALLTYPE *Release)(IUnknown *This);
+} IUnknownVtbl;
+
+struct IUnknown {
+    const IUnknownVtbl *lpVtbl;
+};
 
 // ####################################################################################
 // ########################## COM Open File Dialog Header #############################

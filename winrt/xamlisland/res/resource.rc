@@ -1,4 +1,13 @@
-#include "res/resource-shared.rc"
+#include "res/resource.h"
+
+// Manifests
+ID_MANIFEST MANIFEST "target/res/app.min.manifest"
+
+// Icons
+ID_ICON_APP ICON "target/res/icon.ico"
+
+// XAML
+ID_XAML_WINDOW XAML "res/window.xaml"
 
 // Version Information
 VS_VERSION_INFO VERSIONINFO
@@ -18,8 +27,8 @@ FILESUBTYPE VFT2_UNKNOWN
             VALUE "FileDescription", "Island"
             VALUE "FileVersion", "0.1.0.0"
             VALUE "InternalName", "Island"
-            VALUE "LegalCopyright", "Copyright \xA9 2021 - 2022 PlaatSoft"
-            VALUE "OriginalFilename", "island-x64.exe"
+            VALUE "LegalCopyright", "Copyright \xA9 2021-2024 PlaatSoft"
+            VALUE "OriginalFilename", "island.exe"
             VALUE "ProductName", "Island"
             VALUE "ProductVersion", "0.1.0.0"
         }

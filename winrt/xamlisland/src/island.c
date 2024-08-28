@@ -1,7 +1,26 @@
 #define UNICODE
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
+
 #include "../res/resource.h"
+
+// stringapiset.h
+#define CP_ACP 0
+int MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCCH lpMultiByteStr, int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
+
+// unknwn.h
+typedef struct IUnknown IUnknown;
+
+typedef struct IUnknownVtbl {
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)(IUnknown *This, REFIID riid, void **ppvObject);
+    ULONG (STDMETHODCALLTYPE *AddRef)(IUnknown *This);
+    ULONG (STDMETHODCALLTYPE *Release)(IUnknown *This);
+} IUnknownVtbl;
+
+struct IUnknown {
+    const IUnknownVtbl *lpVtbl;
+};
 
 // ####################################################################################
 // ######################## Windows Runtime UWP XAML Header ###########################

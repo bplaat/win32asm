@@ -1,20 +1,17 @@
+#!/bin/sh
 # A simple Windows application which has a WinRT XAML island
-# Simple build script to build the Windows application with Tiny C Compiler and ResourceHacker
-rm -rf build
-mkdir build
+# Toolchain: tcc, magick, ResourceHacker, minify-xml (npm)
 
-# magick convert res/icon.png -define icon:auto-resize="16,32,48,256" res/icon.ico
-# minify-xml res/app.manifest > res/app.min.manifest
+rm -rf target
+mkdir -p target/res
 
-if [[ $1 != 'release' ]]; then
-    tcc -lcombase src/island.c -Wl,-subsystem=console -o build/island-x64.exe
-else
-    tcc -lcombase src/island.c -o build/island-x64.exe
-fi
-ResourceHacker -open res/resource-x64.rc -save build/resource-x64.res -action compile -log NUL
-ResourceHacker -open build/island-x64.exe -save build/island-x64.exe -action addskip -res build/resource-x64.res -log NUL
-rm build/resource-x64.res
+# Resources
+magick res/icon.png -define icon:auto-resize="16,32,48,256" target/res/icon.ico
+minify-xml res/app.manifest > target/res/app.min.manifest
+ResourceHacker -open res/resource.rc -save target/resource.res -action compile -log NUL
 
-if [[ $1 != 'release' ]]; then
-    ./build/island-x64
-fi
+# Executable
+tcc src/island.c -lcombase -o target/island.exe
+ResourceHacker -open target/island.exe -save target/island.exe -action addskip -res target/resource.res -log NUL
+
+./target/island.exe

@@ -1,8 +1,22 @@
 // A simple Windows application which parses an URL via the WinRT APIs
 // tcc url.c -lcombase && ./url
 
-#include <unknwn.h>
+#define UNICODE
+#include <windows.h>
 #include <stdio.h>
+
+// unknwn.h
+typedef struct IUnknown IUnknown;
+
+typedef struct IUnknownVtbl {
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)(IUnknown *This, REFIID riid, void **ppvObject);
+    ULONG (STDMETHODCALLTYPE *AddRef)(IUnknown *This);
+    ULONG (STDMETHODCALLTYPE *Release)(IUnknown *This);
+} IUnknownVtbl;
+
+struct IUnknown {
+    const IUnknownVtbl *lpVtbl;
+};
 
 // ####################################################################################
 // ########################### Windows Runtime URI Header #############################
@@ -56,7 +70,7 @@ typedef struct IUriRuntimeClassVtbl {
     HRESULT (STDMETHODCALLTYPE *get_SchemeName)(IUriRuntimeClass *This, HSTRING *value);
     HRESULT (STDMETHODCALLTYPE *get_UserName)(IUriRuntimeClass *This, HSTRING *value);
     HRESULT (STDMETHODCALLTYPE *get_Port)(IUriRuntimeClass *This, INT32 *value);
-    HRESULT (STDMETHODCALLTYPE *get_Suspicious)(IUriRuntimeClass *This, boolean *value);
+    HRESULT (STDMETHODCALLTYPE *get_Suspicious)(IUriRuntimeClass *This, BOOL *value);
     void *padding2[2];
 } IUriRuntimeClassVtbl;
 
@@ -111,7 +125,7 @@ int main(void) {
     WindowsDeleteString(uriClassId);
 
     IUriRuntimeClass *uri;
-    HSTRING uriString = hstr(L"https://bastiaan.ml/winrt/stuff/nice?x=1&y=2#dfda");
+    HSTRING uriString = hstr(L"https://bplaat.nl/winrt/stuff/nice?x=1&y=2#dfda");
     IUriRuntimeClassFactory_CreateUri(uriFactory, uriString, &uri);
     printf("URI: %ls\n", WindowsGetStringRawBuffer(uriString, NULL));
     WindowsDeleteString(uriString);
