@@ -5,12 +5,16 @@
 ; Setup instruction set
 %ifdef WIN64
     [bits 64]
+    [default rel]
 %else
     [bits 32]
 %endif
 
-; Setup executable base
-%define _base 0x400000
+%ifdef WIN64
+    %define _base 0x140000000
+%else
+    %define _base 0x400000
+%endif
 %define _alignment 0x1000
 [org _base]
 %define RVA(_address) (_address - _base)
@@ -51,6 +55,17 @@
     %define POINTER_size DWORD_size
 %endif
 
+; Store a link-time address without truncating it to a 32-bit immediate in a
+; 64-bit memory-to-immediate MOV instruction.
+%macro mov_pointer 2
+    %ifdef WIN64
+        lea r11, [%2]
+        mov pointer %1, r11
+    %else
+        mov pointer %1, %2
+    %endif
+%endmacro
+
 ; Unicode macro
 %define utf16(string) __?utf16?__(string)
 
@@ -60,6 +75,14 @@
 
 %define HEADER_HAS_NO_RESOURCES 0
 %define HEADER_HAS_RESOURCES 1
+
+; COFF file characteristics
+%define IMAGE_FILE_RELOCS_STRIPPED     0x0001
+%define IMAGE_FILE_EXECUTABLE_IMAGE    0x0002
+%define IMAGE_FILE_LINE_NUMS_STRIPPED  0x0004
+%define IMAGE_FILE_LOCAL_SYMS_STRIPPED 0x0008
+%define IMAGE_FILE_LARGE_ADDRESS_AWARE 0x0020
+%define IMAGE_FILE_32BIT_MACHINE       0x0100
 
 %macro header 2
     _header:
@@ -87,7 +110,11 @@
         dd 0                          ; PointerToSymbolTable
         dd 0                          ; NumberOfSymbols
         dw _optional_header_size      ; SizeOfOptionalHeader
-        dw 0x030F                     ; Characteristics
+        %ifdef WIN64
+            dw IMAGE_FILE_RELOCS_STRIPPED | IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LINE_NUMS_STRIPPED | IMAGE_FILE_LOCAL_SYMS_STRIPPED | IMAGE_FILE_LARGE_ADDRESS_AWARE ; Characteristics
+        %else
+            dw IMAGE_FILE_RELOCS_STRIPPED | IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LINE_NUMS_STRIPPED | IMAGE_FILE_LOCAL_SYMS_STRIPPED | IMAGE_FILE_32BIT_MACHINE ; Characteristics
+        %endif
 
         ; Standard COFF Fields
     _optional_header:
@@ -115,12 +142,22 @@
         %endif
         dd _alignment                 ; SectionAlignment
         dd _alignment                 ; FileAlignment
-        dw 4                          ; MajorOperatingSystemVersion
-        dw 0                          ; MinorOperatingSystemVersion
+        %ifdef WIN64
+            dw 5                      ; MajorOperatingSystemVersion
+            dw 2                      ; MinorOperatingSystemVersion
+        %else
+            dw 4                      ; MajorOperatingSystemVersion
+            dw 0                      ; MinorOperatingSystemVersion
+        %endif
         dw 0                          ; MajorImageVersion
         dw 0                          ; MinorImageVersion
-        dw 4                          ; MajorSubsystemVersion
-        dw 0                          ; MinorSubsystemVersion
+        %ifdef WIN64
+            dw 5                      ; MajorSubsystemVersion
+            dw 2                      ; MinorSubsystemVersion
+        %else
+            dw 4                      ; MajorSubsystemVersion
+            dw 0                      ; MinorSubsystemVersion
+        %endif
         dd 0                          ; Win32VersionValue
         %if %2 == HEADER_HAS_RESOURCES
             dd _header_aligned_size + _code_section_aligned_size + _data_section_aligned_size + _resources_section_aligned_size ; SizeOfImage
@@ -156,7 +193,11 @@
             dd 0, 0
         %endif
 
-        times 13 dd 0, 0
+        times 9 dd 0, 0
+
+        dd RVA(_import_table), _import_table_size
+
+        times 3 dd 0, 0
 
         _optional_header_size equ $ - _optional_header
 

@@ -77,9 +77,9 @@ code_section
         mov eax, [background_color]
         mov [_di + Widget.background_color], eax
 
-        mov pointer [_di + Widget.draw_function], widget_draw
+        mov_pointer [_di + Widget.draw_function], widget_draw
 
-        mov pointer [_di + Widget.free_function], widget_free
+        mov_pointer [_di + Widget.free_function], widget_free
 
         return
 
@@ -251,9 +251,9 @@ code_section
         fcall widget_init, [label], [rect], [background_color]
 
         mov _di, [label]
-        mov pointer [_di + Widget.draw_function], label_draw
+        mov_pointer [_di + Widget.draw_function], label_draw
 
-        mov pointer [_di + Widget.free_function], label_free
+        mov_pointer [_di + Widget.free_function], label_free
 
         mov _ax, [text]
         mov [_di + Label.text], _ax
@@ -629,7 +629,7 @@ code_section
 
         mov dword [window_class + WNDCLASSEX.style], CS_HREDRAW | CS_VREDRAW
 
-        mov pointer [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
+        mov_pointer [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
 
         mov dword [window_class + WNDCLASSEX.cbClsExtra], 0
 
@@ -649,7 +649,7 @@ code_section
 
         mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
-        mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
+        mov_pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
         invoke RegisterClassExA, addr window_class
 

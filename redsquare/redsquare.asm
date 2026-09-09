@@ -742,7 +742,7 @@ code_section
 
         mov dword [window_class + WNDCLASSEX.style], 0
 
-        mov pointer [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
+        mov_pointer [window_class + WNDCLASSEX.lpfnWndProc], WindowProc
 
         mov dword [window_class + WNDCLASSEX.cbClsExtra], 0
 
@@ -761,7 +761,7 @@ code_section
 
         mov pointer [window_class + WNDCLASSEX.lpszMenuName], NULL
 
-        mov pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
+        mov_pointer [window_class + WNDCLASSEX.lpszClassName], window_class_name
 
         invoke GetSystemMetrics, SM_CXSMICON
         mov _si, _ax
