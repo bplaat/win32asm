@@ -126,7 +126,11 @@
         db 0                          ; MajorLinkerVersion
         db 0                          ; MinorLinkerVersion
         dd _code_section_aligned_size ; SizeOfCode
-        dd _data_section_aligned_size ; SizeOfInitializedData
+        %if %2 == HEADER_HAS_RESOURCES
+            dd _data_section_aligned_size + _resources_section_aligned_size ; SizeOfInitializedData
+        %else
+            dd _data_section_aligned_size ; SizeOfInitializedData
+        %endif
         dd 0                          ; SizeOfUninitializedData
         dd RVA(_entrypoint)           ; AddressOfEntryPoint
         dd RVA(_code_section)         ; BaseOfCode
@@ -185,7 +189,7 @@
         ; Data Directories
         dd 0, 0
 
-        dd RVA(_import_table), _import_table_size
+        dd RVA(_import_table), _import_descriptors_size
 
         %if %2 == HEADER_HAS_RESOURCES
             dd RVA(_resources_section), _resources_section_size
@@ -193,11 +197,7 @@
             dd 0, 0
         %endif
 
-        times 9 dd 0, 0
-
-        dd RVA(_import_table), _import_table_size
-
-        times 3 dd 0, 0
+        times 13 dd 0, 0
 
         _optional_header_size equ $ - _optional_header
 
@@ -300,6 +300,7 @@
         %rotate 2
     %endrep
     dd 0, 0, 0, 0, 0
+    _import_descriptors_size equ $ - _import_table
 
     %rep %0 / 2
         _%1 db %2, 0
@@ -308,6 +309,7 @@
 %endmacro
 
 %macro import 3-*
+    align POINTER_size, db 0
     %1:
         %rotate 1
         %rep (%0 - 1) / 2
@@ -326,6 +328,7 @@
 
         %rotate 1
         %rep (%0 - 1) / 2
+            align 2, db 0
             _%1 db 0, 0, %2, 0
             %rotate 2
         %endrep
